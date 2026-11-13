@@ -30,6 +30,7 @@ class ErrorDetail(BaseModel):
     code: Literal[
         "VALIDATION_ERROR", "PROTOCOL_INVALID", "OUT_OF_SCOPE", "RATE_LIMITED", "PROBE_LIMIT",
         "QUOTE_EXPIRED", "QUOTE_CHANGED", "RETRY_LIMIT", "NOT_FOUND", "UPSTREAM_ERROR",
+        "SELF_APPROVAL_FORBIDDEN", "NOT_APPROVER",
     ]
     message: str
     details: dict[str, Any] = {}
@@ -73,7 +74,10 @@ class ProtocolBody(BaseModel):
     unknown_data_policy: Literal["REQUIRE_APPROVAL", "REJECT"] = "REQUIRE_APPROVAL"
     may_contain_policy: Literal["EXCLUDE", "REQUIRE_APPROVAL"] = "EXCLUDE"
     substitution: SubstitutionPolicy = SubstitutionPolicy()
-    approver: str
+    approval_mode: Literal["SEPARATE", "SELF"] = "SEPARATE"
+    # SEPARATE：提需求的人不能审批自己的单（酒店、医院、连锁厨房）
+    # SELF：老板兼采购，可以审批自己的单，但审批仍是单独的一步并记入日志（小餐厅）
+    approver: str                      # 审批人用户 ID；SELF 模式下通常就是下单人
     valid_until: date
     valio_scope: ValioScope = ValioScope()
 
@@ -514,6 +518,9 @@ class ApprovalCard(BaseModel):
     risk_tags: list[RiskTag] = []
     request: Optional[StructuredRequest] = None
     raw_text: Optional[str] = None
+    requested_by: Optional[str] = None       # 提需求的用户 ID
+    approver: Optional[str] = None           # 有权审批的用户 ID（来自协议）
+    approval_mode: Optional[Literal["SEPARATE", "SELF"]] = None
     quote: Optional[Quote] = None
     candidate: Optional[Candidate] = None
     alternatives: list[Candidate] = []

@@ -58,3 +58,14 @@ def test_apply_only_tightening():
     new = apply_tightening(BODY, changes, res)
     assert new.auto_approve_limit_cents == 80_000
     assert new.allowed_categories == BODY.allowed_categories  # 混合变化的字段等审批
+
+
+def test_approval_mode_separate_to_self_is_expanded():
+    r = classify_changes(BODY, {"approval_mode": "SELF"}, "buyer", TODAY)
+    assert [c.field for c in r["expanded"]] == ["approval_mode"]
+
+
+def test_approval_mode_self_to_separate_is_tightened():
+    body = BODY.model_copy(update={"approval_mode": "SELF"})
+    r = classify_changes(body, {"approval_mode": "SEPARATE"}, "buyer", TODAY)
+    assert [c.field for c in r["tightened"]] == ["approval_mode"]

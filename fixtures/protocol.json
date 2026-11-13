@@ -26,7 +26,8 @@
       "same_category": "APPROVAL",
       "cross_category": "APPROVAL"
     },
-    "approver": "procurement.manager@hotel.example",
+    "approval_mode": "SEPARATE",
+    "approver": "usr_manager",
     "valid_until": "2027-02-13",
     "valio_scope": {
       "prices": "OWN_ONLY",

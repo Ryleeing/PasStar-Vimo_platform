@@ -12,7 +12,7 @@ root = pathlib.Path(__file__).resolve().parents[2]
 (root / "openapi.json").write_text(json.dumps(app.openapi(), ensure_ascii=False, indent=2), encoding="utf-8")
 
 c = TestClient(app)
-H = {"X-Demo-User": "chef", "X-Agent-Key": "demo"}
+H = {"X-Demo-User": "usr_chef", "X-Agent-Key": "demo"}
 calls = {
     "protocol": ("get", "/v1/protocols/prot_hotel_v1", None),
     "protocol_diff": ("post", "/v1/protocols/prot_hotel_v1/amend", {"changes": {}}),

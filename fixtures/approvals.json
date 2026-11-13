@@ -39,6 +39,9 @@
       "notes": null
     },
     "raw_text": "1000 litres of lactose-free milk by Monday",
+    "requested_by": "usr_chef",
+    "approver": "usr_manager",
+    "approval_mode": "SEPARATE",
     "quote": {
       "id": "quo_3",
       "request_id": "req_1",
@@ -371,6 +374,9 @@
     ],
     "request": null,
     "raw_text": null,
+    "requested_by": null,
+    "approver": null,
+    "approval_mode": null,
     "quote": null,
     "candidate": null,
     "alternatives": [],

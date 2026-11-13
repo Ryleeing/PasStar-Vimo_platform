@@ -28,10 +28,10 @@
                   "type": "null"
                 }
               ],
-              "description": "chef | buyer_manager | valio_reviewer",
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
               "title": "X-Demo-User"
             },
-            "description": "chef | buyer_manager | valio_reviewer"
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "requestBody": {
@@ -372,10 +372,10 @@
                   "type": "null"
                 }
               ],
-              "description": "chef | buyer_manager | valio_reviewer",
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
               "title": "X-Demo-User"
             },
-            "description": "chef | buyer_manager | valio_reviewer"
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "responses": {
@@ -493,10 +493,10 @@
                   "type": "null"
                 }
               ],
-              "description": "chef | buyer_manager | valio_reviewer",
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
               "title": "X-Demo-User"
             },
-            "description": "chef | buyer_manager | valio_reviewer"
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "responses": {
@@ -1756,10 +1756,10 @@
                   "type": "null"
                 }
               ],
-              "description": "chef | buyer_manager | valio_reviewer",
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
               "title": "X-Demo-User"
             },
-            "description": "chef | buyer_manager | valio_reviewer"
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "requestBody": {
@@ -2994,7 +2994,7 @@
           "BE1 · approvals"
         ],
         "summary": "Decide",
-        "description": "批准后先复核报价：没变 → 下单；变了 → REQUOTE_REQUIRED（附新报价，超阈值则生成新审批）。",
+        "description": "先校验审批人，再复核报价：没变 → 下单；变了 → REQUOTE_REQUIRED（附新报价，超阈值则生成新审批）。\n审批人校验（BUYER 审批）：\n  - 决定人必须是协议里的 approver，否则 403 NOT_APPROVER；\n  - SEPARATE 模式下，决定人不能是提需求的人，否则 403 SELF_APPROVAL_FORBIDDEN；\n  - SELF 模式下允许自批，但审计日志记为 \"self-approved\"。",
         "operationId": "decide_v1_approvals__approval_id__decision_post",
         "parameters": [
           {
@@ -3019,10 +3019,10 @@
                   "type": "null"
                 }
               ],
-              "description": "chef | buyer_manager | valio_reviewer",
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
               "title": "X-Demo-User"
             },
-            "description": "chef | buyer_manager | valio_reviewer"
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "requestBody": {
@@ -3157,10 +3157,10 @@
                   "type": "null"
                 }
               ],
-              "description": "chef | buyer_manager | valio_reviewer",
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
               "title": "X-Demo-User"
             },
-            "description": "chef | buyer_manager | valio_reviewer"
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "responses": {
@@ -3914,6 +3914,43 @@
               }
             ],
             "title": "Raw Text"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "approver": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approver"
+          },
+          "approval_mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "SEPARATE",
+                  "SELF"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Mode"
           },
           "quote": {
             "anyOf": [
@@ -4682,7 +4719,9 @@
               "QUOTE_CHANGED",
               "RETRY_LIMIT",
               "NOT_FOUND",
-              "UPSTREAM_ERROR"
+              "UPSTREAM_ERROR",
+              "SELF_APPROVAL_FORBIDDEN",
+              "NOT_APPROVER"
             ],
             "title": "Code"
           },
@@ -5665,6 +5704,15 @@
               "same_category": "APPROVAL",
               "cross_category": "APPROVAL"
             }
+          },
+          "approval_mode": {
+            "type": "string",
+            "enum": [
+              "SEPARATE",
+              "SELF"
+            ],
+            "title": "Approval Mode",
+            "default": "SEPARATE"
           },
           "approver": {
             "type": "string",

@@ -82,6 +82,11 @@ def classify_changes(current: ProtocolBody, changes: dict[str, Any], actor: str,
                 add("tightened", field, old, new)
             elif nd > od:
                 add("expanded", field, old, new)
+        elif field == "approval_mode":
+            if old == "SEPARATE" and new == "SELF":
+                add("expanded", field, old, new)                     # 允许自批：放宽，要重新签字
+            elif old == "SELF" and new == "SEPARATE":
+                add("tightened", field, old, new)
         elif field == "approver":
             if new != old:
                 add("expanded", field, old, new)                     # 换审批人要重新签字

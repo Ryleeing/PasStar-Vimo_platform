@@ -14,6 +14,19 @@ uvicorn app.main:app --reload
 前端生成类型：`npx openapi-typescript ../openapi.json -o src/api/types.ts`
 假数据：`fixtures/*.json`（运行 `python scripts/export_contract.py` 可重新导出）
 
+## 演示用户和审批模式
+
+界面请求带 `X-Demo-User` 头（演示用，不做登录）：
+
+| 模式（协议里的 `approval_mode`） | 用户 | 能做什么 |
+|---|---|---|
+| SEPARATE 组织模式（主展示） | `usr_chef` | 提需求、选方案；不能批自己的单（403 `SELF_APPROVAL_FORBIDDEN`） |
+| | `usr_manager` | 审批超出协议的单、签协议 |
+| SELF 单人模式 | `usr_owner` | 提需求，也能批自己的单（日志记为 self-approved） |
+| 两种模式都有 | `usr_valio` | Valio 审批台、agent 管理、完整审计 |
+
+审批人校验在 `backend/app/channel/approvals.py`。
+
 ## 目录
 
 - `backend/app/schemas.py`  接口契约（所有 HTTP 请求和响应）

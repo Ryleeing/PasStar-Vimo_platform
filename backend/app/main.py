@@ -7,9 +7,11 @@ tags 里写了负责人：BE1 通道与交易、BE2 目录与数据、BE3 编排
 from typing import Literal, Optional
 
 from fastapi import FastAPI, Header, Query
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import fixtures as fx
+from .channel.approvals import check_approver
 from .schemas import *  # noqa: F401,F403
 
 app = FastAPI(
@@ -22,7 +24,15 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 AgentKey = Header(default=None, alias="X-Agent-Key")
-DemoUser = Header(default=None, alias="X-Demo-User", description="chef | buyer_manager | valio_reviewer")
+DemoUser = Header(default=None, alias="X-Demo-User",
+                  description="usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio")
+USERS = {  # 演示用户；正式版换成登录
+    "usr_chef": "REQUESTER", "usr_manager": "APPROVER", "usr_owner": "OWNER", "usr_valio": "VALIO_REVIEWER",
+}
+
+
+def _err(status: int, code: str, message: str, **details) -> JSONResponse:
+    return JSONResponse(status_code=status, content=ErrorBody(error=ErrorDetail(code=code, message=message, details=details)).model_dump())
 
 # ───── 协议（BE1）─────
 
@@ -163,9 +173,21 @@ def list_approvals(kind: Optional[Literal["BUYER", "VALIO"]] = None,
 def get_approval(approval_id: str):
     return fx.APPROVAL_BUYER
 
-@app.post("/v1/approvals/{approval_id}/decision", response_model=ApprovalDecisionResult, tags=["BE1 · approvals"])
+@app.post("/v1/approvals/{approval_id}/decision", response_model=ApprovalDecisionResult, tags=["BE1 · approvals"],
+          responses={403: {"model": ErrorBody}})
 def decide(approval_id: str, body: ApprovalDecision, x_demo_user: Optional[str] = DemoUser):
-    """批准后先复核报价：没变 → 下单；变了 → REQUOTE_REQUIRED（附新报价，超阈值则生成新审批）。"""
+    """先校验审批人，再复核报价：没变 → 下单；变了 → REQUOTE_REQUIRED（附新报价，超阈值则生成新审批）。
+    审批人校验（BUYER 审批）：
+      - 决定人必须是协议里的 approver，否则 403 NOT_APPROVER；
+      - SEPARATE 模式下，决定人不能是提需求的人，否则 403 SELF_APPROVAL_FORBIDDEN；
+      - SELF 模式下允许自批，但审计日志记为 "self-approved"。"""
+    a = fx.APPROVAL_BUYER
+    if a.kind == "BUYER" and x_demo_user:
+        code = check_approver(a.approval_mode, a.approver, a.requested_by, x_demo_user)
+        if code:
+            msg = {"SELF_APPROVAL_FORBIDDEN": "In SEPARATE mode the requester cannot approve their own order",
+                   "NOT_APPROVER": "Only the approver named in the protocol can decide"}[code]
+            return _err(403, code, msg, requested_by=a.requested_by, approver=a.approver)
     return ApprovalDecisionResult(approval=fx.APPROVAL_BUYER.model_copy(update={"status": "APPROVED"}),
                                   order=fx.ORDER.model_copy(update={"quote_id": "quo_3"}))
 

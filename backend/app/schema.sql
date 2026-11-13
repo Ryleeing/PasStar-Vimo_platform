@@ -79,6 +79,14 @@ CREATE TABLE buyers (
   delivery_address TEXT
 );
 
+CREATE TABLE users (                              -- 演示用户；正式版接登录
+  id        TEXT PRIMARY KEY,
+  org       TEXT NOT NULL CHECK (org IN ('BUYER','VALIO')),
+  buyer_id  TEXT REFERENCES buyers(id),          -- org = BUYER 时必填
+  name      TEXT NOT NULL,
+  role      TEXT NOT NULL CHECK (role IN ('REQUESTER','APPROVER','OWNER','VALIO_REVIEWER'))
+);
+
 CREATE TABLE agents (
   id           TEXT PRIMARY KEY,
   buyer_id     TEXT NOT NULL REFERENCES buyers(id),
@@ -117,6 +125,7 @@ CREATE TABLE requests (
   buyer_id        TEXT NOT NULL REFERENCES buyers(id),
   protocol_id     TEXT NOT NULL REFERENCES protocols(id),
   profile_id      TEXT REFERENCES profiles(id),
+  created_by      TEXT NOT NULL REFERENCES users(id),   -- 提需求的人；SEPARATE 模式下不能审批自己的单
   input_mode      TEXT NOT NULL CHECK (input_mode IN ('NATURAL_LANGUAGE','PANEL')),
   raw_text        TEXT,
   structured_json TEXT NOT NULL,                   -- StructuredRequest（确认后）
