@@ -1,0 +1,486 @@
+{
+  "request_id": "req_1",
+  "status": "CANDIDATES_READY",
+  "attempt": 1,
+  "structured": {
+    "category": "10400",
+    "category_label": "牛奶",
+    "requirements": [
+      {
+        "kind": "CLAIM",
+        "code": "FREE_FROM_LACTOSE",
+        "label": "无乳糖"
+      }
+    ],
+    "quantity": {
+      "value": 1000.0,
+      "unit": "L"
+    },
+    "delivery_date": "2026-11-16",
+    "budget_cents": null,
+    "substitution": "SAME_CATEGORY",
+    "notes": null
+  },
+  "chain": [
+    {
+      "node": 1,
+      "name": "UNDERSTAND",
+      "attempt": 1,
+      "status": "OK",
+      "summary": "你要的是：牛奶，无乳糖，1000 升，11 月 16 日（周一）前送到；已套用 profile“酒店宴会”。",
+      "can_reject": true,
+      "retries_left": 3,
+      "reject_options": [
+        "WRONG_QUANTITY",
+        "WRONG_DATE",
+        "WRONG_ATTRIBUTES",
+        "WRONG_CATEGORY",
+        "OTHER"
+      ],
+      "events": [
+        {
+          "at": "2026-11-14T10:00:00+02:00",
+          "title": "理解需求",
+          "logic": "从你的原话里提取品类、属性、数量和日期",
+          "evidence": [
+            {
+              "source": "BUYER_INPUT",
+              "detail": "周一前要 1000 升无乳糖奶",
+              "trust_grade": null
+            },
+            {
+              "source": "PROFILE",
+              "detail": "酒店宴会：优先大包装，排除 Arla",
+              "trust_grade": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "node": 2,
+      "name": "FILTER",
+      "attempt": 1,
+      "status": "OK",
+      "summary": "找到 35 个带无乳糖声明的牛奶；排除 27 个（不是液态奶、你不要的品牌）；保留 8 个。",
+      "can_reject": true,
+      "retries_left": 3,
+      "reject_options": [
+        "TOO_STRICT",
+        "TOO_LOOSE",
+        "ALLOW_BRAND",
+        "EXCLUDE_PRODUCT",
+        "OTHER"
+      ],
+      "events": [
+        {
+          "at": "2026-11-14T10:00:01+02:00",
+          "title": "在商品目录里筛选",
+          "logic": "只用制造商的结构化声明，不靠商品名称判断",
+          "evidence": [
+            {
+              "source": "CATALOG",
+              "detail": "品类 10400 + FREE_FROM_LACTOSE",
+              "trust_grade": "A"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "node": 3,
+      "name": "RANK",
+      "attempt": 1,
+      "status": "OK",
+      "summary": "按你的偏好，履约最重要、价格其次；第 1 名是 10 升装，共 50 箱。",
+      "can_reject": true,
+      "retries_left": 3,
+      "reject_options": [
+        "WRONG_PRIORITY",
+        "EXCLUDE_OPTION",
+        "PREFER_SINGLE_SKU",
+        "OTHER"
+      ],
+      "events": [
+        {
+          "at": "2026-11-14T10:00:02+02:00",
+          "title": "查价格和库存并排序",
+          "logic": "只查询这 8 个候选，然后按 profile 的权重排序",
+          "evidence": [
+            {
+              "source": "VALIO_PRICE_API",
+              "detail": "8 个商品的客户价格",
+              "trust_grade": null
+            },
+            {
+              "source": "VALIO_STOCK_API",
+              "detail": "11 月 16 日能否交付",
+              "trust_grade": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "node": 4,
+      "name": "GATE",
+      "attempt": 1,
+      "status": "OK",
+      "summary": "第 1 名 €998.80，在自动额度 €1,000 以内，所有要求都有明确声明：选它可以自动下单。",
+      "can_reject": true,
+      "retries_left": 3,
+      "reject_options": [
+        "SEND_TO_APPROVAL",
+        "PICK_OTHER"
+      ],
+      "events": [
+        {
+          "at": "2026-11-14T10:00:03+02:00",
+          "title": "按协议判断",
+          "logic": "逐条比对授权协议",
+          "evidence": [
+            {
+              "source": "RULE",
+              "detail": "R-SPEND-AUTO：金额 ≤ 自动额度",
+              "trust_grade": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "id": "cand_1",
+      "rank": 1,
+      "badge": "RECOMMENDED",
+      "selectable": true,
+      "lines": [
+        {
+          "product_id": "463038",
+          "name": "Valio Eila® 10 l novobox lactose free",
+          "brand": "Valio",
+          "sales_unit": "KI",
+          "sales_units": 50.0,
+          "qty_covered": {
+            "value": 1000.0,
+            "unit": "L"
+          },
+          "overbuy": null,
+          "conversion_source": "UNIT_CONVERSIONS",
+          "unit_price_cents": 1760,
+          "line_net_cents": 88000,
+          "vat_rate": 0.135,
+          "deposit_cents": 0,
+          "available_on_date": "YES",
+          "deliverable_sales_units": null,
+          "substitution_tier": "NONE",
+          "substitutes_for": null
+        }
+      ],
+      "totals": {
+        "net_cents": 88000,
+        "vat_cents": 11880,
+        "deposit_cents": 0,
+        "gross_cents": 99880
+      },
+      "delivery_date": "2026-11-16",
+      "reliability_level": "UNKNOWN",
+      "outcome_preview": "AUTO",
+      "outcome_reasons": [
+        "€998.80，在自动额度 €1,000 以内",
+        "无乳糖有制造商结构化声明"
+      ],
+      "cards": {
+        "allergen": {
+          "rows": [
+            {
+              "product_id": "463038",
+              "requirement": {
+                "kind": "CLAIM",
+                "code": "FREE_FROM_LACTOSE",
+                "label": "无乳糖"
+              },
+              "status": "CLAIMED",
+              "trust_grade": "A",
+              "source": "制造商结构化声明（GS1 Synkka）"
+            }
+          ],
+          "data_updated_at": "2026-10-05T10:00:00+02:00",
+          "notes": [
+            "无乳糖 ≠ 无奶：含牛奶蛋白，牛奶过敏者不能用"
+          ]
+        },
+        "trust": {
+          "evidence": "HIGH",
+          "match": "HIGH",
+          "fulfilment": "MEDIUM",
+          "compliance": "HIGH",
+          "overall": "MEDIUM",
+          "how_to_improve": "这款没有历史配送记录；选 cand_3 履约一项会是高"
+        },
+        "alternatives": [
+          {
+            "candidate_id": "cand_2",
+            "tradeoff": "便宜 €34，但要收 1000 盒",
+            "tier": "NONE"
+          }
+        ],
+        "tips": [
+          {
+            "kind": "STORAGE",
+            "text": "冷藏 2–6 °C"
+          },
+          {
+            "kind": "COLD_STORAGE_SPACE",
+            "text": "50 箱约占 1.1 m³ 冷藏空间"
+          },
+          {
+            "kind": "RELIABILITY",
+            "text": "这款商品没有配送记录，履约把握按“未知”处理"
+          },
+          {
+            "kind": "QUOTE_TIMER",
+            "text": "选中后报价 15 分钟内有效"
+          }
+        ]
+      },
+      "violations": [],
+      "explanation": "10 升大包装，搬运最省事，符合“优先大包装”的偏好；价格在自动额度内。"
+    },
+    {
+      "id": "cand_2",
+      "rank": 2,
+      "badge": "CHEAPEST",
+      "selectable": true,
+      "lines": [
+        {
+          "product_id": "464306",
+          "name": "Valio Hyvä suomalainen Arki® Eila® 1 l lactose free",
+          "brand": "Valio",
+          "sales_unit": "ST",
+          "sales_units": 1000.0,
+          "qty_covered": {
+            "value": 1000.0,
+            "unit": "L"
+          },
+          "overbuy": null,
+          "conversion_source": "UNIT_CONVERSIONS",
+          "unit_price_cents": 85,
+          "line_net_cents": 85000,
+          "vat_rate": 0.135,
+          "deposit_cents": 0,
+          "available_on_date": "YES",
+          "deliverable_sales_units": null,
+          "substitution_tier": "NONE",
+          "substitutes_for": null
+        }
+      ],
+      "totals": {
+        "net_cents": 85000,
+        "vat_cents": 11475,
+        "deposit_cents": 0,
+        "gross_cents": 96475
+      },
+      "delivery_date": "2026-11-16",
+      "reliability_level": "HIGH",
+      "outcome_preview": "AUTO",
+      "outcome_reasons": [
+        "€964.75，在自动额度以内"
+      ],
+      "cards": {
+        "allergen": {
+          "rows": [
+            {
+              "product_id": "464306",
+              "requirement": {
+                "kind": "CLAIM",
+                "code": "FREE_FROM_LACTOSE",
+                "label": "无乳糖"
+              },
+              "status": "CLAIMED",
+              "trust_grade": "A",
+              "source": "制造商结构化声明（GS1 Synkka）"
+            }
+          ],
+          "data_updated_at": "2026-10-05T10:00:00+02:00",
+          "notes": [
+            "无乳糖 ≠ 无奶：含牛奶蛋白，牛奶过敏者不能用"
+          ]
+        },
+        "trust": {
+          "evidence": "HIGH",
+          "match": "HIGH",
+          "fulfilment": "HIGH",
+          "compliance": "HIGH",
+          "overall": "HIGH",
+          "how_to_improve": null
+        },
+        "alternatives": [],
+        "tips": [
+          {
+            "kind": "LABEL",
+            "text": "芬兰产"
+          }
+        ]
+      },
+      "violations": [],
+      "explanation": "总价最低，历史配送记录良好；1 升小包装，需要拆箱的量比较大。"
+    },
+    {
+      "id": "cand_3",
+      "rank": 3,
+      "badge": "MOST_RELIABLE",
+      "selectable": true,
+      "lines": [
+        {
+          "product_id": "464201",
+          "name": "Valio semi skimmed milk 1 l lactose free UHT",
+          "brand": "Valio",
+          "sales_unit": "ST",
+          "sales_units": 1000.0,
+          "qty_covered": {
+            "value": 1000.0,
+            "unit": "L"
+          },
+          "overbuy": null,
+          "conversion_source": "UNIT_CONVERSIONS",
+          "unit_price_cents": 95,
+          "line_net_cents": 95000,
+          "vat_rate": 0.135,
+          "deposit_cents": 0,
+          "available_on_date": "YES",
+          "deliverable_sales_units": null,
+          "substitution_tier": "NONE",
+          "substitutes_for": null
+        }
+      ],
+      "totals": {
+        "net_cents": 95000,
+        "vat_cents": 12825,
+        "deposit_cents": 0,
+        "gross_cents": 107825
+      },
+      "delivery_date": "2026-11-16",
+      "reliability_level": "HIGH",
+      "outcome_preview": "BUYER_APPROVAL",
+      "outcome_reasons": [
+        "€1,078.25，超过自动额度 €1,000"
+      ],
+      "cards": {
+        "allergen": {
+          "rows": [
+            {
+              "product_id": "464201",
+              "requirement": {
+                "kind": "CLAIM",
+                "code": "FREE_FROM_LACTOSE",
+                "label": "无乳糖"
+              },
+              "status": "CLAIMED",
+              "trust_grade": "A",
+              "source": "制造商结构化声明（GS1 Synkka）"
+            }
+          ],
+          "data_updated_at": "2026-10-05T10:00:00+02:00",
+          "notes": [
+            "无乳糖 ≠ 无奶：含牛奶蛋白，牛奶过敏者不能用"
+          ]
+        },
+        "trust": {
+          "evidence": "HIGH",
+          "match": "HIGH",
+          "fulfilment": "HIGH",
+          "compliance": "MEDIUM",
+          "overall": "MEDIUM",
+          "how_to_improve": "超过自动额度，需要经理审批"
+        },
+        "alternatives": [],
+        "tips": [
+          {
+            "kind": "STORAGE",
+            "text": "UHT，常温保存"
+          }
+        ]
+      },
+      "violations": [],
+      "explanation": "UHT 常温保存、配送记录最好；但总价超过自动额度，需要审批。"
+    }
+  ],
+  "blocked": [
+    {
+      "id": "cand_x1",
+      "rank": null,
+      "badge": null,
+      "selectable": false,
+      "lines": [
+        {
+          "product_id": "464179",
+          "name": "Arla 10 L Novobox lactose free milk drink ESL",
+          "brand": "Arla",
+          "sales_unit": "ST",
+          "sales_units": 100.0,
+          "qty_covered": {
+            "value": 1000.0,
+            "unit": "L"
+          },
+          "overbuy": null,
+          "conversion_source": "UNIT_CONVERSIONS",
+          "unit_price_cents": null,
+          "line_net_cents": null,
+          "vat_rate": null,
+          "deposit_cents": 0,
+          "available_on_date": "UNKNOWN",
+          "deliverable_sales_units": null,
+          "substitution_tier": "NONE",
+          "substitutes_for": null
+        }
+      ],
+      "totals": null,
+      "delivery_date": "2026-11-16",
+      "reliability_level": "UNKNOWN",
+      "outcome_preview": "REJECT",
+      "outcome_reasons": [],
+      "cards": {
+        "allergen": {
+          "rows": [
+            {
+              "product_id": "464179",
+              "requirement": {
+                "kind": "CLAIM",
+                "code": "FREE_FROM_LACTOSE",
+                "label": "无乳糖"
+              },
+              "status": "CLAIMED",
+              "trust_grade": "A",
+              "source": "制造商结构化声明（GS1 Synkka）"
+            }
+          ],
+          "data_updated_at": "2026-10-05T10:00:00+02:00",
+          "notes": [
+            "无乳糖 ≠ 无奶：含牛奶蛋白，牛奶过敏者不能用"
+          ]
+        },
+        "trust": {
+          "evidence": "HIGH",
+          "match": "HIGH",
+          "fulfilment": "MEDIUM",
+          "compliance": "LOW",
+          "overall": "LOW",
+          "how_to_improve": null
+        },
+        "alternatives": [],
+        "tips": []
+      },
+      "violations": [
+        {
+          "rule": "PROFILE_EXCLUDED_BRAND",
+          "detail": "profile“酒店宴会”排除了品牌 Arla",
+          "product_id": "464179"
+        }
+      ],
+      "explanation": "符合无乳糖要求，但你在 profile 里排除了这个品牌。"
+    }
+  ],
+  "no_candidate_reason": null
+}

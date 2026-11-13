@@ -1,0 +1,9 @@
+fastapi>=0.115
+pydantic>=2.7
+uvicorn[standard]
+httpx
+tenacity
+cachetools
+pyyaml
+joserfc
+pytest

@@ -1,0 +1,22 @@
+{
+  "id": "ord_1",
+  "request_id": "req_1",
+  "quote_id": "quo_1",
+  "status": "PLACED",
+  "gate": {
+    "outcome": "AUTO",
+    "rules_hit": [
+      {
+        "rule_id": "R-SPEND-AUTO",
+        "description": "金额 ≤ 自动额度",
+        "outcome": "AUTO"
+      }
+    ],
+    "summary": "在自动额度内，所有硬性要求都有明确声明"
+  },
+  "approval_id": null,
+  "requote_reason": null,
+  "new_quote_id": null,
+  "created_at": "2026-11-14T10:00:00+02:00",
+  "placed_at": "2026-11-14T10:00:00+02:00"
+}

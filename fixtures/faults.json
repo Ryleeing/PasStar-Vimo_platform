@@ -1,0 +1,27 @@
+[
+  {
+    "name": "PRICE_CHANGE",
+    "enabled": false,
+    "params": {}
+  },
+  {
+    "name": "PARTIAL_STOCK",
+    "enabled": false,
+    "params": {}
+  },
+  {
+    "name": "TIMEOUT",
+    "enabled": false,
+    "params": {}
+  },
+  {
+    "name": "RATE_LIMIT",
+    "enabled": false,
+    "params": {}
+  },
+  {
+    "name": "EMPTY_RESULT",
+    "enabled": false,
+    "params": {}
+  }
+]

@@ -1,0 +1,394 @@
+[
+  {
+    "id": "apr_1",
+    "kind": "BUYER",
+    "subject": "ORDER",
+    "status": "PENDING",
+    "created_at": "2026-11-14T10:00:00+02:00",
+    "title": "1000 升无乳糖牛奶，€1,078.25",
+    "reasons": [
+      "金额 €1,078.25 超过自动额度 €1,000"
+    ],
+    "reason_codes": [
+      "R-SPEND-APPROVAL"
+    ],
+    "risk_tags": [
+      {
+        "kind": "SPEND",
+        "level": "MEDIUM",
+        "text": "超出自动额度 €78.25"
+      }
+    ],
+    "request": {
+      "category": "10400",
+      "category_label": "牛奶",
+      "requirements": [
+        {
+          "kind": "CLAIM",
+          "code": "FREE_FROM_LACTOSE",
+          "label": "无乳糖"
+        }
+      ],
+      "quantity": {
+        "value": 1000.0,
+        "unit": "L"
+      },
+      "delivery_date": "2026-11-16",
+      "budget_cents": null,
+      "substitution": "SAME_CATEGORY",
+      "notes": null
+    },
+    "raw_text": "周一前要 1000 升无乳糖奶",
+    "quote": {
+      "id": "quo_3",
+      "request_id": "req_1",
+      "candidate_id": "cand_3",
+      "protocol_id": "prot_hotel_v1",
+      "lines": [
+        {
+          "product_id": "464201",
+          "name": "Valio semi skimmed milk 1 l lactose free UHT",
+          "brand": "Valio",
+          "sales_unit": "ST",
+          "sales_units": 1000.0,
+          "qty_covered": {
+            "value": 1000.0,
+            "unit": "L"
+          },
+          "overbuy": null,
+          "conversion_source": "UNIT_CONVERSIONS",
+          "unit_price_cents": 95,
+          "line_net_cents": 95000,
+          "vat_rate": 0.135,
+          "deposit_cents": 0,
+          "available_on_date": "YES",
+          "deliverable_sales_units": null,
+          "substitution_tier": "NONE",
+          "substitutes_for": null
+        }
+      ],
+      "totals": {
+        "net_cents": 95000,
+        "vat_cents": 12825,
+        "deposit_cents": 0,
+        "gross_cents": 107825
+      },
+      "delivery_date": "2026-11-16",
+      "valid_until": "2026-11-14T10:15:00+02:00",
+      "status": "VALID",
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6InZhbGlvLTEifQ.mock.mock"
+    },
+    "candidate": {
+      "id": "cand_3",
+      "rank": 3,
+      "badge": "MOST_RELIABLE",
+      "selectable": true,
+      "lines": [
+        {
+          "product_id": "464201",
+          "name": "Valio semi skimmed milk 1 l lactose free UHT",
+          "brand": "Valio",
+          "sales_unit": "ST",
+          "sales_units": 1000.0,
+          "qty_covered": {
+            "value": 1000.0,
+            "unit": "L"
+          },
+          "overbuy": null,
+          "conversion_source": "UNIT_CONVERSIONS",
+          "unit_price_cents": 95,
+          "line_net_cents": 95000,
+          "vat_rate": 0.135,
+          "deposit_cents": 0,
+          "available_on_date": "YES",
+          "deliverable_sales_units": null,
+          "substitution_tier": "NONE",
+          "substitutes_for": null
+        }
+      ],
+      "totals": {
+        "net_cents": 95000,
+        "vat_cents": 12825,
+        "deposit_cents": 0,
+        "gross_cents": 107825
+      },
+      "delivery_date": "2026-11-16",
+      "reliability_level": "HIGH",
+      "outcome_preview": "BUYER_APPROVAL",
+      "outcome_reasons": [
+        "€1,078.25，超过自动额度 €1,000"
+      ],
+      "cards": {
+        "allergen": {
+          "rows": [
+            {
+              "product_id": "464201",
+              "requirement": {
+                "kind": "CLAIM",
+                "code": "FREE_FROM_LACTOSE",
+                "label": "无乳糖"
+              },
+              "status": "CLAIMED",
+              "trust_grade": "A",
+              "source": "制造商结构化声明（GS1 Synkka）"
+            }
+          ],
+          "data_updated_at": "2026-10-05T10:00:00+02:00",
+          "notes": [
+            "无乳糖 ≠ 无奶：含牛奶蛋白，牛奶过敏者不能用"
+          ]
+        },
+        "trust": {
+          "evidence": "HIGH",
+          "match": "HIGH",
+          "fulfilment": "HIGH",
+          "compliance": "MEDIUM",
+          "overall": "MEDIUM",
+          "how_to_improve": "超过自动额度，需要经理审批"
+        },
+        "alternatives": [],
+        "tips": [
+          {
+            "kind": "STORAGE",
+            "text": "UHT，常温保存"
+          }
+        ]
+      },
+      "violations": [],
+      "explanation": "UHT 常温保存、配送记录最好；但总价超过自动额度，需要审批。"
+    },
+    "alternatives": [
+      {
+        "id": "cand_1",
+        "rank": 1,
+        "badge": "RECOMMENDED",
+        "selectable": true,
+        "lines": [
+          {
+            "product_id": "463038",
+            "name": "Valio Eila® 10 l novobox lactose free",
+            "brand": "Valio",
+            "sales_unit": "KI",
+            "sales_units": 50.0,
+            "qty_covered": {
+              "value": 1000.0,
+              "unit": "L"
+            },
+            "overbuy": null,
+            "conversion_source": "UNIT_CONVERSIONS",
+            "unit_price_cents": 1760,
+            "line_net_cents": 88000,
+            "vat_rate": 0.135,
+            "deposit_cents": 0,
+            "available_on_date": "YES",
+            "deliverable_sales_units": null,
+            "substitution_tier": "NONE",
+            "substitutes_for": null
+          }
+        ],
+        "totals": {
+          "net_cents": 88000,
+          "vat_cents": 11880,
+          "deposit_cents": 0,
+          "gross_cents": 99880
+        },
+        "delivery_date": "2026-11-16",
+        "reliability_level": "UNKNOWN",
+        "outcome_preview": "AUTO",
+        "outcome_reasons": [
+          "€998.80，在自动额度 €1,000 以内",
+          "无乳糖有制造商结构化声明"
+        ],
+        "cards": {
+          "allergen": {
+            "rows": [
+              {
+                "product_id": "463038",
+                "requirement": {
+                  "kind": "CLAIM",
+                  "code": "FREE_FROM_LACTOSE",
+                  "label": "无乳糖"
+                },
+                "status": "CLAIMED",
+                "trust_grade": "A",
+                "source": "制造商结构化声明（GS1 Synkka）"
+              }
+            ],
+            "data_updated_at": "2026-10-05T10:00:00+02:00",
+            "notes": [
+              "无乳糖 ≠ 无奶：含牛奶蛋白，牛奶过敏者不能用"
+            ]
+          },
+          "trust": {
+            "evidence": "HIGH",
+            "match": "HIGH",
+            "fulfilment": "MEDIUM",
+            "compliance": "HIGH",
+            "overall": "MEDIUM",
+            "how_to_improve": "这款没有历史配送记录；选 cand_3 履约一项会是高"
+          },
+          "alternatives": [
+            {
+              "candidate_id": "cand_2",
+              "tradeoff": "便宜 €34，但要收 1000 盒",
+              "tier": "NONE"
+            }
+          ],
+          "tips": [
+            {
+              "kind": "STORAGE",
+              "text": "冷藏 2–6 °C"
+            },
+            {
+              "kind": "COLD_STORAGE_SPACE",
+              "text": "50 箱约占 1.1 m³ 冷藏空间"
+            },
+            {
+              "kind": "RELIABILITY",
+              "text": "这款商品没有配送记录，履约把握按“未知”处理"
+            },
+            {
+              "kind": "QUOTE_TIMER",
+              "text": "选中后报价 15 分钟内有效"
+            }
+          ]
+        },
+        "violations": [],
+        "explanation": "10 升大包装，搬运最省事，符合“优先大包装”的偏好；价格在自动额度内。"
+      },
+      {
+        "id": "cand_2",
+        "rank": 2,
+        "badge": "CHEAPEST",
+        "selectable": true,
+        "lines": [
+          {
+            "product_id": "464306",
+            "name": "Valio Hyvä suomalainen Arki® Eila® 1 l lactose free",
+            "brand": "Valio",
+            "sales_unit": "ST",
+            "sales_units": 1000.0,
+            "qty_covered": {
+              "value": 1000.0,
+              "unit": "L"
+            },
+            "overbuy": null,
+            "conversion_source": "UNIT_CONVERSIONS",
+            "unit_price_cents": 85,
+            "line_net_cents": 85000,
+            "vat_rate": 0.135,
+            "deposit_cents": 0,
+            "available_on_date": "YES",
+            "deliverable_sales_units": null,
+            "substitution_tier": "NONE",
+            "substitutes_for": null
+          }
+        ],
+        "totals": {
+          "net_cents": 85000,
+          "vat_cents": 11475,
+          "deposit_cents": 0,
+          "gross_cents": 96475
+        },
+        "delivery_date": "2026-11-16",
+        "reliability_level": "HIGH",
+        "outcome_preview": "AUTO",
+        "outcome_reasons": [
+          "€964.75，在自动额度以内"
+        ],
+        "cards": {
+          "allergen": {
+            "rows": [
+              {
+                "product_id": "464306",
+                "requirement": {
+                  "kind": "CLAIM",
+                  "code": "FREE_FROM_LACTOSE",
+                  "label": "无乳糖"
+                },
+                "status": "CLAIMED",
+                "trust_grade": "A",
+                "source": "制造商结构化声明（GS1 Synkka）"
+              }
+            ],
+            "data_updated_at": "2026-10-05T10:00:00+02:00",
+            "notes": [
+              "无乳糖 ≠ 无奶：含牛奶蛋白，牛奶过敏者不能用"
+            ]
+          },
+          "trust": {
+            "evidence": "HIGH",
+            "match": "HIGH",
+            "fulfilment": "HIGH",
+            "compliance": "HIGH",
+            "overall": "HIGH",
+            "how_to_improve": null
+          },
+          "alternatives": [],
+          "tips": [
+            {
+              "kind": "LABEL",
+              "text": "芬兰产"
+            }
+          ]
+        },
+        "violations": [],
+        "explanation": "总价最低，历史配送记录良好；1 升小包装，需要拆箱的量比较大。"
+      }
+    ],
+    "protocol_diff": null,
+    "disclosure_preview": [],
+    "agent_activity": null,
+    "suggested_action": "APPROVE",
+    "suggested_reason": "超出幅度小，履约把握最高"
+  },
+  {
+    "id": "apr_9",
+    "kind": "VALIO",
+    "subject": "DATA_ACCESS",
+    "status": "PENDING",
+    "created_at": "2026-11-14T10:00:00+02:00",
+    "title": "agt_rogue 请求精确库存",
+    "reasons": [
+      "请求的字段属于 L2（精确库存），超出协议范围",
+      "过去 10 分钟用 6 种不同数量探测同一商品"
+    ],
+    "reason_codes": [
+      "OUT_OF_SCOPE",
+      "PROBE_PATTERN"
+    ],
+    "risk_tags": [
+      {
+        "kind": "DATA",
+        "level": "HIGH",
+        "text": "会披露 L2 字段：仓库库存数量"
+      },
+      {
+        "kind": "BEHAVIOUR",
+        "level": "HIGH",
+        "text": "疑似二分法探测库存"
+      }
+    ],
+    "request": null,
+    "raw_text": null,
+    "quote": null,
+    "candidate": null,
+    "alternatives": [],
+    "protocol_diff": null,
+    "disclosure_preview": [
+      {
+        "field": "stock.quantity",
+        "sensitivity": "L2"
+      }
+    ],
+    "agent_activity": {
+      "agent_id": "agt_rogue",
+      "name": "Unknown Procurement Bot",
+      "requests_24h": 212,
+      "blocked_24h": 47,
+      "probe_alerts_24h": 3
+    },
+    "suggested_action": "REJECT",
+    "suggested_reason": "L2 数据，且行为符合探测特征"
+  }
+]

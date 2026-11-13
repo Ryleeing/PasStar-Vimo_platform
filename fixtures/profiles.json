@@ -1,0 +1,36 @@
+[
+  {
+    "id": "prof_banquet",
+    "buyer_id": "buy_hotel",
+    "body": {
+      "name": "酒店宴会",
+      "hard_exclusions": {
+        "brands": [
+          "Arla"
+        ],
+        "vendors": [],
+        "product_ids": [],
+        "requirements": []
+      },
+      "soft_preferences": {
+        "labels": [],
+        "countries": [
+          "fi"
+        ],
+        "prefer_large_packs": true
+      },
+      "defaults": {
+        "delivery_address": "Hotel Helsinki Central, loading dock",
+        "lead_days": 2,
+        "substitution": "SAME_CATEGORY"
+      },
+      "weights": {
+        "price": 0.3,
+        "fulfilment": 0.5,
+        "carbon": 0.1,
+        "local": 0.1
+      }
+    },
+    "updated_at": "2026-11-14T10:00:00+02:00"
+  }
+]

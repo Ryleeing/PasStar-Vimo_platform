@@ -1,0 +1,52 @@
+{
+  "quote": {
+    "id": "quo_1",
+    "request_id": "req_1",
+    "candidate_id": "cand_1",
+    "protocol_id": "prot_hotel_v1",
+    "lines": [
+      {
+        "product_id": "463038",
+        "name": "Valio Eila® 10 l novobox lactose free",
+        "brand": "Valio",
+        "sales_unit": "KI",
+        "sales_units": 50.0,
+        "qty_covered": {
+          "value": 1000.0,
+          "unit": "L"
+        },
+        "overbuy": null,
+        "conversion_source": "UNIT_CONVERSIONS",
+        "unit_price_cents": 1760,
+        "line_net_cents": 88000,
+        "vat_rate": 0.135,
+        "deposit_cents": 0,
+        "available_on_date": "YES",
+        "deliverable_sales_units": null,
+        "substitution_tier": "NONE",
+        "substitutes_for": null
+      }
+    ],
+    "totals": {
+      "net_cents": 88000,
+      "vat_cents": 11880,
+      "deposit_cents": 0,
+      "gross_cents": 99880
+    },
+    "delivery_date": "2026-11-16",
+    "valid_until": "2026-11-14T10:15:00+02:00",
+    "status": "VALID",
+    "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6InZhbGlvLTEifQ.mock.mock"
+  },
+  "gate": {
+    "outcome": "AUTO",
+    "rules_hit": [
+      {
+        "rule_id": "R-SPEND-AUTO",
+        "description": "金额 ≤ 自动额度",
+        "outcome": "AUTO"
+      }
+    ],
+    "summary": "在自动额度内，所有硬性要求都有明确声明"
+  }
+}

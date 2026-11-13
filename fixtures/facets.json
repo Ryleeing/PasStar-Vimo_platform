@@ -1,0 +1,67 @@
+{
+  "categories": [
+    {
+      "code": "10400",
+      "label": "牛奶 / Milk"
+    },
+    {
+      "code": "10401",
+      "label": "奶油 / Cream"
+    },
+    {
+      "code": "10430",
+      "label": "夸克 / Quark"
+    }
+  ],
+  "claims": [
+    {
+      "code": "FREE_FROM_LACTOSE",
+      "label": "无乳糖"
+    },
+    {
+      "code": "FREE_FROM_GLUTEN",
+      "label": "无麸质"
+    },
+    {
+      "code": "VEGAN",
+      "label": "纯素"
+    },
+    {
+      "code": "LOW_FAT",
+      "label": "低脂"
+    }
+  ],
+  "allergens": [
+    {
+      "code": "AN",
+      "label": "坚果"
+    },
+    {
+      "code": "AP",
+      "label": "花生"
+    },
+    {
+      "code": "AM",
+      "label": "牛奶"
+    },
+    {
+      "code": "AE",
+      "label": "鸡蛋"
+    }
+  ],
+  "labels": [
+    {
+      "code": "EU_ORGANIC_FARMING",
+      "label": "欧盟有机"
+    },
+    {
+      "code": "GOODS_FROM_FINLAND_BLUE_SWAN",
+      "label": "芬兰产（蓝天鹅）"
+    }
+  ],
+  "units": [
+    "L",
+    "kg",
+    "pcs"
+  ]
+}

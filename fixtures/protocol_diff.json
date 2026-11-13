@@ -1,0 +1,30 @@
+{
+  "tightened": [
+    {
+      "field": "auto_approve_limit_cents",
+      "before": 100000,
+      "after": 80000
+    }
+  ],
+  "expanded": [
+    {
+      "field": "allowed_categories",
+      "before": [
+        "10400"
+      ],
+      "after": [
+        "10400",
+        "22540"
+      ]
+    }
+  ],
+  "forbidden": [
+    {
+      "field": "valio_scope.prices",
+      "before": "OWN_ONLY",
+      "after": "ALL_CUSTOMERS"
+    }
+  ],
+  "result_status": "PENDING_BUYER_SIGNATURE",
+  "approval_id": "apr_prot_1"
+}

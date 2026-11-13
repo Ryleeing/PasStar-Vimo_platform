@@ -1,0 +1,35 @@
+[
+  {
+    "id": "463038",
+    "name": "Valio Eila® semi skimmed milk drink 10 l novobox lactose free",
+    "brand": "Valio",
+    "category": "10400",
+    "sales_unit": "KI",
+    "qty_per_sales_unit": 20.0,
+    "qty_unit": "L",
+    "claims": [
+      "FREE_FROM_LACTOSE",
+      "LOW_FAT",
+      "VEGETARIAN"
+    ],
+    "labels": [],
+    "allergens": [
+      {
+        "code": "AM",
+        "label": "牛奶",
+        "status": "CONTAINS",
+        "trust_grade": "A"
+      },
+      {
+        "code": "AN",
+        "label": "坚果",
+        "status": "UNDECLARED",
+        "trust_grade": "D"
+      }
+    ],
+    "country": "fi",
+    "has_manufacturer_data": true,
+    "data_updated_at": "2026-10-05T10:00:00+02:00",
+    "flags": []
+  }
+]

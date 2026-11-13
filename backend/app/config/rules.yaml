@@ -1,0 +1,31 @@
+# 闸门规则（BE1）。自上而下匹配，结果取最严格的一条：REJECT > VALIO_REVIEW > BUYER_APPROVAL > AUTO
+- id: R-SPEND-MAX
+  when: gross_cents > max_cents
+  outcome: REJECT
+- id: R-DELIVERY-NONE
+  when: any_line_available == "NO" and no_partial
+  outcome: REJECT
+- id: R-DELIVERY-PARTIAL
+  when: any_line_available == "PARTIAL"
+  outcome: BUYER_APPROVAL
+- id: R-SPEND-APPROVAL
+  when: gross_cents > auto_limit_cents
+  outcome: BUYER_APPROVAL
+- id: R-DATA-UNVERIFIED
+  when: any_requirement_unverified
+  outcome: BUYER_APPROVAL
+- id: R-QTY-INEXACT
+  when: any_conversion_unknown
+  outcome: BUYER_APPROVAL
+- id: R-SUB-CROSS
+  when: any_tier == "CROSS_CATEGORY"
+  outcome: BUYER_APPROVAL
+- id: R-SUB-SAME
+  when: any_tier == "SAME_CATEGORY"
+  outcome: protocol.substitution.same_category   # AUTO 或 APPROVAL
+- id: R-OUT-OF-API
+  when: needs_custom_quote
+  outcome: VALIO_REVIEW
+- id: R-SPEND-AUTO
+  when: true
+  outcome: AUTO

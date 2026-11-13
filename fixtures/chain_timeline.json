@@ -1,0 +1,64 @@
+{
+  "request_id": "req_1",
+  "attempt": 1,
+  "events": [
+    {
+      "at": "2026-11-14T10:00:00+02:00",
+      "title": "理解需求",
+      "logic": "从你的原话里提取品类、属性、数量和日期",
+      "evidence": [
+        {
+          "source": "BUYER_INPUT",
+          "detail": "周一前要 1000 升无乳糖奶",
+          "trust_grade": null
+        },
+        {
+          "source": "PROFILE",
+          "detail": "酒店宴会：优先大包装，排除 Arla",
+          "trust_grade": null
+        }
+      ]
+    },
+    {
+      "at": "2026-11-14T10:00:01+02:00",
+      "title": "在商品目录里筛选",
+      "logic": "只用制造商的结构化声明，不靠商品名称判断",
+      "evidence": [
+        {
+          "source": "CATALOG",
+          "detail": "品类 10400 + FREE_FROM_LACTOSE",
+          "trust_grade": "A"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-14T10:00:02+02:00",
+      "title": "查价格和库存并排序",
+      "logic": "只查询这 8 个候选，然后按 profile 的权重排序",
+      "evidence": [
+        {
+          "source": "VALIO_PRICE_API",
+          "detail": "8 个商品的客户价格",
+          "trust_grade": null
+        },
+        {
+          "source": "VALIO_STOCK_API",
+          "detail": "11 月 16 日能否交付",
+          "trust_grade": null
+        }
+      ]
+    },
+    {
+      "at": "2026-11-14T10:00:03+02:00",
+      "title": "按协议判断",
+      "logic": "逐条比对授权协议",
+      "evidence": [
+        {
+          "source": "RULE",
+          "detail": "R-SPEND-AUTO：金额 ≤ 自动额度",
+          "trust_grade": null
+        }
+      ]
+    }
+  ]
+}

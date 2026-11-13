@@ -1,0 +1,37 @@
+{
+  "structured": {
+    "category": "10400",
+    "category_label": "牛奶",
+    "requirements": [
+      {
+        "kind": "CLAIM",
+        "code": "FREE_FROM_LACTOSE",
+        "label": "无乳糖"
+      }
+    ],
+    "quantity": {
+      "value": 1000.0,
+      "unit": "L"
+    },
+    "delivery_date": "2026-11-16",
+    "budget_cents": null,
+    "substitution": "SAME_CATEGORY",
+    "notes": null
+  },
+  "ambiguities": [
+    {
+      "field": "requirements",
+      "question": "是全脂、低脂还是脱脂？",
+      "options": [
+        "不限",
+        "全脂",
+        "低脂",
+        "脱脂"
+      ]
+    }
+  ],
+  "profile_applied": [
+    "默认接受同品类替代",
+    "优先大包装"
+  ]
+}

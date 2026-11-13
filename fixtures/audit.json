@@ -1,0 +1,47 @@
+[
+  {
+    "seq": 1,
+    "at": "2026-11-14T10:00:00+02:00",
+    "request_id": "req_1",
+    "actor": "agent:agt_hotel",
+    "event": "REQUEST_CREATED",
+    "summary": "收到需求：1000 升无乳糖牛奶，周一前",
+    "disclosed_fields": [],
+    "payload": {},
+    "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+  },
+  {
+    "seq": 2,
+    "at": "2026-11-14T10:00:02+02:00",
+    "request_id": "req_1",
+    "actor": "system",
+    "event": "CANDIDATES_DISCLOSED",
+    "summary": "向 agt_hotel 披露 8 个候选的价格（L1）和能否交付（L1）",
+    "disclosed_fields": [
+      {
+        "field": "price.net",
+        "sensitivity": "L1"
+      },
+      {
+        "field": "availability.deliverable",
+        "sensitivity": "L1"
+      }
+    ],
+    "payload": {},
+    "prev_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+  },
+  {
+    "seq": 3,
+    "at": "2026-11-14T10:00:05+02:00",
+    "request_id": "req_1",
+    "actor": "system",
+    "event": "ORDER_PLACED",
+    "summary": "规则 R-SPEND-AUTO 放行，订单 ord_1 已下单",
+    "disclosed_fields": [],
+    "payload": {},
+    "prev_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+    "hash": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"
+  }
+]
