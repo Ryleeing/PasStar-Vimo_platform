@@ -1,31 +1,36 @@
-# 闸门规则（BE1）。自上而下匹配，结果取最严格的一条：REJECT > VALIO_REVIEW > BUYER_APPROVAL > AUTO
+# 闸门规则（BE1）。所有命中的规则都列进 rules_hit；最终结果取最严格的一条：
+# REJECT > VALIO_REVIEW > BUYER_APPROVAL > AUTO
+# 违反硬性要求的商品在第②节点就进了标红列表，不会走到这里。
 - id: R-SPEND-MAX
-  when: gross_cents > max_cents
+  when: gross_cents > max_order_cents
   outcome: REJECT
 - id: R-DELIVERY-NONE
-  when: any_line_available == "NO" and no_partial
+  when: all_lines_available == "NO"
   outcome: REJECT
+- id: R-OUT-OF-API
+  when: needs_custom_quote          # 定制报价、目录外商品、超大量
+  outcome: VALIO_REVIEW
 - id: R-DELIVERY-PARTIAL
   when: any_line_available == "PARTIAL"
   outcome: BUYER_APPROVAL
 - id: R-SPEND-APPROVAL
-  when: gross_cents > auto_limit_cents
+  when: gross_cents > auto_approve_limit_cents
   outcome: BUYER_APPROVAL
 - id: R-DATA-UNVERIFIED
-  when: any_requirement_unverified
-  outcome: BUYER_APPROVAL
+  when: any_requirement_unverified  # 可信等级 C/D，或名称与声明冲突
+  outcome: protocol.unknown_data_policy   # REQUIRE_APPROVAL → BUYER_APPROVAL；REJECT → REJECT
 - id: R-QTY-INEXACT
   when: any_conversion_unknown
   outcome: BUYER_APPROVAL
 - id: R-SUB-CROSS
   when: any_tier == "CROSS_CATEGORY"
-  outcome: BUYER_APPROVAL
+  outcome: protocol.substitution.cross_category   # AUTO / APPROVAL / FORBIDDEN(→ REJECT)
 - id: R-SUB-SAME
   when: any_tier == "SAME_CATEGORY"
-  outcome: protocol.substitution.same_category   # AUTO 或 APPROVAL
-- id: R-OUT-OF-API
-  when: needs_custom_quote
-  outcome: VALIO_REVIEW
+  outcome: protocol.substitution.same_category
+- id: R-SUB-OFFICIAL
+  when: any_tier == "OFFICIAL"
+  outcome: protocol.substitution.official
 - id: R-SPEND-AUTO
   when: true
   outcome: AUTO

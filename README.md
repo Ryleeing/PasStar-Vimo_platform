@@ -25,7 +25,7 @@ uvicorn app.main:app --reload
 - `backend/app/orchestrator/` BE3 编排与 AI
 - `backend/app/config/`     rules.yaml（闸门规则）、field_policy.yaml（字段敏感等级）
 - `agent/`  买方 agent、独立脚本、不守规矩的 agent（BE3）
-- `tests/`  测试 runner（BE3）
+- `tests/`  测试 runner（BE3）；`test_protocol_rules.py` 协议修改判定的测试（`PYTHONPATH=backend pytest tests`）
 - `frontend/` 前端（FE）
 - `openapi.json`、`fixtures/` 由 scripts/export_contract.py 生成
 
