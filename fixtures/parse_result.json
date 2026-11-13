@@ -1,12 +1,12 @@
 {
   "structured": {
     "category": "10400",
-    "category_label": "牛奶",
+    "category_label": "Milk",
     "requirements": [
       {
         "kind": "CLAIM",
         "code": "FREE_FROM_LACTOSE",
-        "label": "无乳糖"
+        "label": "Lactose-free"
       }
     ],
     "quantity": {
@@ -21,17 +21,17 @@
   "ambiguities": [
     {
       "field": "requirements",
-      "question": "是全脂、低脂还是脱脂？",
+      "question": "Whole, semi-skimmed or skimmed?",
       "options": [
-        "不限",
-        "全脂",
-        "低脂",
-        "脱脂"
+        "Any",
+        "Whole",
+        "Semi-skimmed",
+        "Skimmed"
       ]
     }
   ],
   "profile_applied": [
-    "默认接受同品类替代",
-    "优先大包装"
+    "Same-category substitutes allowed by default",
+    "Prefer large packs"
   ]
 }

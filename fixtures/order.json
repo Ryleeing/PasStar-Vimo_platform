@@ -8,11 +8,11 @@
     "rules_hit": [
       {
         "rule_id": "R-SPEND-AUTO",
-        "description": "金额 ≤ 自动额度",
+        "description": "Total ≤ auto-approve limit",
         "outcome": "AUTO"
       }
     ],
-    "summary": "在自动额度内，所有硬性要求都有明确声明"
+    "summary": "Within the auto-approve limit; all hard requirements explicitly declared"
   },
   "approval_id": null,
   "requote_reason": null,

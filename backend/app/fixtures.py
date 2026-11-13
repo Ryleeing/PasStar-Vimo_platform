@@ -1,5 +1,5 @@
-"""假数据：M1 阶段所有接口都先返回这些对象。
-商品编码和单位来自真实目录；价格是编的，等接上 Valio API 后替换。"""
+"""Mock data (M1): every endpoint returns these objects first.
+Product IDs and units are real; prices are made up until the Valio API is connected."""
 from datetime import date, datetime, timedelta, timezone
 
 from .schemas import *  # noqa: F401,F403
@@ -8,8 +8,8 @@ TZ = timezone(timedelta(hours=2))
 NOW = datetime(2026, 11, 14, 10, 0, 0, tzinfo=TZ)
 MONDAY = date(2026, 11, 16)
 
-LACTOSE_FREE = Requirement(kind="CLAIM", code="FREE_FROM_LACTOSE", label="无乳糖")
-NUT_FREE = Requirement(kind="ALLERGEN_FREE", code="AN", label="不含坚果")
+LACTOSE_FREE = Requirement(kind="CLAIM", code="FREE_FROM_LACTOSE", label="Lactose-free")
+NUT_FREE = Requirement(kind="ALLERGEN_FREE", code="AN", label="Nut-free")
 
 PROTOCOL = Protocol(
     id="prot_hotel_v1", version=1, status="ACTIVE",
@@ -28,7 +28,7 @@ PROTOCOL = Protocol(
 
 PROTOCOL_DRAFT = Protocol(
     id="prot_hotel_v2", version=2, status="DRAFT", body=PROTOCOL.body,
-    open_questions=[OpenQuestion(field="hard_requirements", question="是否需要排除坚果？", suggested=False)],
+    open_questions=[OpenQuestion(field="hard_requirements", question="Should nuts be excluded?", suggested=False)],
     supersedes="prot_hotel_v1", created_at=NOW,
 )
 
@@ -42,7 +42,7 @@ PROTOCOL_DIFF = ProtocolDiff(
 PROFILE = Profile(
     id="prof_banquet", buyer_id="buy_hotel", updated_at=NOW,
     body=ProfileBody(
-        name="酒店宴会",
+        name="Hotel banquets",
         hard_exclusions=HardExclusions(brands=["Arla"]),
         soft_preferences=SoftPreferences(countries=["fi"], prefer_large_packs=True),
         defaults=ProfileDefaults(delivery_address="Hotel Helsinki Central, loading dock", lead_days=2),
@@ -51,42 +51,42 @@ PROFILE = Profile(
 )
 
 FACETS = Facets(
-    categories=[FacetItem(code="10400", label="牛奶 / Milk"), FacetItem(code="10401", label="奶油 / Cream"),
-                FacetItem(code="10430", label="夸克 / Quark")],
-    claims=[FacetItem(code="FREE_FROM_LACTOSE", label="无乳糖"), FacetItem(code="FREE_FROM_GLUTEN", label="无麸质"),
-            FacetItem(code="VEGAN", label="纯素"), FacetItem(code="LOW_FAT", label="低脂")],
-    allergens=[FacetItem(code="AN", label="坚果"), FacetItem(code="AP", label="花生"),
-               FacetItem(code="AM", label="牛奶"), FacetItem(code="AE", label="鸡蛋")],
-    labels=[FacetItem(code="EU_ORGANIC_FARMING", label="欧盟有机"), FacetItem(code="GOODS_FROM_FINLAND_BLUE_SWAN", label="芬兰产（蓝天鹅）")],
+    categories=[FacetItem(code="10400", label="Milk"), FacetItem(code="10401", label="Cream"),
+                FacetItem(code="10430", label="Quark")],
+    claims=[FacetItem(code="FREE_FROM_LACTOSE", label="Lactose-free"), FacetItem(code="FREE_FROM_GLUTEN", label="Gluten-free"),
+            FacetItem(code="VEGAN", label="Vegan"), FacetItem(code="LOW_FAT", label="Low fat")],
+    allergens=[FacetItem(code="AN", label="Tree nuts"), FacetItem(code="AP", label="Peanuts"),
+               FacetItem(code="AM", label="Milk"), FacetItem(code="AE", label="Eggs")],
+    labels=[FacetItem(code="EU_ORGANIC_FARMING", label="EU organic"), FacetItem(code="GOODS_FROM_FINLAND_BLUE_SWAN", label="Made in Finland (Blue Swan)")],
 )
 
 PRODUCT = ProductPublic(
     id="463038", name="Valio Eila® semi skimmed milk drink 10 l novobox lactose free", brand="Valio",
     category="10400", sales_unit="KI", qty_per_sales_unit=20, qty_unit="L",
     claims=["FREE_FROM_LACTOSE", "LOW_FAT", "VEGETARIAN"], labels=[], country="fi",
-    allergens=[AllergenStatus(code="AM", label="牛奶", status="CONTAINS", trust_grade="A"),
-               AllergenStatus(code="AN", label="坚果", status="UNDECLARED", trust_grade="D")],
+    allergens=[AllergenStatus(code="AM", label="Milk", status="CONTAINS", trust_grade="A"),
+               AllergenStatus(code="AN", label="Tree nuts", status="UNDECLARED", trust_grade="D")],
     has_manufacturer_data=True, data_updated_at=NOW - timedelta(days=40),
 )
 
 STRUCTURED = StructuredRequest(
-    category="10400", category_label="牛奶", requirements=[LACTOSE_FREE],
+    category="10400", category_label="Milk", requirements=[LACTOSE_FREE],
     quantity=Quantity(value=1000, unit="L"), delivery_date=MONDAY, substitution="SAME_CATEGORY",
 )
 
 PARSE_RESULT = ParseResult(
     structured=STRUCTURED,
-    ambiguities=[Ambiguity(field="requirements", question="是全脂、低脂还是脱脂？", options=["不限", "全脂", "低脂", "脱脂"])],
-    profile_applied=["默认接受同品类替代", "优先大包装"],
+    ambiguities=[Ambiguity(field="requirements", question="Whole, semi-skimmed or skimmed?", options=["Any", "Whole", "Semi-skimmed", "Skimmed"])],
+    profile_applied=["Same-category substitutes allowed by default", "Prefer large packs"],
 )
 
 
 def _allergen_card(pid: str, nut_status: str = "UNDECLARED") -> AllergenCard:
     return AllergenCard(
         rows=[AllergenRow(product_id=pid, requirement=LACTOSE_FREE, status="CLAIMED", trust_grade="A",
-                          source="制造商结构化声明（GS1 Synkka）")],
+                          source="Manufacturer structured claim (GS1 Synkka)")],
         data_updated_at=NOW - timedelta(days=40),
-        notes=["无乳糖 ≠ 无奶：含牛奶蛋白，牛奶过敏者不能用"],
+        notes=["Lactose-free is not milk-free: contains milk protein, not suitable for milk allergy"],
     )
 
 
@@ -98,18 +98,18 @@ CAND_1 = Candidate(
                          vat_rate=0.135, available_on_date="YES")],
     totals=Totals(net_cents=88_000, vat_cents=11_880, deposit_cents=0, gross_cents=99_880),
     delivery_date=MONDAY, reliability_level="UNKNOWN", outcome_preview="AUTO",
-    outcome_reasons=["€998.80，在自动额度 €1,000 以内", "无乳糖有制造商结构化声明"],
+    outcome_reasons=["€998.80, within the auto-approve limit of €1,000", "Lactose-free backed by a manufacturer structured claim"],
     cards=Cards(
         allergen=_allergen_card("463038"),
         trust=TrustScore(evidence="HIGH", match="HIGH", fulfilment="MEDIUM", compliance="HIGH", overall="MEDIUM",
-                         how_to_improve="这款没有历史配送记录；选 cand_3 履约一项会是高"),
-        alternatives=[AlternativeRef(candidate_id="cand_2", tradeoff="便宜 €34，但要收 1000 盒", tier="NONE")],
-        tips=[Tip(kind="STORAGE", text="冷藏 2–6 °C"),
-              Tip(kind="COLD_STORAGE_SPACE", text="50 箱约占 1.1 m³ 冷藏空间"),
-              Tip(kind="RELIABILITY", text="这款商品没有配送记录，履约把握按“未知”处理"),
-              Tip(kind="QUOTE_TIMER", text="选中后报价 15 分钟内有效")],
+                         how_to_improve="No delivery history for this product; cand_3 scores high on fulfilment"),
+        alternatives=[AlternativeRef(candidate_id="cand_2", tradeoff="€34 cheaper, but 1,000 cartons to receive", tier="NONE")],
+        tips=[Tip(kind="STORAGE", text="Keep chilled at 2–6 °C"),
+              Tip(kind="COLD_STORAGE_SPACE", text="50 cases take about 1.1 m³ of cold storage"),
+              Tip(kind="RELIABILITY", text="No delivery history; fulfilment treated as unknown"),
+              Tip(kind="QUOTE_TIMER", text="Quote is valid for 15 minutes after you select it")],
     ),
-    explanation="10 升大包装，搬运最省事，符合“优先大包装”的偏好；价格在自动额度内。",
+    explanation="10 L bag-in-box packs are the easiest to handle and match your large-pack preference; within the auto-approve limit.",
 )
 
 CAND_2 = Candidate(
@@ -120,11 +120,11 @@ CAND_2 = Candidate(
                          vat_rate=0.135, available_on_date="YES")],
     totals=Totals(net_cents=85_000, vat_cents=11_475, deposit_cents=0, gross_cents=96_475),
     delivery_date=MONDAY, reliability_level="HIGH", outcome_preview="AUTO",
-    outcome_reasons=["€964.75，在自动额度以内"],
+    outcome_reasons=["€964.75, within the auto-approve limit"],
     cards=Cards(allergen=_allergen_card("464306"),
                 trust=TrustScore(evidence="HIGH", match="HIGH", fulfilment="HIGH", compliance="HIGH", overall="HIGH"),
-                tips=[Tip(kind="LABEL", text="芬兰产")]),
-    explanation="总价最低，历史配送记录良好；1 升小包装，需要拆箱的量比较大。",
+                tips=[Tip(kind="LABEL", text="Made in Finland")]),
+    explanation="Lowest total and a good delivery record; 1 L cartons mean more unpacking.",
 )
 
 CAND_3 = Candidate(
@@ -135,12 +135,12 @@ CAND_3 = Candidate(
                          vat_rate=0.135, available_on_date="YES")],
     totals=Totals(net_cents=95_000, vat_cents=12_825, deposit_cents=0, gross_cents=107_825),
     delivery_date=MONDAY, reliability_level="HIGH", outcome_preview="BUYER_APPROVAL",
-    outcome_reasons=["€1,078.25，超过自动额度 €1,000"],
+    outcome_reasons=["€1,078.25, above the auto-approve limit of €1,000"],
     cards=Cards(allergen=_allergen_card("464201"),
                 trust=TrustScore(evidence="HIGH", match="HIGH", fulfilment="HIGH", compliance="MEDIUM", overall="MEDIUM",
-                                 how_to_improve="超过自动额度，需要经理审批"),
-                tips=[Tip(kind="STORAGE", text="UHT，常温保存")]),
-    explanation="UHT 常温保存、配送记录最好；但总价超过自动额度，需要审批。",
+                                 how_to_improve="Above the auto-approve limit; needs manager approval"),
+                tips=[Tip(kind="STORAGE", text="UHT, store at room temperature")]),
+    explanation="UHT keeps at room temperature and has the best delivery record; total is above the auto-approve limit, so it needs approval.",
 )
 
 BLOCKED_1 = Candidate(
@@ -151,8 +151,8 @@ BLOCKED_1 = Candidate(
     delivery_date=MONDAY, reliability_level="UNKNOWN", outcome_preview="REJECT",
     cards=Cards(allergen=_allergen_card("464179"),
                 trust=TrustScore(evidence="HIGH", match="HIGH", fulfilment="MEDIUM", compliance="LOW", overall="LOW")),
-    violations=[Violation(rule="PROFILE_EXCLUDED_BRAND", detail="profile“酒店宴会”排除了品牌 Arla", product_id="464179")],
-    explanation="符合无乳糖要求，但你在 profile 里排除了这个品牌。",
+    violations=[Violation(rule="PROFILE_EXCLUDED_BRAND", detail="Brand Arla is excluded in profile 'Hotel banquets'", product_id="464179")],
+    explanation="Meets the lactose-free requirement, but you excluded this brand in your profile.",
 )
 
 
@@ -160,28 +160,28 @@ def _chain(attempt: int = 1) -> list[ChainNode]:
     return [
         ChainNode(node=1, name="UNDERSTAND", attempt=attempt, status="OK", can_reject=True, retries_left=3,
                   reject_options=["WRONG_QUANTITY", "WRONG_DATE", "WRONG_ATTRIBUTES", "WRONG_CATEGORY", "OTHER"],
-                  summary="你要的是：牛奶，无乳糖，1000 升，11 月 16 日（周一）前送到；已套用 profile“酒店宴会”。",
-                  events=[ChainEvent(at=NOW, title="理解需求", logic="从你的原话里提取品类、属性、数量和日期",
-                                     evidence=[EvidenceRef(source="BUYER_INPUT", detail="周一前要 1000 升无乳糖奶"),
-                                               EvidenceRef(source="PROFILE", detail="酒店宴会：优先大包装，排除 Arla")])]),
+                  summary="You need: milk, lactose-free, 1,000 L, delivered by Monday 16 Nov; profile 'Hotel banquets' applied.",
+                  events=[ChainEvent(at=NOW, title="Understood the request", logic="Extracted category, attributes, quantity and date from your words",
+                                     evidence=[EvidenceRef(source="BUYER_INPUT", detail="1000 litres of lactose-free milk by Monday"),
+                                               EvidenceRef(source="PROFILE", detail="Hotel banquets: prefer large packs, exclude Arla")])]),
         ChainNode(node=2, name="FILTER", attempt=attempt, status="OK", can_reject=True, retries_left=3,
                   reject_options=["TOO_STRICT", "TOO_LOOSE", "ALLOW_BRAND", "EXCLUDE_PRODUCT", "OTHER"],
-                  summary="找到 35 个带无乳糖声明的牛奶；排除 27 个（不是液态奶、你不要的品牌）；保留 8 个。",
-                  events=[ChainEvent(at=NOW + timedelta(seconds=1), title="在商品目录里筛选",
-                                     logic="只用制造商的结构化声明，不靠商品名称判断",
-                                     evidence=[EvidenceRef(source="CATALOG", detail="品类 10400 + FREE_FROM_LACTOSE", trust_grade="A")])]),
+                  summary="Found 35 milks with a lactose-free claim; excluded 27 (not liquid milk, excluded brand); kept 8.",
+                  events=[ChainEvent(at=NOW + timedelta(seconds=1), title="Filtered the catalogue",
+                                     logic="Used manufacturer structured claims only, not product names",
+                                     evidence=[EvidenceRef(source="CATALOG", detail="Category 10400 + FREE_FROM_LACTOSE", trust_grade="A")])]),
         ChainNode(node=3, name="RANK", attempt=attempt, status="OK", can_reject=True, retries_left=3,
                   reject_options=["WRONG_PRIORITY", "EXCLUDE_OPTION", "PREFER_SINGLE_SKU", "OTHER"],
-                  summary="按你的偏好，履约最重要、价格其次；第 1 名是 10 升装，共 50 箱。",
-                  events=[ChainEvent(at=NOW + timedelta(seconds=2), title="查价格和库存并排序",
-                                     logic="只查询这 8 个候选，然后按 profile 的权重排序",
-                                     evidence=[EvidenceRef(source="VALIO_PRICE_API", detail="8 个商品的客户价格"),
-                                               EvidenceRef(source="VALIO_STOCK_API", detail="11 月 16 日能否交付")])]),
+                  summary="Ranked by your preferences: fulfilment first, then price. #1 is the 10 L pack, 50 cases.",
+                  events=[ChainEvent(at=NOW + timedelta(seconds=2), title="Checked price and stock, then ranked",
+                                     logic="Queried only these 8 candidates, then ranked by profile weights",
+                                     evidence=[EvidenceRef(source="VALIO_PRICE_API", detail="Customer prices for 8 products"),
+                                               EvidenceRef(source="VALIO_STOCK_API", detail="Deliverable on 16 Nov?")])]),
         ChainNode(node=4, name="GATE", attempt=attempt, status="OK", can_reject=True, retries_left=3,
                   reject_options=["SEND_TO_APPROVAL", "PICK_OTHER"],
-                  summary="第 1 名 €998.80，在自动额度 €1,000 以内，所有要求都有明确声明：选它可以自动下单。",
-                  events=[ChainEvent(at=NOW + timedelta(seconds=3), title="按协议判断", logic="逐条比对授权协议",
-                                     evidence=[EvidenceRef(source="RULE", detail="R-SPEND-AUTO：金额 ≤ 自动额度")])]),
+                  summary="#1 is €998.80, within the €1,000 auto-approve limit, and every requirement is explicitly declared: it can be ordered automatically.",
+                  events=[ChainEvent(at=NOW + timedelta(seconds=3), title="Checked against the protocol", logic="Compared rule by rule with the authorization protocol",
+                                     evidence=[EvidenceRef(source="RULE", detail="R-SPEND-AUTO: total ≤ auto-approve limit")])]),
     ]
 
 
@@ -193,10 +193,10 @@ REQUEST_RESULT = RequestResult(
 TIMELINE = ChainTimeline(request_id="req_1", attempt=1,
                          events=[e for n in _chain() for e in n.events])
 
-GATE_AUTO = GateDecision(outcome="AUTO", summary="在自动额度内，所有硬性要求都有明确声明",
-                         rules_hit=[RuleHit(rule_id="R-SPEND-AUTO", description="金额 ≤ 自动额度", outcome="AUTO")])
-GATE_APPROVAL = GateDecision(outcome="BUYER_APPROVAL", summary="超过自动额度，需要采购经理审批",
-                             rules_hit=[RuleHit(rule_id="R-SPEND-APPROVAL", description="自动额度 < 金额 ≤ 预算上限", outcome="BUYER_APPROVAL")])
+GATE_AUTO = GateDecision(outcome="AUTO", summary="Within the auto-approve limit; all hard requirements explicitly declared",
+                         rules_hit=[RuleHit(rule_id="R-SPEND-AUTO", description="Total ≤ auto-approve limit", outcome="AUTO")])
+GATE_APPROVAL = GateDecision(outcome="BUYER_APPROVAL", summary="Above the auto-approve limit; needs procurement manager approval",
+                             rules_hit=[RuleHit(rule_id="R-SPEND-APPROVAL", description="Auto-approve limit < total ≤ order maximum", outcome="BUYER_APPROVAL")])
 
 QUOTE = Quote(id="quo_1", request_id="req_1", candidate_id="cand_1", protocol_id="prot_hotel_v1",
               lines=CAND_1.lines, totals=CAND_1.totals, delivery_date=MONDAY,
@@ -211,38 +211,38 @@ ORDER = Order(id="ord_1", request_id="req_1", quote_id="quo_1", status="PLACED",
 
 APPROVAL_BUYER = ApprovalCard(
     id="apr_1", kind="BUYER", subject="ORDER", status="PENDING", created_at=NOW,
-    title="1000 升无乳糖牛奶，€1,078.25",
-    reasons=["金额 €1,078.25 超过自动额度 €1,000"], reason_codes=["R-SPEND-APPROVAL"],
-    risk_tags=[RiskTag(kind="SPEND", level="MEDIUM", text="超出自动额度 €78.25")],
-    request=STRUCTURED, raw_text="周一前要 1000 升无乳糖奶",
+    title="1,000 L lactose-free milk, €1,078.25",
+    reasons=["Total €1,078.25 is above the auto-approve limit of €1,000"], reason_codes=["R-SPEND-APPROVAL"],
+    risk_tags=[RiskTag(kind="SPEND", level="MEDIUM", text="€78.25 over the auto-approve limit")],
+    request=STRUCTURED, raw_text="1000 litres of lactose-free milk by Monday",
     quote=QUOTE.model_copy(update={"id": "quo_3", "candidate_id": "cand_3", "lines": CAND_3.lines, "totals": CAND_3.totals}),
     candidate=CAND_3, alternatives=[CAND_1, CAND_2],
-    suggested_action="APPROVE", suggested_reason="超出幅度小，履约把握最高",
+    suggested_action="APPROVE", suggested_reason="Small overrun; highest fulfilment confidence",
 )
 
 APPROVAL_VALIO = ApprovalCard(
     id="apr_9", kind="VALIO", subject="DATA_ACCESS", status="PENDING", created_at=NOW,
-    title="agt_rogue 请求精确库存",
-    reasons=["请求的字段属于 L2（精确库存），超出协议范围", "过去 10 分钟用 6 种不同数量探测同一商品"],
+    title="agt_rogue asks for exact stock levels",
+    reasons=["Requested field is L2 (exact stock), outside the protocol scope", "Probed the same product with 6 different quantities in 10 minutes"],
     reason_codes=["OUT_OF_SCOPE", "PROBE_PATTERN"],
-    risk_tags=[RiskTag(kind="DATA", level="HIGH", text="会披露 L2 字段：仓库库存数量"),
-               RiskTag(kind="BEHAVIOUR", level="HIGH", text="疑似二分法探测库存")],
+    risk_tags=[RiskTag(kind="DATA", level="HIGH", text="Would disclose an L2 field: warehouse stock quantity"),
+               RiskTag(kind="BEHAVIOUR", level="HIGH", text="Looks like binary-search probing of stock")],
     disclosure_preview=[FieldDisclosure(field="stock.quantity", sensitivity="L2")],
     agent_activity=AgentActivity(agent_id="agt_rogue", name="Unknown Procurement Bot", requests_24h=212,
                                  blocked_24h=47, probe_alerts_24h=3),
-    suggested_action="REJECT", suggested_reason="L2 数据，且行为符合探测特征",
+    suggested_action="REJECT", suggested_reason="L2 data and the behaviour matches probing",
 )
 
 AUDIT = [
     AuditEntry(seq=1, at=NOW, request_id="req_1", actor="agent:agt_hotel", event="REQUEST_CREATED",
-               summary="收到需求：1000 升无乳糖牛奶，周一前", prev_hash="0" * 64, hash="a1" * 32),
+               summary="Request received: 1,000 L lactose-free milk by Monday", prev_hash="0" * 64, hash="a1" * 32),
     AuditEntry(seq=2, at=NOW + timedelta(seconds=2), request_id="req_1", actor="system", event="CANDIDATES_DISCLOSED",
-               summary="向 agt_hotel 披露 8 个候选的价格（L1）和能否交付（L1）",
+               summary="Disclosed prices (L1) and deliverability (L1) for 8 candidates to agt_hotel",
                disclosed_fields=[FieldDisclosure(field="price.net", sensitivity="L1"),
                                  FieldDisclosure(field="availability.deliverable", sensitivity="L1")],
                prev_hash="a1" * 32, hash="b2" * 32),
     AuditEntry(seq=3, at=NOW + timedelta(seconds=5), request_id="req_1", actor="system", event="ORDER_PLACED",
-               summary="规则 R-SPEND-AUTO 放行，订单 ord_1 已下单", prev_hash="b2" * 32, hash="c3" * 32),
+               summary="Rule R-SPEND-AUTO passed; order ord_1 placed", prev_hash="b2" * 32, hash="c3" * 32),
 ]
 
 AUDIT_VERIFY = AuditVerifyResult(ok=True, entries_checked=3)

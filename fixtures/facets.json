@@ -2,61 +2,61 @@
   "categories": [
     {
       "code": "10400",
-      "label": "牛奶 / Milk"
+      "label": "Milk"
     },
     {
       "code": "10401",
-      "label": "奶油 / Cream"
+      "label": "Cream"
     },
     {
       "code": "10430",
-      "label": "夸克 / Quark"
+      "label": "Quark"
     }
   ],
   "claims": [
     {
       "code": "FREE_FROM_LACTOSE",
-      "label": "无乳糖"
+      "label": "Lactose-free"
     },
     {
       "code": "FREE_FROM_GLUTEN",
-      "label": "无麸质"
+      "label": "Gluten-free"
     },
     {
       "code": "VEGAN",
-      "label": "纯素"
+      "label": "Vegan"
     },
     {
       "code": "LOW_FAT",
-      "label": "低脂"
+      "label": "Low fat"
     }
   ],
   "allergens": [
     {
       "code": "AN",
-      "label": "坚果"
+      "label": "Tree nuts"
     },
     {
       "code": "AP",
-      "label": "花生"
+      "label": "Peanuts"
     },
     {
       "code": "AM",
-      "label": "牛奶"
+      "label": "Milk"
     },
     {
       "code": "AE",
-      "label": "鸡蛋"
+      "label": "Eggs"
     }
   ],
   "labels": [
     {
       "code": "EU_ORGANIC_FARMING",
-      "label": "欧盟有机"
+      "label": "EU organic"
     },
     {
       "code": "GOODS_FROM_FINLAND_BLUE_SWAN",
-      "label": "芬兰产（蓝天鹅）"
+      "label": "Made in Finland (Blue Swan)"
     }
   ],
   "units": [

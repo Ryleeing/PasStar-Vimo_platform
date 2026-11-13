@@ -3,7 +3,7 @@
     "id": "prof_banquet",
     "buyer_id": "buy_hotel",
     "body": {
-      "name": "酒店宴会",
+      "name": "Hotel banquets",
       "hard_exclusions": {
         "brands": [
           "Arla"

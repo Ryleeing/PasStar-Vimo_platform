@@ -19,7 +19,7 @@ calls = {
     "profiles": ("get", "/v1/buyers/buy_hotel/profiles", None),
     "facets": ("get", "/v1/catalog/facets", None),
     "products_search": ("post", "/v1/products/search", {"requirements": []}),
-    "parse_result": ("post", "/v1/requests/parse", {"text": "周一前要 1000 升无乳糖奶"}),
+    "parse_result": ("post", "/v1/requests/parse", {"text": "1000 litres of lactose-free milk by Monday"}),
     "request_result": ("get", "/v1/requests/req_1", None),
     "chain_timeline": ("get", "/v1/requests/req_1/chain", None),
     "select_result": ("post", "/v1/requests/req_1/select", {"candidate_id": "cand_1"}),

@@ -5,7 +5,7 @@
     "request_id": "req_1",
     "actor": "agent:agt_hotel",
     "event": "REQUEST_CREATED",
-    "summary": "收到需求：1000 升无乳糖牛奶，周一前",
+    "summary": "Request received: 1,000 L lactose-free milk by Monday",
     "disclosed_fields": [],
     "payload": {},
     "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -17,7 +17,7 @@
     "request_id": "req_1",
     "actor": "system",
     "event": "CANDIDATES_DISCLOSED",
-    "summary": "向 agt_hotel 披露 8 个候选的价格（L1）和能否交付（L1）",
+    "summary": "Disclosed prices (L1) and deliverability (L1) for 8 candidates to agt_hotel",
     "disclosed_fields": [
       {
         "field": "price.net",
@@ -38,7 +38,7 @@
     "request_id": "req_1",
     "actor": "system",
     "event": "ORDER_PLACED",
-    "summary": "规则 R-SPEND-AUTO 放行，订单 ord_1 已下单",
+    "summary": "Rule R-SPEND-AUTO passed; order ord_1 placed",
     "disclosed_fields": [],
     "payload": {},
     "prev_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",

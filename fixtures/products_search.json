@@ -16,13 +16,13 @@
     "allergens": [
       {
         "code": "AM",
-        "label": "牛奶",
+        "label": "Milk",
         "status": "CONTAINS",
         "trust_grade": "A"
       },
       {
         "code": "AN",
-        "label": "坚果",
+        "label": "Tree nuts",
         "status": "UNDECLARED",
         "trust_grade": "D"
       }

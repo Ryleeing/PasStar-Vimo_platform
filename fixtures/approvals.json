@@ -5,9 +5,9 @@
     "subject": "ORDER",
     "status": "PENDING",
     "created_at": "2026-11-14T10:00:00+02:00",
-    "title": "1000 升无乳糖牛奶，€1,078.25",
+    "title": "1,000 L lactose-free milk, €1,078.25",
     "reasons": [
-      "金额 €1,078.25 超过自动额度 €1,000"
+      "Total €1,078.25 is above the auto-approve limit of €1,000"
     ],
     "reason_codes": [
       "R-SPEND-APPROVAL"
@@ -16,17 +16,17 @@
       {
         "kind": "SPEND",
         "level": "MEDIUM",
-        "text": "超出自动额度 €78.25"
+        "text": "€78.25 over the auto-approve limit"
       }
     ],
     "request": {
       "category": "10400",
-      "category_label": "牛奶",
+      "category_label": "Milk",
       "requirements": [
         {
           "kind": "CLAIM",
           "code": "FREE_FROM_LACTOSE",
-          "label": "无乳糖"
+          "label": "Lactose-free"
         }
       ],
       "quantity": {
@@ -38,7 +38,7 @@
       "substitution": "SAME_CATEGORY",
       "notes": null
     },
-    "raw_text": "周一前要 1000 升无乳糖奶",
+    "raw_text": "1000 litres of lactose-free milk by Monday",
     "quote": {
       "id": "quo_3",
       "request_id": "req_1",
@@ -116,7 +116,7 @@
       "reliability_level": "HIGH",
       "outcome_preview": "BUYER_APPROVAL",
       "outcome_reasons": [
-        "€1,078.25，超过自动额度 €1,000"
+        "€1,078.25, above the auto-approve limit of €1,000"
       ],
       "cards": {
         "allergen": {
@@ -126,16 +126,16 @@
               "requirement": {
                 "kind": "CLAIM",
                 "code": "FREE_FROM_LACTOSE",
-                "label": "无乳糖"
+                "label": "Lactose-free"
               },
               "status": "CLAIMED",
               "trust_grade": "A",
-              "source": "制造商结构化声明（GS1 Synkka）"
+              "source": "Manufacturer structured claim (GS1 Synkka)"
             }
           ],
           "data_updated_at": "2026-10-05T10:00:00+02:00",
           "notes": [
-            "无乳糖 ≠ 无奶：含牛奶蛋白，牛奶过敏者不能用"
+            "Lactose-free is not milk-free: contains milk protein, not suitable for milk allergy"
           ]
         },
         "trust": {
@@ -144,18 +144,18 @@
           "fulfilment": "HIGH",
           "compliance": "MEDIUM",
           "overall": "MEDIUM",
-          "how_to_improve": "超过自动额度，需要经理审批"
+          "how_to_improve": "Above the auto-approve limit; needs manager approval"
         },
         "alternatives": [],
         "tips": [
           {
             "kind": "STORAGE",
-            "text": "UHT，常温保存"
+            "text": "UHT, store at room temperature"
           }
         ]
       },
       "violations": [],
-      "explanation": "UHT 常温保存、配送记录最好；但总价超过自动额度，需要审批。"
+      "explanation": "UHT keeps at room temperature and has the best delivery record; total is above the auto-approve limit, so it needs approval."
     },
     "alternatives": [
       {
@@ -196,8 +196,8 @@
         "reliability_level": "UNKNOWN",
         "outcome_preview": "AUTO",
         "outcome_reasons": [
-          "€998.80，在自动额度 €1,000 以内",
-          "无乳糖有制造商结构化声明"
+          "€998.80, within the auto-approve limit of €1,000",
+          "Lactose-free backed by a manufacturer structured claim"
         ],
         "cards": {
           "allergen": {
@@ -207,16 +207,16 @@
                 "requirement": {
                   "kind": "CLAIM",
                   "code": "FREE_FROM_LACTOSE",
-                  "label": "无乳糖"
+                  "label": "Lactose-free"
                 },
                 "status": "CLAIMED",
                 "trust_grade": "A",
-                "source": "制造商结构化声明（GS1 Synkka）"
+                "source": "Manufacturer structured claim (GS1 Synkka)"
               }
             ],
             "data_updated_at": "2026-10-05T10:00:00+02:00",
             "notes": [
-              "无乳糖 ≠ 无奶：含牛奶蛋白，牛奶过敏者不能用"
+              "Lactose-free is not milk-free: contains milk protein, not suitable for milk allergy"
             ]
           },
           "trust": {
@@ -225,36 +225,36 @@
             "fulfilment": "MEDIUM",
             "compliance": "HIGH",
             "overall": "MEDIUM",
-            "how_to_improve": "这款没有历史配送记录；选 cand_3 履约一项会是高"
+            "how_to_improve": "No delivery history for this product; cand_3 scores high on fulfilment"
           },
           "alternatives": [
             {
               "candidate_id": "cand_2",
-              "tradeoff": "便宜 €34，但要收 1000 盒",
+              "tradeoff": "€34 cheaper, but 1,000 cartons to receive",
               "tier": "NONE"
             }
           ],
           "tips": [
             {
               "kind": "STORAGE",
-              "text": "冷藏 2–6 °C"
+              "text": "Keep chilled at 2–6 °C"
             },
             {
               "kind": "COLD_STORAGE_SPACE",
-              "text": "50 箱约占 1.1 m³ 冷藏空间"
+              "text": "50 cases take about 1.1 m³ of cold storage"
             },
             {
               "kind": "RELIABILITY",
-              "text": "这款商品没有配送记录，履约把握按“未知”处理"
+              "text": "No delivery history; fulfilment treated as unknown"
             },
             {
               "kind": "QUOTE_TIMER",
-              "text": "选中后报价 15 分钟内有效"
+              "text": "Quote is valid for 15 minutes after you select it"
             }
           ]
         },
         "violations": [],
-        "explanation": "10 升大包装，搬运最省事，符合“优先大包装”的偏好；价格在自动额度内。"
+        "explanation": "10 L bag-in-box packs are the easiest to handle and match your large-pack preference; within the auto-approve limit."
       },
       {
         "id": "cand_2",
@@ -294,7 +294,7 @@
         "reliability_level": "HIGH",
         "outcome_preview": "AUTO",
         "outcome_reasons": [
-          "€964.75，在自动额度以内"
+          "€964.75, within the auto-approve limit"
         ],
         "cards": {
           "allergen": {
@@ -304,16 +304,16 @@
                 "requirement": {
                   "kind": "CLAIM",
                   "code": "FREE_FROM_LACTOSE",
-                  "label": "无乳糖"
+                  "label": "Lactose-free"
                 },
                 "status": "CLAIMED",
                 "trust_grade": "A",
-                "source": "制造商结构化声明（GS1 Synkka）"
+                "source": "Manufacturer structured claim (GS1 Synkka)"
               }
             ],
             "data_updated_at": "2026-10-05T10:00:00+02:00",
             "notes": [
-              "无乳糖 ≠ 无奶：含牛奶蛋白，牛奶过敏者不能用"
+              "Lactose-free is not milk-free: contains milk protein, not suitable for milk allergy"
             ]
           },
           "trust": {
@@ -328,19 +328,19 @@
           "tips": [
             {
               "kind": "LABEL",
-              "text": "芬兰产"
+              "text": "Made in Finland"
             }
           ]
         },
         "violations": [],
-        "explanation": "总价最低，历史配送记录良好；1 升小包装，需要拆箱的量比较大。"
+        "explanation": "Lowest total and a good delivery record; 1 L cartons mean more unpacking."
       }
     ],
     "protocol_diff": null,
     "disclosure_preview": [],
     "agent_activity": null,
     "suggested_action": "APPROVE",
-    "suggested_reason": "超出幅度小，履约把握最高"
+    "suggested_reason": "Small overrun; highest fulfilment confidence"
   },
   {
     "id": "apr_9",
@@ -348,10 +348,10 @@
     "subject": "DATA_ACCESS",
     "status": "PENDING",
     "created_at": "2026-11-14T10:00:00+02:00",
-    "title": "agt_rogue 请求精确库存",
+    "title": "agt_rogue asks for exact stock levels",
     "reasons": [
-      "请求的字段属于 L2（精确库存），超出协议范围",
-      "过去 10 分钟用 6 种不同数量探测同一商品"
+      "Requested field is L2 (exact stock), outside the protocol scope",
+      "Probed the same product with 6 different quantities in 10 minutes"
     ],
     "reason_codes": [
       "OUT_OF_SCOPE",
@@ -361,12 +361,12 @@
       {
         "kind": "DATA",
         "level": "HIGH",
-        "text": "会披露 L2 字段：仓库库存数量"
+        "text": "Would disclose an L2 field: warehouse stock quantity"
       },
       {
         "kind": "BEHAVIOUR",
         "level": "HIGH",
-        "text": "疑似二分法探测库存"
+        "text": "Looks like binary-search probing of stock"
       }
     ],
     "request": null,
@@ -389,6 +389,6 @@
       "probe_alerts_24h": 3
     },
     "suggested_action": "REJECT",
-    "suggested_reason": "L2 数据，且行为符合探测特征"
+    "suggested_reason": "L2 data and the behaviour matches probing"
   }
 ]
