@@ -34,6 +34,19 @@ export const seed = () => ({
   select: clone(selectJson) as unknown as SelectResult,
 });
 
+/** Mock-only: the parser asks about the milk type when the text doesn't say it. The shared fixture no longer
+ *  carries this question, but the real parser may; this keeps the clarify step demonstrable in mock mode. */
+export function withMilkQuestion(p: ParseResult, text: string): ParseResult {
+  const out = clone(p);
+  const isMilk = out.structured.category === '10400';
+  const saysType = /(whole|full[- ]fat|semi|skim|skimmed|light|rasvaton|kevyt|täys)/i.test(text);
+  if (isMilk && !saysType && !(out.ambiguities ?? []).length) {
+    out.ambiguities = [{ field: 'requirements', question: 'Whole, semi-skimmed or skimmed?', options: ['Any', 'Whole', 'Semi-skimmed', 'Skimmed'] }];
+  }
+  if (isMilk && saysType) out.ambiguities = [];
+  return out;
+}
+
 /** Mock-only: two lower-ranked options so "show more options" has something to show (the fixture has 3). */
 function withExtraCandidates(r: RequestResult): RequestResult {
   const base = r.candidates.find((c) => c.id === 'cand_2') ?? r.candidates[0];

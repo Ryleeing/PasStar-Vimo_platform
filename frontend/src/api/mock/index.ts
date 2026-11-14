@@ -6,7 +6,7 @@ import type {
   ApprovalCard, ApprovalDecision, AuditEntry, Candidate, CreateRequest, GateDecision, Order, ProfileBody,
   Protocol, Quote, RejectNodeRequest, RequestResult,
 } from '../types';
-import { draftFrom, ROGUE_AUDIT, seed, selfProtocol } from './data';
+import { draftFrom, ROGUE_AUDIT, seed, selfProtocol, withMilkQuestion } from './data';
 
 interface Ctx {
   body?: unknown;
@@ -115,7 +115,7 @@ const routes: [string, RegExp, Handler][] = [
   // ── catalog ──
   ['GET', /^\/v1\/catalog\/facets$/, () => db.facets],
   // ── requests ──
-  ['POST', /^\/v1\/requests\/parse$/, () => db.parse],
+  ['POST', /^\/v1\/requests\/parse$/, (_m, { body }) => withMilkQuestion(db.parse, String((body as { text?: string })?.text ?? ''))],
   ['POST', /^\/v1\/requests$/, async (_m, { body, headers }) => {
     const b = body as CreateRequest;
     if (db.faults.find((f) => f.name === 'TIMEOUT')?.enabled) throw err(502, 'UPSTREAM_ERROR', 'Valio API timed out');

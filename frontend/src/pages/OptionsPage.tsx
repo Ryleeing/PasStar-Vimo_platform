@@ -97,12 +97,28 @@ export function OptionsPage() {
       ) : (
         <>
           <ol className="opts reveal" id="options-grid" aria-label="Options, best match first">
-            {(showMore ? r.candidates : top).map((c, i) => (
+            {top.map((c, i) => (
               <OptionRow key={c.id} c={c} position={i + 1} best={r.candidates[0]} all={all} mode={mode}
                 onChooseAlt={(id) => { const alt = all.find((x) => x.id === id); if (alt?.selectable) choose(alt); }}
                 selected={flow.selection?.candidate.id === c.id} loading={selecting === c.id} onSelect={() => choose(c)} />
             ))}
           </ol>
+
+          {showMore && more.length > 0 && (
+            <section className="opts-extra" aria-label="Other options">
+              <header className="opts-extra-head">
+                <h3>Other options</h3>
+                <span>Ranked lower for your priorities. Still within your requirements.</span>
+              </header>
+              <ol className="opts-compact">
+                {more.map((c, i) => (
+                  <OptionRow key={c.id} c={c} position={top.length + i + 1} best={r.candidates[0]} all={all} mode={mode} compact
+                onChooseAlt={(id) => { const alt = all.find((x) => x.id === id); if (alt?.selectable) choose(alt); }}
+                selected={flow.selection?.candidate.id === c.id} loading={selecting === c.id} onSelect={() => choose(c)} />
+                ))}
+              </ol>
+            </section>
+          )}
 
           {more.length > 0 && (
             <button type="button" className="opts-more" onClick={() => setShowMore((v) => !v)} aria-expanded={showMore} aria-controls="options-grid">

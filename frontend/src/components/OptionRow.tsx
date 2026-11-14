@@ -72,8 +72,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 const REQ_CAUSE = 'REQ';
 
 /** One option in the ranked list. */
-export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, loading, mode, all }: {
-  c: Candidate; position: number; best: Candidate; selected: boolean; onSelect: () => void; onChooseAlt?: (id: string) => void;
+export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, loading, mode, all, compact }: {
+  c: Candidate; position: number; compact?: boolean; best: Candidate; selected: boolean; onSelect: () => void; onChooseAlt?: (id: string) => void;
   loading: boolean; mode: 'SEPARATE' | 'SELF'; all: Candidate[];
 }) {
   const [open, setOpen] = useState(false);
@@ -141,7 +141,7 @@ export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, 
   const alts = c.cards.alternatives ?? [];
 
   return (
-    <li className={`opt ${featured ? 'featured' : ''} ${selected ? 'sel' : ''} ${open ? 'open' : ''}`} aria-label={`Option ${position}: ${line.name}`}>
+    <li className={`opt ${compact ? 'compact' : ''} ${featured ? 'featured' : ''} ${selected ? 'sel' : ''} ${open ? 'open' : ''}`} aria-label={`Option ${position}: ${line.name}`}>
       <span className="opt-rank" aria-hidden>{position}</span>
 
       <div className="opt-main">
@@ -184,7 +184,7 @@ export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, 
       </div>
 
       <div className="opt-act">
-        <Button variant={featured && !selected ? 'primary' : 'default'} loading={loading} onClick={onSelect} aria-pressed={selected}>
+        <Button variant={featured && !selected ? 'primary' : 'default'} size={compact ? 'sm' : undefined} loading={loading} onClick={onSelect} aria-pressed={selected}>
           {selected ? <><Check size={16} /> Selected</> : 'Choose'}
         </Button>
       </div>
