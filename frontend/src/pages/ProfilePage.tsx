@@ -5,7 +5,8 @@
 // Alongside: the approval rules from the signed protocol, read-only, so the whole rule set is visible here.
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, Lock, Minus, Plus, RotateCcw, Save, Search, X } from 'lucide-react';
+import { Check, Lock, Plus, RotateCcw, Save, Search, X } from 'lucide-react';
+import { WeightDonut } from '../components/WeightDonut';
 import { getProtocol, listProfiles, updateProfile } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Profile, ProfileBody, Protocol } from '../api/types';
@@ -17,12 +18,11 @@ import { Banner, Button, ErrorState, PageHead, Skeleton, Switch, useAsync, useTo
 
 type Weights = NonNullable<ProfileBody['weights']>;
 type WKey = keyof Weights;
-const STEP = 5;
-const PRIORITIES: { key: WKey; label: string; help: string }[] = [
-  { key: 'fulfilment', label: 'On-time delivery', help: 'Deliverable in full on your date' },
-  { key: 'price', label: 'Price', help: 'Lower total, VAT included' },
-  { key: 'local', label: 'Local origin', help: 'Made in the countries you choose below' },
-  { key: 'carbon', label: 'Low carbon', help: 'Lower CO₂ footprint per kg' },
+const PRIORITIES: { key: WKey; label: string; help: string; color: string }[] = [
+  { key: 'fulfilment', label: 'On-time delivery', help: 'Deliverable in full on your date', color: 'var(--seg-1)' },
+  { key: 'price', label: 'Price', help: 'Lower total, VAT included', color: 'var(--seg-2)' },
+  { key: 'local', label: 'Local origin', help: 'Made in the countries you choose below', color: 'var(--seg-3)' },
+  { key: 'carbon', label: 'Low carbon', help: 'Lower CO₂ footprint per kg', color: 'var(--seg-4)' },
 ];
 const PRESETS: { label: string; w: Record<WKey, number> }[] = [
   { label: 'Balanced', w: { fulfilment: 40, price: 40, local: 10, carbon: 10 } },
@@ -37,11 +37,11 @@ const SUBSTITUTES: { value: 'SAME_CATEGORY' | 'NONE' | 'ANY'; label: string; hel
 ];
 const COUNTRIES: [string, string][] = [['fi', 'Finland'], ['se', 'Sweden'], ['ee', 'Estonia']];
 
-/** Weights as whole points out of 100, in steps of 5. */
+/** Weights as whole points out of 100 (exact values survive a save). */
 function toPoints(w?: Weights | null): Record<WKey, number> {
   const base = w ?? { price: 0.4, fulfilment: 0.4, carbon: 0.1, local: 0.1 };
   const total = Object.values(base).reduce((a, x) => a + x, 0) || 1;
-  const p = Object.fromEntries((Object.keys(base) as WKey[]).map((k) => [k, Math.round((base[k] / total) * 100 / STEP) * STEP])) as Record<WKey, number>;
+  const p = Object.fromEntries((Object.keys(base) as WKey[]).map((k) => [k, Math.round((base[k] / total) * 100)])) as Record<WKey, number>;
   const diff = 100 - Object.values(p).reduce((a, x) => a + x, 0);
   if (diff) { const top = (Object.keys(p) as WKey[]).sort((a, b) => p[b] - p[a])[0]; p[top] += diff; }
   return p;
@@ -88,17 +88,15 @@ function ProfileForm({ profile, protocol, canSeeProtocol, onSaved }: {
   useEffect(() => setB(profile.body), [profile]);
   const set = (patch: Partial<ProfileBody>) => { setJustSaved(false); setB((x) => ({ ...x, ...patch })); };
 
-  // ── priorities: a budget of 100 points; + takes from the unassigned pool, so nothing else moves ──
+  // ── priorities: 100 points shared on the donut ──
   const [points, setPoints] = useState<Record<WKey, number>>(() => toPoints(profile.body.weights));
   useEffect(() => setPoints(toPoints(profile.body.weights)), [profile]);
   const used = Object.values(points).reduce((a, x) => a + x, 0);
-  const left = 100 - used;
   const applyPoints = (p: Record<WKey, number>) => {
     setPoints(p);
     const sum = Object.values(p).reduce((a, x) => a + x, 0) || 1;
     set({ weights: Object.fromEntries((Object.keys(p) as WKey[]).map((k) => [k, +(p[k] / sum).toFixed(4)])) as Weights });
   };
-  const bump = (k: WKey, d: number) => applyPoints({ ...points, [k]: Math.max(0, Math.min(100, points[k] + d)) });
   const preset = PRESETS.find((p) => (Object.keys(p.w) as WKey[]).every((k) => p.w[k] === points[k]));
 
   const countries = b.soft_preferences?.countries ?? [];
@@ -185,25 +183,8 @@ function ProfileForm({ profile, protocol, canSeeProtocol, onSaved }: {
               ))}
             </div>
 
-            <div className="prio-list">
-              {PRIORITIES.map((p) => (
-                <div key={p.key} className="prio">
-                  <div className="prio-text">
-                    <span className="prio-label">{p.label}</span>
-                    <span className="prio-help">{p.help}</span>
-                  </div>
-                  <div className="prio-bar" aria-hidden><i style={{ width: `${points[p.key]}%` }} /></div>
-                  <div className="stepper" role="group" aria-label={p.label}>
-                    <button type="button" aria-label={`Less ${p.label}`} disabled={points[p.key] <= 0} onClick={() => bump(p.key, -STEP)}><Minus size={14} /></button>
-                    <output aria-live="polite">{points[p.key]}</output>
-                    <button type="button" aria-label={`More ${p.label}`} disabled={left < STEP} onClick={() => bump(p.key, STEP)}><Plus size={14} /></button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className={`prio-total ${left ? 'open' : ''}`}>
-              {left > 0 ? <>{left} points not assigned. The others are scaled up to 100% when ranking.</> : left < 0 ? <>{-left} points over 100.</> : <><Check size={14} aria-hidden /> All 100 points assigned. To raise one, lower another first.</>}
-            </div>
+            <WeightDonut segs={PRIORITIES} values={PRIORITIES.map((p) => points[p.key])}
+              onChange={(v) => applyPoints(Object.fromEntries(PRIORITIES.map((p, i) => [p.key, v[i]])) as Record<WKey, number>)} />
 
             <div className="field">
               <span className="label">“Local” means made in</span>
@@ -292,7 +273,7 @@ function ProfileForm({ profile, protocol, canSeeProtocol, onSaved }: {
         <div className="savebar" role="status">
           <span className="savebar-state">Unsaved changes</span>
           <Button variant="ghost" onClick={discard}><RotateCcw size={15} /> Discard</Button>
-          <Button variant="primary" disabled={!b.name || left < 0} loading={saving} onClick={save}><Save size={15} /> Save profile</Button>
+          <Button variant="primary" disabled={!b.name || used !== 100} title={used !== 100 ? 'Points must add up to 100' : undefined} loading={saving} onClick={save}><Save size={15} /> Save profile</Button>
         </div>
       ) : (
         <p className="saved-state" role="status"><Check size={15} aria-hidden /> All changes saved · {new Date(profile.updated_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
