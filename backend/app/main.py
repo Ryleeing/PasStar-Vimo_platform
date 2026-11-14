@@ -142,6 +142,17 @@ def issue_agent_key(agent_id: str, body: IssueKeyRequest, who: Audience = Caller
     the agent's active protocol may do this, so no agent gets a key before step 0."""
     return agents.issue_key(agent_id, body.kind, who)
 
+@app.post("/v1/agents/{agent_id}/block", response_model=AgentConnection, tags=["BE1 · agents"])
+@_atomic
+def block_agent(agent_id: str, who: Audience = Caller):
+    """Valio blocks an agent on its channel: every call is refused, even with a valid key. Nothing is deleted."""
+    return _out(who, agents.set_blocked(agent_id, True, who))
+
+@app.post("/v1/agents/{agent_id}/unblock", response_model=AgentConnection, tags=["BE1 · agents"])
+@_atomic
+def unblock_agent(agent_id: str, who: Audience = Caller):
+    return _out(who, agents.set_blocked(agent_id, False, who))
+
 @app.post("/v1/agents/{agent_id}/revoke", response_model=AgentConnection, tags=["BE1 · agents"])
 @_atomic
 def revoke_agent_key(agent_id: str, who: Audience = Caller):
@@ -163,9 +174,10 @@ class ConsoleAttacks(pydantic.BaseModel):
 
 
 def _console_guard(who: Audience, agent_key: str) -> None:
-    """People only (so the model budget cannot be spent through a tunnel), and a buyer drives only its own agents."""
-    if who.kind == "AGENT":
-        raise errors.ApiError("OUT_OF_SCOPE", "The console is for people; agents call /mcp directly")
+    """The buyer's people only: it is their agent and their key (Valio holds no buyer keys), and the model budget
+    cannot be spent through a tunnel. A buyer drives only its own agents."""
+    if who.kind != "BUYER_USER":
+        raise errors.ApiError("OUT_OF_SCOPE", "The console is for the buyer's people; agents call /mcp directly")
     try:
         agent = identity.caller(agent_key, None)
     except errors.ApiError:

@@ -580,6 +580,7 @@ class AgentConnection(BaseModel):
     buyer_id: str
     buyer_name: str
     kind: AgentKind
+    status: Literal["ACTIVE", "BLOCKED"] = "ACTIVE"  # BLOCKED by Valio: refused even with a valid key
     connection: Literal["MCP", "REST", "NONE"]      # how it talks to PasStar
     has_key: bool
     key_hint: Optional[str] = None                  # first characters of the current key

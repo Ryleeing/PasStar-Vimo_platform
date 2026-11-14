@@ -4,6 +4,9 @@ A key is the agent's credential ("work badge"): it says which agent is calling, 
 and which active protocol it acts under. PasStar stores only its hash, shows it once when issued, and a lost or
 leaked key is replaced or revoked, never shown again. Only the approver named in the agent's active protocol may
 issue or revoke its key, so an agent cannot be given access before step 0 (a signed, confirmed protocol).
+
+Nothing is ever deleted: the audit log keeps referring to the agent. A buyer disconnects an agent by revoking its
+key; Valio blocks an agent that misbehaves on its channel, which refuses it even with a valid key.
 """
 from __future__ import annotations
 
@@ -32,7 +35,7 @@ def _connection(row) -> AgentConnection:
     kind = row["kind"] or "UNKNOWN"
     return AgentConnection(
         agent_id=row["id"], name=row["name"], buyer_id=row["buyer_id"], buyer_name=row["buyer_name"],
-        kind=kind, connection=CONNECTION[kind] if p else "NONE",
+        kind=kind, status=row["status"], connection=CONNECTION[kind] if p and row["status"] == "ACTIVE" else "NONE",
         has_key=row["api_key_hash"] != REVOKED and row["key_hint"] is not None, key_hint=row["key_hint"],
         key_issued_at=row["key_issued_at"], last_used_at=row["last_used_at"],
         protocol_id=p.id if p else None, protocol_version=p.version if p else None,
@@ -69,6 +72,8 @@ def _may_manage(agent_id: str, who: Caller):
     p = _active_protocol(agent_id)
     if p is None:
         raise ApiError("PROTOCOL_INVALID", f"Agent {agent_id} has no active protocol; sign one first (step 0)")
+    if conn.status == "BLOCKED":
+        raise ApiError("OUT_OF_SCOPE", "Valio has blocked this agent; ask Valio to unblock it first")
     if p.body.approver != who.user_id:
         raise ApiError("NOT_APPROVER", "Only the approver named in the protocol can issue or revoke this key",
                        approver=p.body.approver)
@@ -94,6 +99,19 @@ def revoke_key(agent_id: str, who: Caller) -> AgentConnection:
     audit.append("AGENT_KEY_REVOKED", actor(who), {"buyer_id": p.body.buyer_id, "agent_id": agent_id},
                  summary=f"Revoked the key of agent {agent_id}; it can no longer call PasStar",
                  buyer_id=p.body.buyer_id, agent_id=agent_id)
+    return get(agent_id, who)
+
+
+def set_blocked(agent_id: str, blocked: bool, who: Caller) -> AgentConnection:
+    """Valio blocks (or unblocks) an agent on its channel. A blocked agent is refused even with a valid key."""
+    if who.kind != "VALIO_USER":
+        raise ApiError("NOT_APPROVER", "Only Valio blocks or unblocks agents")
+    conn = get(agent_id, who)
+    db.run("UPDATE agents SET status = ? WHERE id = ?", ("BLOCKED" if blocked else "ACTIVE", agent_id))
+    audit.append("AGENT_BLOCKED_BY_VALIO" if blocked else "AGENT_UNBLOCKED_BY_VALIO", actor(who),
+                 {"buyer_id": conn.buyer_id, "agent_id": agent_id},
+                 summary=f"Valio {'blocked' if blocked else 'unblocked'} agent {agent_id}",
+                 buyer_id=conn.buyer_id, agent_id=agent_id)
     return get(agent_id, who)
 
 

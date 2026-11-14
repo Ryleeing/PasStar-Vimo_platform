@@ -1463,3 +1463,28 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
   .console-chat, .console-behind { max-height: none; min-height: 420px; }
   .call-steps { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Valio's channel summary in the sidebar: labels shrink and wrap, values never overflow */
+.valio-summary .summary-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); min-width: 0; }
+.valio-summary .summary-row > span { min-width: 0; overflow-wrap: anywhere; }
+.valio-summary .summary-row > b { flex: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media (min-width: 901px) { .sidebar.collapsed .valio-summary { display: none; } }
+
+/* Agent console: key check, connection status, rendered Markdown, inactive agents */
+.console-key { display: flex; gap: var(--s2); align-items: center; }
+.console-key input { flex: 1; min-width: 0; }
+.console-key.ok { padding: 6px 6px 6px var(--s3); border: 1px solid color-mix(in srgb, var(--ok) 40%, var(--border)); border-radius: var(--radius-sm); background: var(--ok-soft); }
+.console-key.ok .mono { flex: 1; color: var(--text); }
+.console-link { display: flex; align-items: center; gap: var(--s2); font-size: 0.9375rem; font-weight: 600; }
+.console-link.ok { color: var(--ok); }
+.console-link.bad { color: var(--bad); }
+.console-link.checking { color: var(--muted); }
+.agent-card.inactive { opacity: 0.78; }
+.md { display: flex; flex-direction: column; gap: var(--s2); white-space: normal; }
+.md p, .md ul, .md ol { margin: 0; }
+.md ul, .md ol { padding-left: 1.2rem; display: flex; flex-direction: column; gap: 2px; }
+.md h3, .md h4, .md h5, .md h6 { margin: var(--s2) 0 0; line-height: 1.3; }
+.md h3 { font-size: 1.0625rem; } .md h4 { font-size: 1rem; } .md h5, .md h6 { font-size: 0.9375rem; color: var(--text-2); }
+.md code { padding: 1px 5px; border-radius: 4px; background: var(--surface); font-size: 0.85em; }
+.md hr { border: 0; border-top: 1px solid var(--border); margin: var(--s2) 0; }
+.msg-user .md code { background: rgba(255, 255, 255, 0.2); }

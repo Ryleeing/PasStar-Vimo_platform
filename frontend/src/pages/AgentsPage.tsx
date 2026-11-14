@@ -4,8 +4,8 @@
 // Valio sees every buyer's agents and the demo fault switches; a buyer sees its own, and only the approver named
 // in the protocol may issue or revoke keys.
 import { useEffect, useState, type ReactNode } from 'react';
-import { Bot, Building2, Check, Copy, KeyRound, Link2, PlugZap, ShieldAlert, ShieldCheck, Sparkles, Trash2 } from 'lucide-react';
-import { issueAgentKey, listAgents, listFaults, protocolAsAgent, revokeAgentKey, setFault } from '../api/endpoints';
+import { Ban, Bot, Building2, Check, Copy, KeyRound, Link2, MessagesSquare, PlugZap, ShieldAlert, ShieldCheck, Sparkles, Unplug } from 'lucide-react';
+import { blockAgent, issueAgentKey, listAgents, listFaults, protocolAsAgent, revokeAgentKey, setFault } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { AgentConnection, AgentKind, Fault, IssuedKey, Protocol } from '../api/types';
 import { accountByUserId } from '../config/accounts';
@@ -49,7 +49,15 @@ export function AgentsPage() {
   const list = useAsync(listAgents, [account.key]);
   const [tab, setTab] = useState<'connected' | 'connect' | 'console'>('connected');
   const [preset, setPreset] = useState<string | null>(null);
+  const [consoleStart, setConsoleStart] = useState<{ agentId: string; key: string } | null>(null);
   const canManage = (a: AgentConnection) => a.approver === account.userId;
+  // Working agents first; disconnected, blocked and protocol-less ones after them.
+  const rank = (a: AgentConnection) => (a.status === 'BLOCKED' ? 3 : !a.protocol_id ? 2 : !a.has_key ? 1 : 0);
+  const agents = [...(list.data ?? [])].sort((a, b) => rank(a) - rank(b));
+  const openConsole = (agentId: string, key: string) => {
+    setConsoleStart({ agentId, key });
+    setTab('console');
+  };
 
   const connectAgain = (a: AgentConnection) => {
     setPreset(a.agent_id);
@@ -63,21 +71,23 @@ export function AgentsPage() {
           ? 'Every buyer’s external agents: how they connect, the protocol they act under, and what they did in the last 24 hours.'
           : 'The AI assistants and systems that may order for you. Each one gets its own key, tied to your signed protocol.'} />
 
-      <div style={{ marginBottom: 16 }}>
-        <Segmented label="View" value={tab} onChange={(v) => { setTab(v); setPreset(null); }}
-          options={valio ? [['connected', 'Connected'], ['console', 'Console']]
-                         : [['connected', 'Connected'], ['connect', 'Connect an agent'], ['console', 'Console']]} />
-      </div>
+      {!valio && (
+        <div style={{ marginBottom: 16 }}>
+          <Segmented label="View" value={tab} onChange={(v) => { setTab(v); setPreset(null); setConsoleStart(null); }}
+            options={[['connected', 'Connected'], ['connect', 'Connect an agent'], ['console', 'Console']]} />
+        </div>
+      )}
 
-      {tab === 'console' ? (
-        list.loading ? <Skeleton h={420} /> : list.error ? <ErrorState error={list.error} onRetry={list.reload} /> : <AgentConsole agents={list.data ?? []} />
+      {tab === 'console' && !valio ? (
+        list.loading ? <Skeleton h={420} /> : list.error ? <ErrorState error={list.error} onRetry={list.reload} />
+          : <AgentConsole key={consoleStart?.key ?? 'console'} agents={agents} start={consoleStart} />
       ) : tab === 'connect' && !valio ? (
-        <ConnectAgent agents={list.data ?? []} preset={preset} onDone={() => { list.reload(); }} />
+        <ConnectAgent agents={agents} preset={preset} onDone={() => { list.reload(); }} onOpenConsole={openConsole} />
       ) : list.loading ? <Skeleton h={320} /> : list.error ? <ErrorState error={list.error} onRetry={list.reload} /> : (
         <div className={valio ? 'grid two' : ''} style={{ alignItems: 'start' }}>
           <div className="agent-grid">
-            {(list.data ?? []).map((a) => (
-              <AgentCard key={a.agent_id} a={a} showBuyer={valio} canManage={canManage(a)}
+            {agents.map((a) => (
+              <AgentCard key={a.agent_id} a={a} valio={valio} canManage={canManage(a)}
                 onConnect={() => connectAgain(a)} onChanged={list.reload} />
             ))}
             {!list.data?.length && <Empty icon={<Bot size={22} />} title="No agents yet">Connect one to let it order for you.</Empty>}
@@ -89,22 +99,24 @@ export function AgentsPage() {
   );
 }
 
-function AgentCard({ a, showBuyer, canManage, onConnect, onChanged }: {
-  a: AgentConnection; showBuyer: boolean; canManage: boolean; onConnect: () => void; onChanged: () => void;
+function AgentCard({ a, valio, canManage, onConnect, onChanged }: {
+  a: AgentConnection; valio: boolean; canManage: boolean; onConnect: () => void; onChanged: () => void;
 }) {
+  const showBuyer = valio;
   const toast = useToast();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const k = KIND[a.kind];
-  const status = !a.protocol_id
-    ? { tone: 'bad' as const, label: 'No protocol · every call refused' }
-    : !a.has_key ? { tone: 'warn' as const, label: 'No key' } : { tone: 'ok' as const, label: 'Connected' };
+  const status = a.status === 'BLOCKED'
+    ? { tone: 'bad' as const, label: 'Blocked by Valio' }
+    : !a.protocol_id ? { tone: 'bad' as const, label: 'No protocol · every call refused' }
+    : !a.has_key ? { tone: 'neutral' as const, label: 'Disconnected' } : { tone: 'ok' as const, label: 'Connected' };
 
   const revoke = async () => {
     setBusy(true);
     try {
       await revokeAgentKey(a.agent_id);
-      toast(`${a.name}: key revoked`, 'info');
+      toast(`${a.name} disconnected: its key no longer works`, 'info');
       onChanged();
     } catch (e) {
       toast(describeError(e), 'bad');
@@ -114,8 +126,21 @@ function AgentCard({ a, showBuyer, canManage, onConnect, onChanged }: {
     }
   };
 
+  const block = async (blocked: boolean) => {
+    setBusy(true);
+    try {
+      await blockAgent(a.agent_id, blocked);
+      toast(`${a.name} ${blocked ? 'blocked' : 'unblocked'}`, blocked ? 'warn' : 'info');
+      onChanged();
+    } catch (e) {
+      toast(describeError(e), 'bad');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <section className={`card agent-card ${status.tone}`} aria-label={a.name}>
+    <section className={`card agent-card ${status.tone} ${a.status === 'BLOCKED' || !a.has_key ? 'inactive' : ''}`} aria-label={a.name}>
       <header className="agent-head">
         <span className={`agent-kind k-${a.kind.toLowerCase()}`} aria-hidden>{k.icon}</span>
         <div className="grow">
@@ -136,29 +161,39 @@ function AgentCard({ a, showBuyer, canManage, onConnect, onChanged }: {
         </dd></div>
       </dl>
 
-      {canManage && a.protocol_id && (
+      {canManage && a.protocol_id && a.status !== 'BLOCKED' && (
         <div className="row wrap" style={{ gap: 8 }}>
-          <Button size="sm" onClick={onConnect}><KeyRound size={15} /> {a.has_key ? 'Issue a new key' : 'Connect'}</Button>
+          <Button size="sm" onClick={onConnect}><KeyRound size={15} /> {a.has_key ? 'Issue a new key' : 'Connect again'}</Button>
           {a.has_key && (confirming ? (
             <>
-              <Button size="sm" variant="outline-danger" loading={busy} onClick={revoke}>Revoke now</Button>
+              <Button size="sm" variant="outline-danger" loading={busy} onClick={revoke}>Disconnect now</Button>
               <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>Keep it</Button>
             </>
           ) : (
-            <Button size="sm" variant="ghost" onClick={() => setConfirming(true)}><Trash2 size={15} /> Revoke</Button>
+            <Button size="sm" variant="ghost" onClick={() => setConfirming(true)}><Unplug size={15} /> Disconnect</Button>
           ))}
         </div>
       )}
-      {confirming && <p className="small muted">The agent stops working immediately; every later call is refused and reported.</p>}
+      {confirming && <p className="small muted">Its key stops working immediately; later calls are refused and reported. Its history stays in the log.</p>}
+      {a.status === 'BLOCKED' && !valio && <p className="small muted">Valio blocked this agent on its channel. Ask Valio to unblock it.</p>}
+      {valio && (
+        <div className="row wrap" style={{ gap: 8 }}>
+          {a.status === 'BLOCKED'
+            ? <Button size="sm" loading={busy} onClick={() => block(false)}><ShieldCheck size={15} /> Unblock</Button>
+            : <Button size="sm" variant="outline-danger" loading={busy} onClick={() => block(true)}><Ban size={15} /> Block on Valio’s channel</Button>}
+        </div>
+      )}
     </section>
   );
 }
 
 /** Connect an agent: kind → protocol → key (shown once) → setup → test. */
-function ConnectAgent({ agents, preset, onDone }: { agents: AgentConnection[]; preset: string | null; onDone: () => void }) {
+function ConnectAgent({ agents, preset, onDone, onOpenConsole }: {
+  agents: AgentConnection[]; preset: string | null; onDone: () => void; onOpenConsole: (agentId: string, key: string) => void;
+}) {
   const { account } = useSession();
   const toast = useToast();
-  const mine = agents.filter((a) => a.protocol_id && a.approver === account.userId);
+  const mine = agents.filter((a) => a.protocol_id && a.approver === account.userId && a.status !== 'BLOCKED');
   const [kind, setKind] = useState<AgentKind | null>(() => (preset ? agents.find((a) => a.agent_id === preset)?.kind ?? null : null));
   const [agentId, setAgentId] = useState<string | null>(preset ?? (mine.length === 1 ? mine[0].agent_id : null));
   const [issued, setIssued] = useState<IssuedKey | null>(null);
@@ -289,6 +324,7 @@ function ConnectAgent({ agents, preset, onDone }: { agents: AgentConnection[]; p
 
           <div className="row wrap" style={{ gap: 8 }}>
             <Button onClick={runTest} loading={testing}><PlugZap size={15} /> Test the connection</Button>
+            <Button variant="primary" onClick={() => onOpenConsole(issued.agent_id, issued.key)}><MessagesSquare size={15} /> Try it in the console</Button>
             <Button variant="ghost" onClick={() => { setIssued(null); setKind(null); setTest(null); }}>Connect another</Button>
           </div>
           {test?.ok && (

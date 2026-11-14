@@ -2,10 +2,12 @@
 // right, everything PasStar did behind each answer: the key checked at the door, the four steps, the gate, Valio's
 // seal, the audit entries. The agent reaches PasStar only through /mcp with its key, like ChatGPT does.
 import { useEffect, useRef, useState } from 'react';
-import { Bot, Check, ChevronDown, DoorOpen, FileSignature, Maximize2, Minimize2, RotateCcw, ScrollText, Send, ShieldAlert, ShieldCheck, Swords, User } from 'lucide-react';
+import { Bot, Check, ChevronDown, DoorOpen, FileSignature, KeyRound, Maximize2, Minimize2, PlugZap, RotateCcw, ScrollText, Send, ShieldAlert, ShieldCheck, Swords, User } from 'lucide-react';
 import { streamConsole, type Behind, type ConsoleEvent } from '../api/console';
 import { describeError } from '../api/client';
+import { protocolAsAgent } from '../api/endpoints';
 import type { AgentConnection } from '../api/types';
+import { Markdown } from './Markdown';
 import { Button, Pill, Segmented } from './ui';
 
 type Mode = 'llm' | 'script';
@@ -21,8 +23,9 @@ const PROMPTS = ['Who are you buying for, and what are my limits?', 'I need 1500
 const STEP_LABEL: Record<string, string> = { UNDERSTAND: 'Understand', FILTER: 'Filter products', RANK: 'Combine & rank', GATE: 'Protocol check' };
 const keyStore = (id: string) => `passtar.console.key.${id}`;
 
-export function AgentConsole({ agents }: { agents: AgentConnection[] }) {
-  const [agentId, setAgentId] = useState<string>(() => agents.find((a) => a.has_key && a.protocol_id)?.agent_id ?? agents[0]?.agent_id ?? UNKNOWN);
+/** `start`: open on this agent with this key, already checked (e.g. right after issuing the key). */
+export function AgentConsole({ agents, start }: { agents: AgentConnection[]; start?: { agentId: string; key: string } | null }) {
+  const [agentId, setAgentId] = useState<string>(() => start?.agentId ?? agents.find((a) => a.has_key && a.protocol_id && a.status === 'ACTIVE')?.agent_id ?? agents[0]?.agent_id ?? UNKNOWN);
   const agent = agents.find((a) => a.agent_id === agentId);
   const demoKey = agent && DEMO_KEYS[agent.agent_id]?.slice(0, 8) === agent.key_hint ? DEMO_KEYS[agent.agent_id] : '';
   const [key, setKey] = useState('');
@@ -35,6 +38,10 @@ export function AgentConsole({ agents }: { agents: AgentConnection[] }) {
   const [busy, setBusy] = useState<false | 'chat' | 'attacks'>(false);
   const [thinking, setThinking] = useState(false);
   const [present, setPresent] = useState(false);
+  // The key is used only once it has been checked against PasStar (Connect). An unknown agent needs no check:
+  // watching it being refused is the point.
+  const [link, setLink] = useState<{ state: 'idle' | 'checking' | 'ok' | 'bad'; text?: string }>({ state: 'idle' });
+  const connected = agentId === UNKNOWN || link.state === 'ok';
   const chatEnd = useRef<HTMLDivElement>(null);
   const behindEnd = useRef<HTMLDivElement>(null);
 
@@ -42,8 +49,11 @@ export function AgentConsole({ agents }: { agents: AgentConnection[] }) {
   useEffect(() => {
     let saved = '';
     try { saved = sessionStorage.getItem(keyStore(agentId)) ?? ''; } catch { /* private mode */ }
-    setKey(agentId === UNKNOWN ? 'tp_made_up_key_0000000000' : saved || demoKey);
+    const k = start && start.agentId === agentId ? start.key : agentId === UNKNOWN ? 'tp_made_up_key_0000000000' : saved || demoKey;
+    setKey(k);
+    setLink({ state: 'idle' });
     reset();
+    if (start && start.agentId === agentId) void check(k);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentId]);
   useEffect(() => { try { if (agentId !== UNKNOWN) sessionStorage.setItem(keyStore(agentId), key); } catch { /* private mode */ } }, [agentId, key]);
@@ -55,6 +65,18 @@ export function AgentConsole({ agents }: { agents: AgentConnection[] }) {
     window.addEventListener('keydown', esc);
     return () => window.removeEventListener('keydown', esc);
   }, [present]);
+
+  async function check(k = key) {
+    if (!k.trim() || agentId === UNKNOWN) return;
+    setLink({ state: 'checking' });
+    try {
+      const p = await protocolAsAgent(agentId, k.trim());
+      const a = agents.find((x) => x.agent_id === agentId);
+      setLink({ state: 'ok', text: `Connected as ${agentId} · ${a?.buyer_name ?? p.body.buyer_id} · protocol ${p.id} v${p.version}` });
+    } catch (e) {
+      setLink({ state: 'bad', text: `Key not accepted: ${describeError(e)}` });
+    }
+  }
 
   function reset() {
     setLines([]);
@@ -129,25 +151,46 @@ export function AgentConsole({ agents }: { agents: AgentConnection[] }) {
         <label className="console-field">
           <span>Agent</span>
           <select value={agentId} onChange={(e) => setAgentId(e.target.value)} disabled={!!busy}>
-            {agents.map((a) => <option key={a.agent_id} value={a.agent_id}>{a.name}{a.protocol_id ? '' : ' (no protocol)'}</option>)}
+            {agents.map((a) => <option key={a.agent_id} value={a.agent_id}>{a.name}{a.status === 'BLOCKED' ? ' (blocked by Valio)' : !a.protocol_id ? ' (no protocol)' : !a.has_key ? ' (disconnected)' : ''}</option>)}
             <option value={UNKNOWN}>An unknown agent (made-up key)</option>
           </select>
         </label>
-        <label className="console-field grow">
+        <div className="console-field grow">
           <span>Its key</span>
-          <input className="mono" value={key} onChange={(e) => setKey(e.target.value)} disabled={!!busy || agentId === UNKNOWN}
-            placeholder="Paste the key you issued to this agent" spellCheck={false} />
-        </label>
+          {link.state === 'ok' ? (
+            <div className="console-key ok">
+              <span className="mono">{key.slice(0, 8)}…</span>
+              <Button size="sm" variant="ghost" onClick={() => { setLink({ state: 'idle' }); reset(); }} disabled={!!busy}><KeyRound size={14} /> Change key</Button>
+            </div>
+          ) : (
+            <form className="console-key" onSubmit={(e) => { e.preventDefault(); void check(); }}>
+              <input className="mono" value={key} onChange={(e) => { setKey(e.target.value); setLink({ state: 'idle' }); }}
+                disabled={!!busy || agentId === UNKNOWN} placeholder="Paste the key you issued to this agent" spellCheck={false} aria-label="Agent key" />
+              {agentId !== UNKNOWN && (
+                <Button size="sm" variant="primary" type="submit" loading={link.state === 'checking'} disabled={!key.trim()}><PlugZap size={14} /> Connect</Button>
+              )}
+            </form>
+          )}
+        </div>
         <Segmented label="Mode" value={mode} onChange={(m) => { setMode(m); reset(); }}
           options={[['llm', 'Live model'], ['script', 'Script']]} />
         <div className="row" style={{ gap: 8 }}>
-          <Button size="sm" variant="outline-danger" onClick={attack} disabled={!!busy || !key} loading={busy === 'attacks'}><Swords size={15} /> Try to break the rules</Button>
+          <Button size="sm" variant="outline-danger" onClick={attack} disabled={!!busy || !connected} loading={busy === 'attacks'}><Swords size={15} /> Try to break the rules</Button>
           <Button size="sm" variant="ghost" onClick={reset} disabled={!!busy}><RotateCcw size={15} /> Start over</Button>
           <Button size="sm" variant="ghost" onClick={() => setPresent((p) => !p)} aria-pressed={present}>
             {present ? <><Minimize2 size={15} /> Exit</> : <><Maximize2 size={15} /> Present</>}
           </Button>
         </div>
       </div>
+
+      {link.text && (
+        <div className={`console-link ${link.state}`} role="status">
+          {link.state === 'ok' ? <Check size={15} aria-hidden /> : <ShieldAlert size={15} aria-hidden />} {link.text}
+        </div>
+      )}
+      {agentId === UNKNOWN && (
+        <div className="console-link bad" role="status"><ShieldAlert size={15} aria-hidden /> An agent with a made-up key: PasStar should refuse every call.</div>
+      )}
 
       <div className="console-split">
         {/* ── What the user sees ── */}
@@ -156,9 +199,9 @@ export function AgentConsole({ agents }: { agents: AgentConnection[] }) {
           <div className="console-scroll">
             {!lines.length && (
               <div className="console-empty">
-                <p className="muted">Talk to the agent as a kitchen would. It can only reach PasStar with its key.</p>
+                <p className="muted">{connected ? 'Talk to the agent as a kitchen would. It can only reach PasStar with its key.' : 'Connect the agent with its key above to start.'}</p>
                 <div className="chips">
-                  {PROMPTS.map((p) => <button key={p} type="button" className="chip" onClick={() => send(p)} disabled={!!busy || !key}>{p}</button>)}
+                  {PROMPTS.map((p) => <button key={p} type="button" className="chip" onClick={() => send(p)} disabled={!!busy || !connected}>{p}</button>)}
                 </div>
               </div>
             )}
@@ -167,16 +210,16 @@ export function AgentConsole({ agents }: { agents: AgentConnection[] }) {
                 {l.kind === 'user' && <span className="msg-who" aria-hidden><User size={14} /></span>}
                 {l.kind === 'assistant' && <span className="msg-who" aria-hidden><Bot size={14} /></span>}
                 {l.kind === 'attempt' ? <span className="msg-attempt"><Swords size={14} aria-hidden /> Attempt: {l.text}</span>
-                  : <div className="msg-text">{l.text}</div>}
+                  : <div className="msg-text">{l.kind === 'assistant' ? <Markdown text={l.text} /> : l.text}</div>}
               </div>
             ))}
             {thinking && <div className="msg msg-assistant"><span className="msg-who" aria-hidden><Bot size={14} /></span><div className="msg-text muted">Thinking<span className="run-dots" aria-hidden><i /><i /><i /></span></div></div>}
             <div ref={chatEnd} />
           </div>
           <form className="console-input" onSubmit={(e) => { e.preventDefault(); send(); }}>
-            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={key ? 'Message the agent…' : 'Paste the agent’s key above first'}
-              disabled={!!busy || !key} aria-label="Message the agent" />
-            <Button variant="primary" size="sm" type="submit" disabled={!!busy || !input.trim() || !key} loading={busy === 'chat'}><Send size={15} /> Send</Button>
+            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={connected ? 'Message the agent…' : 'Connect the agent with its key first'}
+              disabled={!!busy || !connected} aria-label="Message the agent" />
+            <Button variant="primary" size="sm" type="submit" disabled={!!busy || !input.trim() || !connected} loading={busy === 'chat'}><Send size={15} /> Send</Button>
           </form>
         </section>
 

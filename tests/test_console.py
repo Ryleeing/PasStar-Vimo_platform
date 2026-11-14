@@ -131,6 +131,7 @@ def test_console_is_for_people_on_this_machine_and_their_own_agents():
     body = {"agent_key": "demo-hotel", "text": "hi", "mode": "script"}
     assert c.post("/v1/console/turn", json=body, headers={"X-Agent-Key": "demo-hotel"}).status_code == 403
     assert c.post("/v1/console/turn", json=body, headers={"X-Demo-User": "usr_owner"}).json()["error"]["code"] == "OUT_OF_SCOPE"
+    assert c.post("/v1/console/turn", json=body, headers={"X-Demo-User": "usr_valio"}).status_code == 403
     tunnel = {"X-Demo-User": "usr_manager", "Cf-Connecting-Ip": "203.0.113.7"}
     assert c.post("/v1/console/turn", json=body, headers=tunnel).status_code == 403
     assert json  # keep the import used

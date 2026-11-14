@@ -74,3 +74,22 @@ def test_key_changes_are_audited(client):
     client.post("/v1/agents/agt_hotel/revoke", headers=MANAGER)
     events = [r["event"] for r in db.all("SELECT event FROM audit_log ORDER BY seq")]
     assert "AGENT_KEY_ISSUED" in events and "AGENT_KEY_REVOKED" in events
+
+
+def test_valio_blocks_an_agent_even_with_a_valid_key(client):
+    a = client.post("/v1/agents/agt_rogue/block", headers=VALIO).json()
+    assert a["status"] == "BLOCKED" and a["connection"] == "NONE"
+    with pytest.raises(ApiError):
+        identity.caller("demo-rogue", None)
+    client.post("/v1/agents/agt_rogue/unblock", headers=VALIO)
+    assert identity.caller("demo-rogue", None).agent_id == "agt_rogue"
+
+
+def test_only_valio_blocks(client):
+    assert client.post("/v1/agents/agt_hotel/block", headers=MANAGER).json()["error"]["code"] == "NOT_APPROVER"
+
+
+def test_no_new_key_for_a_blocked_agent(client):
+    client.post("/v1/agents/agt_hotel/block", headers=VALIO)
+    r = client.post("/v1/agents/agt_hotel/key", json={"kind": "CHATGPT"}, headers=MANAGER)
+    assert r.json()["error"]["code"] == "OUT_OF_SCOPE"

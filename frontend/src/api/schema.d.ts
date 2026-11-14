@@ -82,6 +82,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/agents/{agent_id}/block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Block Agent
+         * @description Valio blocks an agent on its channel: every call is refused, even with a valid key. Nothing is deleted.
+         */
+        post: operations["block_agent_v1_agents__agent_id__block_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/agents/{agent_id}/unblock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unblock Agent */
+        post: operations["unblock_agent_v1_agents__agent_id__unblock_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/agents/{agent_id}/revoke": {
         parameters: {
             query?: never;
@@ -96,6 +133,46 @@ export interface paths {
          * @description Revoke the agent's key: every call with it is refused from now on (and shows up in the hold report).
          */
         post: operations["revoke_agent_key_v1_agents__agent_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/console/turn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Console Turn
+         * @description One message to the console agent; streams its tool calls, PasStar's answers and what happened behind them.
+         */
+        post: operations["console_turn_v1_console_turn_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/console/attacks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Console Attacks
+         * @description The agent tries to break the rules in several ways; streams each attempt and PasStar's refusal.
+         */
+        post: operations["console_attacks_v1_console_attacks_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -795,6 +872,12 @@ export interface components {
              */
             kind: "CHATGPT" | "CLAUDE" | "ERP" | "UNKNOWN";
             /**
+             * Status
+             * @default ACTIVE
+             * @enum {string}
+             */
+            status: "ACTIVE" | "BLOCKED";
+            /**
              * Connection
              * @enum {string}
              */
@@ -1260,6 +1343,38 @@ export interface components {
             attempt: number;
             /** Events */
             events: components["schemas"]["ChainEvent"][];
+        };
+        /** ConsoleAttacks */
+        ConsoleAttacks: {
+            /** Agent Key */
+            agent_key: string;
+        };
+        /** ConsoleTurn */
+        ConsoleTurn: {
+            /** Agent Key */
+            agent_key: string;
+            /** Text */
+            text: string;
+            /**
+             * Mode
+             * @default llm
+             * @enum {string}
+             */
+            mode: "llm" | "script";
+            /**
+             * History
+             * @default []
+             */
+            history: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * State
+             * @default {}
+             */
+            state: {
+                [key: string]: unknown;
+            };
         };
         /** CreateOrderRequest */
         CreateOrderRequest: {
@@ -2609,6 +2724,184 @@ export interface operations {
             };
         };
     };
+    block_agent_v1_agents__agent_id__block_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentConnection"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    unblock_agent_v1_agents__agent_id__unblock_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentConnection"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     revoke_agent_key_v1_agents__agent_id__revoke_post: {
         parameters: {
             query?: never;
@@ -2631,6 +2924,188 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentConnection"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    console_turn_v1_console_turn_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsoleTurn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    console_attacks_v1_console_attacks_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsoleAttacks"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Bad Request */
