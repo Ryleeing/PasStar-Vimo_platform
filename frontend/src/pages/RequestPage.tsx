@@ -277,7 +277,7 @@ export function RequestPage() {
                     </select>
                   </label>
                 )}
-                <Button variant="primary" size="sm" className="ml-auto" loading={busy === 'chat'} disabled={!input.trim() || !!busy} onClick={() => send()}>
+                <Button variant="primary" size="sm" className="ml-auto" loading={busy === 'chat'} disabled={!!busy} onClick={() => send()}>
                   Find options <ArrowRight size={16} />
                 </Button>
               </div>
