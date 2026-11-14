@@ -3,15 +3,15 @@
 //  · Any exact value (e.g. 33) can be typed in the legend. If the total isn't 100, the donut shows it and
 //    offers to balance the others; dragging resumes once the total is 100.
 //  · Dividers are keyboard sliders too (arrow keys move 5 points).
-//  · When a drag or edit ends, segments re-order from highest to lowest, starting at 12 o'clock;
-//    the legend follows the same order. Nothing moves while you are still dragging or typing.
+//  · The ring stays exactly as you left it (no re-ordering, no rotation). Only the legend on the right
+//    re-orders from highest to lowest when a drag or edit ends; nothing moves while you are still typing.
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { Scale } from 'lucide-react';
 
 export interface DonutSeg { key: string; label: string; help: string; color: string }
 
 const SNAP = 5;
-const CX = 120, CY = 120, R_OUT = 104, R_IN = 66, R_MID = (R_OUT + R_IN) / 2;
+const CX = 120, CY = 120, R_OUT = 102, R_IN = 80, R_MID = (R_OUT + R_IN) / 2;
 const pt = (deg: number, r: number) => {
   const a = (deg * Math.PI) / 180;
   return [CX + r * Math.sin(a), CY - r * Math.cos(a)] as const;
@@ -30,18 +30,16 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 const byValue = (vals: number[], prev: number[]) => [...prev].sort((a, b) => vals[b] - vals[a]);
 
 export function WeightDonut({ segs: rawSegs, values: rawValues, onChange: onRawChange }: { segs: DonutSeg[]; values: number[]; onChange: (v: number[]) => void }) {
-  // Display order: segments sorted by value. Everything below works on display positions.
+  // The ring keeps a fixed order; only the legend is sorted (by value, highest first).
+  const segs = rawSegs;
+  const values = rawValues;
   const [order, setOrder] = useState<number[]>(() => byValue(rawValues, rawValues.map((_, i) => i)));
-  const segs = order.map((i) => rawSegs[i]);
-  const values = order.map((i) => rawValues[i]);
   const internal = useRef(false);
-  const toRaw = (dv: number[]) => { const v = [...rawValues]; order.forEach((i, j) => { v[i] = dv[j]; }); return v; };
-  const onChange = (dv: number[]) => { internal.current = true; onRawChange(toRaw(dv)); };
-  /** Re-order by value and put the largest at the top. */
+  const onChange = (v: number[]) => { internal.current = true; onRawChange(v); };
+  /** Re-sort the legend once a change is finished. The ring is left alone. */
   const settle = (raw = rawValues) => {
     if (raw.reduce((a, x) => a + x, 0) !== 100) return;
     setOrder((o) => byValue(raw, o));
-    setStart(0);
   };
   // Changes from outside (presets, switching profile) settle straight away.
   useEffect(() => {
@@ -112,7 +110,7 @@ export function WeightDonut({ segs: rawSegs, values: rawValues, onChange: onRawC
     const top = v.map((x, i) => [x, i]).filter(([, i]) => i !== keep).sort((a, b) => b[0] - a[0])[0][1];
     v = v.map((x, i) => (i === top ? x + diff : x));
     onChange(v);
-    settle(toRaw(v));
+    settle(v);
   };
 
   // Draw with the real proportions even when the total isn't 100.
@@ -123,7 +121,7 @@ export function WeightDonut({ segs: rawSegs, values: rawValues, onChange: onRawC
   return (
     <div className={`donut ${drag != null ? 'dragging' : ''}`}>
       <div className="donut-chart">
-        <svg ref={svgRef} key={order.join('')} className="donut-svg" viewBox="0 0 240 240" role="img" aria-label={`Priorities: ${segs.map((s, i) => `${s.label} ${values[i]}`).join(', ')}`}
+        <svg ref={svgRef} className="donut-svg" viewBox="0 0 240 240" role="img" aria-label={`Priorities: ${segs.map((s, i) => `${s.label} ${values[i]}`).join(', ')}`}
           onPointerMove={(e) => { if (drag != null) moveDivider(drag, pointsAt(e)); }}
           onPointerUp={() => { if (drag != null) { setDrag(null); settle(); } }} onPointerCancel={() => { setDrag(null); settle(); }}>
           <circle cx={CX} cy={CY} r={R_MID} fill="none" stroke="var(--surface-3)" strokeWidth={R_OUT - R_IN} />
@@ -167,7 +165,9 @@ export function WeightDonut({ segs: rawSegs, values: rawValues, onChange: onRawC
       </div>
 
       <ul className="donut-legend">
-        {segs.map((s, i) => (
+        {order.map((i) => segs[i]).map((s) => {
+          const i = segs.indexOf(s);
+          return (
           <li key={s.key} className={shown === i ? 'on' : ''} onPointerEnter={() => setActive(i)} onPointerLeave={() => setActive(null)}>
             <span className="swatch" style={{ background: s.color }} aria-hidden />
             <span className="lg-text">
@@ -179,7 +179,8 @@ export function WeightDonut({ segs: rawSegs, values: rawValues, onChange: onRawC
                 onChange={(e) => setOne(i, e.target.value)} onBlur={() => settle()} aria-describedby="donut-hint" />
             </span>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       <p id="donut-hint" className={`donut-hint ${balanced ? '' : 'warn'}`} role="status">

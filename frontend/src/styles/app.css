@@ -1134,7 +1134,7 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
 .donut { display: grid; grid-template-columns: minmax(200px, 250px) minmax(0, 1fr); gap: var(--s4) var(--s7); align-items: center; }
 .donut-chart { position: relative; width: 100%; max-width: 250px; aspect-ratio: 1; justify-self: center; touch-action: none; user-select: none; }
 .donut-chart svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.donut-svg { animation: donut-settle 420ms var(--ease); }
+.donut-svg { animation: none; }
 @keyframes donut-settle { from { transform: rotate(-24deg); opacity: .6; } to { transform: none; opacity: 1; } }
 .donut-legend li { animation: fade var(--t) var(--ease); }
 .donut-seg { transition: opacity var(--t-fast) var(--ease); cursor: default; }
@@ -1625,3 +1625,15 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 .tl-fill.tl-caution { background: linear-gradient(180deg, #f8d659 0%, #efbe1f 100%); }
 .tl-fill.tl-stop { background: linear-gradient(180deg, #f27a6e 0%, #df4334 100%); }
 .trust-line { grid-template-columns: 128px minmax(80px, 1fr) 56px; }
+
+/* Priorities donut, after the reference: pastel segments with round ends and air between them, a soft white core,
+   the hovered segment eases out with a shadow. Numbers on the ring are dark so they read on pastel. */
+:root, [data-theme='light'] { --seg-1: #a796f3; --seg-2: #86cff0; --seg-3: #f6bf9c; --seg-4: #f1a6c9; }
+.donut-pct { fill: rgba(20, 27, 45, 0.78); font-size: 12px; font-weight: 700; }
+.donut-handle .knob { fill: #fff; stroke: rgba(20, 27, 45, 0.18); stroke-width: 1.5; filter: drop-shadow(0 2px 4px rgba(40, 60, 110, 0.25)); }
+.donut-handle:focus-visible .knob { stroke: var(--accent); stroke-width: 3; }
+.donut-center b { font-weight: 600; }
+.donut-center span { color: var(--muted); }
+/* pastel on white is too faint for the big number: keep it dark; the hovered segment already shows which one */
+.donut-center b { color: var(--text) !important; }
+.donut-center b.warn-text { color: var(--warn) !important; }
