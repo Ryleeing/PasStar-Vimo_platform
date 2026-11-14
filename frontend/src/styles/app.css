@@ -6,7 +6,7 @@
 
 :root {
   /* traffic light for trust: green tick, yellow question mark, red cross (same hues in both themes) */
-  --tl-go: #1fa45a; --tl-caution: #f5c518; --tl-stop: #d92d20;
+  --tl-go: #1aa19c; --tl-caution: #f5c518; --tl-stop: #d92d20;
   --tl-go-ink: #ffffff; --tl-caution-ink: #2b2100; --tl-stop-ink: #ffffff;
   /* type */
   --font: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -43,12 +43,12 @@
   --text-2: #bcc8db;
   --muted: #8d9db8;
 
-  --accent: #4cd0de;               /* lines, rings, selection */
-  --accent-ink: #8be3ee;           /* accent used as text on dark */
-  --accent-strong: #1497a5;        /* filled surfaces with white text */
-  --accent-grad: linear-gradient(180deg, #2cbfcc 0%, #13919f 100%);
-  --accent-soft: rgba(76, 208, 222, 0.14);
-  --navy: #1497a5;
+  --accent: #8a98f2;               /* lines, rings, selection */
+  --accent-ink: #b9c2fa;           /* accent used as text on dark */
+  --accent-strong: #5566dc;        /* filled surfaces with white text */
+  --accent-grad: linear-gradient(180deg, #6476eb 0%, #5566dc 100%);
+  --accent-soft: rgba(138, 152, 242, 0.16);
+  --navy: #5566dc;
   --brand-orange: #ec6f30;
   --glass: linear-gradient(150deg, rgba(30, 48, 76, 0.85) 0%, rgba(20, 34, 56, 0.78) 100%);
   --glass-rim: rgba(160, 190, 230, 0.14);
@@ -56,7 +56,7 @@
   --tile-shadow: 0 10px 26px -16px rgba(0, 0, 0, 0.6);
   --accent-shadow: 0 10px 24px -10px rgba(10, 30, 70, 0.7);
 
-  --ok: #5ad67d;   --ok-soft: rgba(90, 214, 125, 0.12);
+  --ok: #4fd1c5;   --ok-soft: rgba(79, 209, 197, 0.12);
   --warn: #fcc23f; --warn-soft: rgba(252, 194, 63, 0.12);
   --bad: #ff8080;  --bad-soft: rgba(255, 128, 128, 0.12);
   --info: #6fb0ff; --info-soft: rgba(111, 176, 255, 0.13);
@@ -97,20 +97,20 @@
   --text: #141b2d;
   --text-2: #4a5470;
   --muted: #7f89a3;
-  --accent: #17b6c4;               /* bright cyan-teal: selection, focus, highlights (kept apart from success green) */
-  --accent-ink: #0a7a86;           /* the same hue, dark enough for text */
-  --accent-strong: #0e98a6;        /* filled surfaces with white text */
-  --accent-grad: linear-gradient(180deg, #2fcad6 0%, #13a9b7 100%);   /* lit from above: a touch lighter on top */
-  --accent-soft: rgba(23, 182, 196, 0.12);
-  --accent-shadow: 0 8px 20px -10px rgba(14, 140, 152, 0.55);
-  --navy: #0e98a6;
+  --accent: #5566dc;               /* blue-violet: selection, focus, highlights (kept apart from success teal-green) */
+  --accent-ink: #3f4fc4;           /* the same hue, dark enough for text */
+  --accent-strong: #5566dc;        /* filled surfaces with white text */
+  --accent-grad: linear-gradient(180deg, #6476eb 0%, #5566dc 100%);   /* lit from above: a touch lighter on top */
+  --accent-soft: rgba(85, 102, 220, 0.10);
+  --accent-shadow: 0 8px 20px -10px rgba(85, 102, 220, 0.55);
+  --navy: #5566dc;
   --brand-orange: #e2611f;
   /* card glass: white catching light at the top-left, cooling to blue at the bottom-right */
   --glass: linear-gradient(150deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.78) 45%, rgba(236, 243, 252, 0.72) 100%);
   --glass-rim: rgba(255, 255, 255, 0.95);
   --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 2px rgba(40, 70, 120, 0.04), 0 24px 56px -30px rgba(40, 80, 150, 0.35);
   --tile-shadow: 0 1px 2px rgba(40, 70, 120, 0.05), 0 10px 26px -16px rgba(40, 80, 150, 0.30);
-  --ok: #1a8a3e;   --ok-soft: rgba(26, 138, 62, 0.10);
+  --ok: #0f8079;   --ok-soft: rgba(26, 161, 156, 0.10);
   --warn: #a87c00; --warn-soft: rgba(245, 197, 24, 0.18);
   --bad: #c62a1f;  --bad-soft: rgba(198, 42, 31, 0.08);
   --info: #1f5fc4; --info-soft: rgba(31, 95, 196, 0.09);
@@ -1535,19 +1535,19 @@ h3, .run-title, .opt-name { font-weight: 500; }
 }
 .card, .opt, .chat, .excl, .prof-bar, .ai-reply, .mandate-strip, .checkout, .request-panel .form-card { border-radius: 26px; }
 .progress, .account-btn { border-radius: 22px; }
-.opt:hover { border-color: var(--glass-rim); box-shadow: var(--glass-shadow), 0 0 0 1px rgba(23, 182, 196, 0.18); }
+.opt:hover { border-color: var(--glass-rim); box-shadow: var(--glass-shadow), 0 0 0 1px rgba(85, 102, 220, 0.18); }
 .opt.sel { border-color: var(--glass-rim); box-shadow: var(--glass-shadow), 0 0 0 1.5px var(--accent); }
-.opt.featured { border-color: var(--glass-rim); box-shadow: var(--glass-shadow), 0 0 0 1px rgba(23, 182, 196, 0.35); }
-.opt.featured::before { background: linear-gradient(100deg, rgba(23, 182, 196, 0.55), transparent 40%); }
+.opt.featured { border-color: var(--glass-rim); box-shadow: var(--glass-shadow), 0 0 0 1px rgba(85, 102, 220, 0.35); }
+.opt.featured::before { background: linear-gradient(100deg, rgba(85, 102, 220, 0.55), transparent 40%); }
 .ai-reply.asking { border: 1px solid var(--glass-rim); background: var(--glass); box-shadow: var(--glass-shadow), 0 0 0 1.5px var(--accent); }
 
 /* request hero keeps its gradient, dots and glow (now in blue) and gets the glass rim + shadow */
 .hero { border: 1px solid var(--glass-rim); box-shadow: var(--glass-shadow); border-radius: 26px;
   background:
-    radial-gradient(circle at 1px 1px, rgba(23, 182, 196, 0.30) 1px, transparent 0) right top / 18px 18px no-repeat,
-    linear-gradient(135deg, rgba(214, 243, 248, 0.95) 0%, rgba(255, 255, 255, 0.85) 70%);
+    radial-gradient(circle at 1px 1px, rgba(85, 102, 220, 0.30) 1px, transparent 0) right top / 18px 18px no-repeat,
+    linear-gradient(135deg, rgba(228, 231, 252, 0.95) 0%, rgba(255, 255, 255, 0.85) 70%);
 }
-.hero::before { background: radial-gradient(circle, rgba(80, 205, 222, 0.35), transparent 70%); }
+.hero::before { background: radial-gradient(circle, rgba(100, 118, 235, 0.22), transparent 70%); }
 
 /* tiles inside cards: solid white, soft lift */
 .composer { border: 1px solid rgba(255, 255, 255, 0.9); box-shadow: var(--tile-shadow); border-radius: 20px; }
@@ -1588,7 +1588,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 
 /* chips: white pills; selected = bright blue tint (like the reference's selected row) */
 .chip { background: rgba(255, 255, 255, 0.85); border-color: var(--border-strong); color: var(--text-2); font-weight: 500; }
-.chip[aria-pressed='true'] { background: rgba(23, 182, 196, 0.12); border-color: rgba(23, 182, 196, 0.45); color: var(--accent-ink); }
+.chip[aria-pressed='true'] { background: rgba(85, 102, 220, 0.12); border-color: rgba(85, 102, 220, 0.45); color: var(--accent-ink); }
 .chip[aria-pressed='true'] svg { color: var(--accent); }
 
 /* segmented: translucent track, white pill selection */
@@ -1599,8 +1599,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 /* small details */
 .opt-rank { background: rgba(255, 255, 255, 0.85); border: 0; box-shadow: var(--tile-shadow); }
 .opt.featured .opt-rank { background: var(--accent-grad); color: #fff; }
-.opt-badge { background: rgba(23, 182, 196, 0.11); color: var(--accent-ink); }
-.pill.tone-ok, .opt-save { background: rgba(26, 138, 62, 0.10); }
+.opt-badge { background: rgba(85, 102, 220, 0.11); color: var(--accent-ink); }
+.pill.tone-ok, .opt-save { background: rgba(26, 161, 156, 0.10); }
 /* the reference's hatched bars: a fine diagonal sheen on filled bars */
 .prio-bar i { background-image: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.28) 0 3px, transparent 3px 7px); }
 .prio-bar { background: rgba(255, 255, 255, 0.8); box-shadow: inset 0 0 0 1px var(--border); }
@@ -1617,11 +1617,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 /* Reliability score bars: thick rounded pills on a tinted track of the same hue, a soft fill that is a touch
    lighter at the top, rounded at the end. Colours keep their meaning (green reliable, yellow unsure, red risky). */
 .tl-bar { height: 14px; border-radius: 999px; overflow: hidden; background: var(--surface-3); box-shadow: none; }
-.tl-bar:has(.tl-go) { background: rgba(31, 164, 90, 0.12); }
+.tl-bar:has(.tl-go) { background: rgba(26, 161, 156, 0.12); }
 .tl-bar:has(.tl-caution) { background: rgba(240, 190, 30, 0.16); }
 .tl-bar:has(.tl-stop) { background: rgba(217, 45, 32, 0.10); }
 .tl-fill { min-width: 14px; border-radius: 999px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 1px 3px -1px rgba(0, 0, 0, 0.12); }
-.tl-fill.tl-go { background: linear-gradient(180deg, #4cc785 0%, #27a862 100%); }
+.tl-fill.tl-go { background: linear-gradient(180deg, #3cc0b8 0%, #1aa19c 100%); }
 .tl-fill.tl-caution { background: linear-gradient(180deg, #f8d659 0%, #efbe1f 100%); }
 .tl-fill.tl-stop { background: linear-gradient(180deg, #f27a6e 0%, #df4334 100%); }
 .trust-line { grid-template-columns: 128px minmax(80px, 1fr) 56px; }
@@ -1661,11 +1661,11 @@ html:not([data-theme='light']) .seg { background: rgba(255, 255, 255, 0.05); bor
 html:not([data-theme='light']) .seg button[aria-checked='true'] { background: var(--surface-3); color: var(--text); box-shadow: none; }
 html:not([data-theme='light']) .hero {
   background:
-    radial-gradient(circle at 1px 1px, rgba(76, 208, 222, 0.30) 1px, transparent 0) right top / 18px 18px no-repeat,
-    linear-gradient(135deg, rgba(76, 208, 222, 0.16) 0%, rgba(20, 34, 56, 0.85) 70%);
+    radial-gradient(circle at 1px 1px, rgba(138, 152, 242, 0.30) 1px, transparent 0) right top / 18px 18px no-repeat,
+    linear-gradient(135deg, rgba(138, 152, 242, 0.16) 0%, rgba(20, 34, 56, 0.85) 70%);
   border-color: var(--glass-rim);
 }
-html:not([data-theme='light']) .hero::before { background: radial-gradient(circle, rgba(76, 208, 222, 0.22), transparent 70%); }
+html:not([data-theme='light']) .hero::before { background: radial-gradient(circle, rgba(138, 152, 242, 0.22), transparent 70%); }
 html:not([data-theme='light']) .hero-sub { color: var(--text-2); }
 html:not([data-theme='light']) .composer { background: var(--surface); border-color: var(--border); }
 html:not([data-theme='light']) .bubble-text, html:not([data-theme='light']) .tiebreak, html:not([data-theme='light']) .rule-compose, html:not([data-theme='light']) .opt-panel .alt { background: var(--surface-2); }
@@ -1803,3 +1803,9 @@ html:not([data-theme='light']) .composer textarea { background: transparent; bor
   padding: 2px 10px; border-radius: 999px; background: var(--surface-2); font-size: var(--fs-label); color: var(--text-2); }
 .placed-by.agent { background: var(--accent-soft); color: var(--accent-ink); }
 .placed-by b { color: inherit; }
+
+/* ═════════════ Flat primary (blue) buttons: solid fill, no gradient / glow / inset highlight / text shadow ═════════════ */
+.btn.primary { background: var(--accent-strong); box-shadow: none; text-shadow: none; filter: none; }
+.btn.primary:hover { background: #4656cc; box-shadow: none; filter: none; }
+.btn.primary:active { transform: none; }
+html:not([data-theme='light']) .btn.primary:hover { background: #6476eb; }
