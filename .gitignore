@@ -1,0 +1,132 @@
+# -----------------------------------------------------------------------------
+# Operating system and editor files
+# -----------------------------------------------------------------------------
+.DS_Store
+._*
+Thumbs.db
+
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# Local AI-tool settings/state. Shared project instructions may still be tracked.
+/.claude/settings.local.json
+/.codex/
+
+# -----------------------------------------------------------------------------
+# Secrets and machine-local configuration
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.*.example
+.envrc
+.direnv/
+/secrets/
+
+*.pem
+*.key
+*.p12
+*.pfx
+*_private.jwk
+
+# The demo buyer ERP creates this private key on first import/use.
+/backend/data/demo/buyer_erp_key.json
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+.venv/
+venv/
+ENV/
+
+.pytest_cache/
+.hypothesis/
+.mypy_cache/
+.pyright/
+.ruff_cache/
+.tox/
+.nox/
+
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+junit.xml
+
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+build/
+dist/
+
+# -----------------------------------------------------------------------------
+# Node / React / Vite
+# -----------------------------------------------------------------------------
+node_modules/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+
+.vite/
+coverage/
+storybook-static/
+playwright-report/
+test-results/
+blob-report/
+
+*.tsbuildinfo
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -----------------------------------------------------------------------------
+# Local product data and runtime databases
+# -----------------------------------------------------------------------------
+# Raw Valio data is downloaded separately and must not be committed.
+/data/*
+!/data/.gitkeep
+!/data/README.md
+
+/backend/data/*
+!/backend/data/.gitkeep
+!/backend/data/README.md
+
+**/valio_aimo_junction26_product_data.json
+**/valio_aimo_junction26_delivery_reliability.csv
+**/valio_aimo_junction26_carbon_footprint.csv
+
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Files produced by the README's local external-approval demo.
+/order.json
+/backend/order.json
+
+# -----------------------------------------------------------------------------
+# Logs, caches, and temporary output
+# -----------------------------------------------------------------------------
+*.log
+*.pid
+.cache/
+tmp/
+temp/
+*.tmp
+
+# Intentionally versioned contract artifacts:
+#   /openapi.json
+#   /fixtures/
