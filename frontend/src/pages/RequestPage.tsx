@@ -390,7 +390,7 @@ function AiReply({ message, answers, asking, stuck, thinking, onAnswer, onStartO
               <input aria-label={asking.question} value={draft} autoFocus
                 placeholder={(asking.options?.length ?? 0) > 0 ? 'Or type your answer' : ANSWER_HINT[asking.field] ?? 'Type your answer'}
                 onChange={(e) => setDraft(e.target.value)} />
-              <Button type="submit" variant="primary" size="sm" disabled={!draft.trim()}>Answer <ArrowUp size={15} /></Button>
+              <Button type="submit" variant="primary" size="sm">Answer <ArrowUp size={15} /></Button>
             </form>
             <p className="small muted">You can also set it in the order form and find options there.</p>
           </>

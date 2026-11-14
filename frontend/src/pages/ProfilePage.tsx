@@ -308,12 +308,13 @@ function BuyingRules({ b, set, known, facets }: {
   const setEx = (patch: Partial<NonNullable<ProfileBody['hard_exclusions']>>) => set({ hard_exclusions: { ...ex, ...patch } });
 
   const understand = () => {
+    if (!text.trim()) return;
     const res = interpretRules(text, { facets, knownBrands: [...new Set([...known.brands, ...brands])], knownProducts: known.products });
     setResult(res);
     setPicked(new Set(res.rules.map((r, i) => (already(r) ? -1 : i)).filter((i) => i >= 0)));
   };
   const apply = () => {
-    if (!result) return;
+    if (!result || !picked.size) return;
     const chosen = result.rules.filter((_, i) => picked.has(i));
     setEx({
       brands: [...brands, ...chosen.filter((r) => r.kind === 'brand').map((r) => r.value as string)],
@@ -341,7 +342,7 @@ function BuyingRules({ b, set, known, facets }: {
           <textarea id="rule-text" rows={2} value={text} placeholder="e.g. No Arla. Everything must be nut-free. Skip product 464179."
             onChange={(e) => { setText(e.target.value); setResult(null); }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && text.trim()) { e.preventDefault(); understand(); } }} />
-          <Button variant="primary" size="sm" disabled={!text.trim()} onClick={understand}><WandSparkles size={15} /> Turn into rules</Button>
+          <Button variant="primary" size="sm" onClick={understand}><WandSparkles size={15} /> Turn into rules</Button>
         </div>
 
         {result && (
@@ -366,7 +367,7 @@ function BuyingRules({ b, set, known, facets }: {
                   })}
                 </ul>
                 <div className="row" style={{ gap: 8 }}>
-                  <Button variant="primary" size="sm" disabled={!picked.size} onClick={apply}><Plus size={14} /> Add {picked.size} rule{picked.size === 1 ? '' : 's'}</Button>
+                  <Button variant="primary" size="sm" onClick={apply}><Plus size={14} /> Add {picked.size} rule{picked.size === 1 ? '' : 's'}</Button>
                   <Button variant="ghost" size="sm" onClick={() => setResult(null)}>Cancel</Button>
                 </div>
               </>
