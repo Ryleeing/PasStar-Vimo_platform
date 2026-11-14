@@ -7,3 +7,4 @@ cachetools
 pyyaml
 joserfc
 pytest
+mcp>=2.3,<3

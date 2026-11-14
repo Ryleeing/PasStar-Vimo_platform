@@ -22,6 +22,11 @@ from .orchestrator import parser_api, seed as be3_seed, service as be3
 from .orchestrator.holds import HoldCaller, record_parse
 from .schemas import *  # noqa: F401,F403
 
+try:        # MCP for AI assistants (BE3, orchestrator/mcp_server.py); the API runs without it when mcp is not installed
+    from .orchestrator import mcp_server
+except ImportError:
+    mcp_server = None
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -29,7 +34,11 @@ async def lifespan(_: FastAPI):
     if db.one("SELECT 1 FROM buyers") is None:
         seed.reset()
         be3_seed.reset()
-    yield
+    if mcp_server is None:
+        yield
+        return
+    async with mcp_server.session_manager.run():
+        yield
 
 
 app = FastAPI(
@@ -41,6 +50,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+if mcp_server is not None:
+    app.router.routes.extend(mcp_server.routes)      # POST /mcp
 
 AgentKey = Header(default=None, alias="X-Agent-Key")
 DemoUser = Header(default=None, alias="X-Demo-User",

@@ -31,6 +31,8 @@ class TemplateExplain:
             reqs = ", ".join(d["requirements"]) or "no extra requirements"
             profile = f"; profile '{d['profile']}' applied" if d.get("profile") else ""
             what = f"{d['category']}, {reqs}, {d['quantity']}, delivered by {d['delivery_date']}{profile}"
+            if d.get("submitted_by_agent") and d.get("parsed_from_text"):
+                return f"Understood the message agent {d['submitted_by_agent']} passed on: {what}."
             if d.get("submitted_by_agent"):
                 return f"Agent {d['submitted_by_agent']} sent a structured request (not interpreted here): {what}."
             return f"You need: {what}."

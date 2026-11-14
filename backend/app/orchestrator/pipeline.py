@@ -117,7 +117,7 @@ class Pipeline:
 
         out = _Attempt(self, request_id, attempt, from_node, prev_attempt)
         structured = self._node1(out, structured, constraints, profile.body.name if profile else None,
-                                 agent_of(req["created_by"]))
+                                 agent_of(req["created_by"]), req["input_mode"] == "NATURAL_LANGUAGE")
         kept, blocked = self._node2(out, structured, rules, constraints)
         if self.d.audit and from_node <= 2:     # a rerun from node 3 or 4 re-uses node 2, nothing new was blocked
             record_blocked(self.d.audit, request_id, attempt, blocked, protocol.body.buyer_id,
@@ -190,7 +190,7 @@ class Pipeline:
     # ───────────── nodes ─────────────
 
     def _node1(self, out: "_Attempt", structured: StructuredRequest, constraints: list[dict],
-               profile_name: Optional[str], agent_id: Optional[str]) -> StructuredRequest:
+               profile_name: Optional[str], agent_id: Optional[str], from_text: bool = False) -> StructuredRequest:
         for c in _for_node(constraints, 1):
             if "structured" in c["params"]:
                 structured = StructuredRequest.model_validate(c["params"]["structured"])
@@ -198,8 +198,13 @@ class Pipeline:
                  "requirements": [r.label or r.code for r in structured.requirements],
                  "quantity": f"{structured.quantity.value:g} {structured.quantity.unit}",
                  "delivery_date": structured.delivery_date.isoformat(), "profile": profile_name,
-                 "submitted_by_agent": agent_id}
-        if agent_id:
+                 "submitted_by_agent": agent_id, "parsed_from_text": from_text}
+        if agent_id and from_text:      # an assistant passed on the user's words (MCP): The Pass parsed them itself
+            event = self._event(f"Understood the message agent {agent_id} passed on",
+                                "Parsed the user's words with the cross-checked parser; the agent answers "
+                                "open questions by sending the request again",
+                                [EvidenceRef(source="BUYER_INPUT", detail=json.dumps(facts))])
+        elif agent_id:
             event = self._event(f"Received a structured request from agent {agent_id}",
                                 "The agent understood the request itself; this node was skipped",
                                 [EvidenceRef(source="BUYER_INPUT", detail=json.dumps(facts))])
