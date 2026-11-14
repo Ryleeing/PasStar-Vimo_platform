@@ -9,7 +9,7 @@
   --tl-go: #1fa45a; --tl-caution: #f5c518; --tl-stop: #d92d20;
   --tl-go-ink: #ffffff; --tl-caution-ink: #2b2100; --tl-stop-ink: #ffffff;
   /* type */
-  --font: 'Hanken Grotesk Variable', 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
   --fs-meta: 0.8125rem;   /* 13 – timestamps, footnotes */
   --fs-label: 0.875rem;   /* 14 – labels, secondary text, controls */
@@ -59,7 +59,8 @@
   --radius-sm: 10px;
   --radius: 14px;
   --radius-lg: 20px;
-  --shadow: 0 1px 0 rgba(255, 255, 255, 0.025) inset, 0 14px 32px -20px rgba(0, 0, 0, 0.7);
+  --pill: 999px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   --shadow-pop: 0 22px 48px -14px rgba(0, 0, 0, 0.65);
   --illo-shadow: rgba(0, 0, 0, 0.35);
   --sidebar-w: 300px;
@@ -81,7 +82,7 @@
 [data-theme='light'] {
   --bg: #f6f4f1;
   --bg-glow: rgba(236, 106, 44, 0.06);
-  --sidebar: #fbfaf8;
+  --sidebar: #ffffff;
   --surface: #ffffff;
   --surface-2: #f4f2ee;
   --surface-3: #eae7e1;
@@ -101,8 +102,8 @@
   --bad: #c62a1f;  --bad-soft: rgba(198, 42, 31, 0.08);
   --info: #1f5fc4; --info-soft: rgba(31, 95, 196, 0.09);
   --neutral: #6b645c; --neutral-soft: rgba(107, 100, 92, 0.10);
-  --shadow: 0 1px 2px rgba(28, 25, 23, 0.04), 0 10px 26px -18px rgba(28, 25, 23, 0.22);
-  --shadow-pop: 0 22px 44px -14px rgba(28, 25, 23, 0.25);
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
+  --shadow-pop: 0 16px 40px -12px rgba(16, 24, 40, 0.18);
   --illo-shadow: rgba(28, 25, 23, 0.10);
   color-scheme: light;
 }
@@ -1406,3 +1407,76 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
 .trust-name { font-size: var(--fs-label); font-weight: 600; color: var(--text); }
 .trust-line .tl-bar { width: 100%; }
 .trust-score { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: var(--fs-label); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ═════════════ Clean dashboard skin ═════════════
+   Style only (no layout changes): cool grey page, white cards with a hairline border and no shadow,
+   pill-shaped secondary buttons, flat primary, soft tinted status tags, grey segmented controls,
+   lighter type weights. Mascot colours and motion are untouched. */
+body { font-weight: 400; letter-spacing: -0.006em; }
+h1 { font-weight: 600; letter-spacing: -0.025em; }
+h2 { font-weight: 600; letter-spacing: -0.015em; }
+h3 { font-weight: 600; }
+b, strong, .strong { font-weight: 600; }
+
+/* surfaces */
+.card, .opt, .chat, .card.run, .excl, .prof-bar, .progress, .account-btn, .opts-more, .savebar, .review-summary, .receipt {
+  border-color: var(--border); box-shadow: none;
+}
+.card, .opt, .chat, .excl, .prof-bar { border-radius: 20px; }
+.opt:hover { border-color: var(--border-strong); box-shadow: none; }
+.opt.sel { box-shadow: 0 0 0 1px var(--accent); }
+
+/* sidebar: a floating white panel */
+@media (min-width: 901px) {
+  .sidebar { margin: 12px 0 12px 12px; height: calc(100vh - 24px); top: 12px; border: 1px solid var(--border); border-radius: 20px; background: var(--sidebar); }
+}
+.nav a { border-radius: 12px; font-weight: 500; color: var(--text-2); }
+.nav a:hover { background: var(--surface-2); }
+.nav a.active { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.account-btn, .progress { border-radius: 16px; background: var(--surface); }
+
+/* inputs */
+input, select, textarea { background: var(--surface); border-color: var(--border-strong); border-radius: 12px; }
+input:hover, select:hover, textarea:hover { border-color: #c9ced6; }
+
+/* chips: white pills; selected = soft tint */
+.chip { background: var(--surface); border-color: var(--border-strong); color: var(--text-2); font-weight: 500; }
+.chip[aria-pressed='true'] { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 40%, transparent); color: var(--accent-ink); }
+
+/* segmented control: grey track, white selection */
+.seg { background: var(--surface-2); border: 0; border-radius: 12px; padding: 4px; }
+.seg button { border-radius: 9px; font-weight: 500; color: var(--muted); }
+.seg button[aria-checked='true'] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08), 0 0 0 1px var(--border); }
+
+/* status tags: soft tinted rounded rectangles, no border */
+.pill, .opt-badge, .ev-pill, .run-updated, .form-src { border-radius: 8px; font-weight: 500; }
+.pill { border: 0; }
+.sig { border-radius: 10px; }
+.sig b { font-weight: 600; }
+
+/* tables */
+.table th { font-weight: 500; color: var(--muted); border-bottom-color: var(--border); }
+.table td { border-bottom-color: var(--border); }
+
+/* figures: confident but not heavy */
+.opt-amount { font-weight: 600; letter-spacing: -0.03em; }
+.opt-rank { background: var(--surface); border-color: var(--border-strong); font-weight: 600; }
+.opt.featured::before { display: none; }
+.opt.featured { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+
+/* chat bubbles keep their shapes; flatter fills */
+.bubble-text { background: var(--surface-2); }
+.compose-box, .chat-compose textarea { border-radius: 12px; }
+.chat-compose .send, .compose-box .send { border-radius: 10px; }
+
+.seg { background: rgba(16, 24, 40, 0.05); }
+[data-theme='dark'] .seg, :root:not([data-theme='light']) .seg { background: var(--surface-2); }
+
+/* avatars: one quiet grey for every person (no per-role colours) */
+.avatar, .av-chef, .av-buyer_manager, .av-owner, .av-valio_reviewer { background: #e4e2de; color: #3d3833; }
+:root:not([data-theme='light']) .avatar { background: var(--surface-3); color: var(--text-2); }
+
+/* answering A.I.mo happens in its reply card, right under the question */
+.ai-answer { display: flex; align-items: center; gap: var(--s2); margin-top: var(--s1); max-width: 520px; }
+.ai-answer input { flex: 1; min-width: 0; min-height: 44px; background: var(--surface); }
+.ai-answer .btn { flex: none; min-height: 44px; }
