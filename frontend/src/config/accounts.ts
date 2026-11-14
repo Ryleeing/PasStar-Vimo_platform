@@ -7,7 +7,7 @@ import {
 
 export type RoleKey = 'chef' | 'buyer_manager' | 'owner' | 'valio_reviewer';
 export type PageKey = 'request' | 'options' | 'review' | 'approve' | 'ordered' | 'orders' | 'approvals' | 'protocol' | 'profile' | 'audit' | 'valio' | 'agents';
-export type WorkspaceKey = 'hotel' | 'cafe' | 'valio';
+export type WorkspaceKey = 'hotel' | 'bistro' | 'valio';
 
 export interface Account {
   key: RoleKey;
@@ -25,18 +25,20 @@ export interface Workspace {
   modeLabel: string;
   buyerId?: string;
   protocolId?: string;
+  /** The agent named in this workspace's protocol (backend seed: app/channel/seed.py). */
+  agentId?: string;
 }
 
 export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
-  hotel: { key: 'hotel', name: 'Hotel Helsinki Central', kind: 'buyer', mode: 'SEPARATE', modeLabel: 'Organisation · separate approver', buyerId: 'buy_hotel', protocolId: 'prot_hotel_v1' },
-  cafe: { key: 'cafe', name: 'Café Kallio', kind: 'buyer', mode: 'SELF', modeLabel: 'Single owner · self-approval logged', buyerId: 'buy_cafe', protocolId: 'prot_cafe_v1' },
+  hotel: { key: 'hotel', name: 'Hotel Helsinki Central', kind: 'buyer', mode: 'SEPARATE', modeLabel: 'Organisation · separate approver', buyerId: 'buy_hotel', protocolId: 'prot_hotel_v1', agentId: 'agt_hotel' },
+  bistro: { key: 'bistro', name: 'Bistro Kallio', kind: 'buyer', mode: 'SELF', modeLabel: 'Single owner · self-approval logged', buyerId: 'buy_bistro', protocolId: 'prot_bistro_v1', agentId: 'agt_bistro' },
   valio: { key: 'valio', name: 'Valio Aimo', kind: 'seller', modeLabel: 'Channel owner' },
 };
 
 export const ACCOUNTS: Account[] = [
   { key: 'chef', userId: 'usr_chef', name: 'Aino', title: 'Chef', workspace: 'hotel' },
   { key: 'buyer_manager', userId: 'usr_manager', name: 'Mikko', title: 'Procurement manager', workspace: 'hotel' },
-  { key: 'owner', userId: 'usr_owner', name: 'Sanna', title: 'Owner', workspace: 'cafe' },
+  { key: 'owner', userId: 'usr_owner', name: 'Sanna', title: 'Owner', workspace: 'bistro' },
   { key: 'valio_reviewer', userId: 'usr_valio', name: 'Elina', title: 'Valio reviewer', workspace: 'valio' },
 ];
 

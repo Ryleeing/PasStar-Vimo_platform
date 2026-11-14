@@ -65,9 +65,11 @@ function ValioCard({ a }: { a: ApprovalCard }) {
     setBusy(decision);
     try {
       const res = await decideApproval(a.id, { decision, route_to: decision === 'ROUTE' ? 'data_governance' : null, changes: {}, note: null });
-      // The fixture server answers with the buyer approval; keep this card and take only the new status.
+      // The backend answers with this card as decided. The in-browser mock answers with a buyer approval
+      // instead, so there keep this card and take only the new status.
       const status: ApprovalCard['status'] = decision === 'APPROVE' ? 'APPROVED' : decision === 'REJECT' ? 'REJECTED' : 'ROUTED';
-      patch({ decisions: { ...flow.decisions, [a.id]: { ...res, approval: { ...a, status } } } });
+      const approval = res.approval.id === a.id ? res.approval : { ...a, status };
+      patch({ decisions: { ...flow.decisions, [a.id]: { ...res, approval } } });
       toast(decision === 'REJECT' ? 'Rejected. Nothing was disclosed.' : decision === 'ROUTE' ? 'Routed to the data governance team' : 'One-off disclosure approved and logged', decision === 'APPROVE' ? 'warn' : 'ok');
     } catch (e) {
       toast(describeError(e), 'bad');

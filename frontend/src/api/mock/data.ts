@@ -69,7 +69,7 @@ function withExtraCandidates(r: RequestResult): RequestResult {
 
 /** The fixtures only have the SEPARATE hotel protocol; the single-owner café needs a SELF one. */
 export function selfProtocol(p: Protocol): Protocol {
-  return { ...clone(p), id: 'prot_cafe_v1', body: { ...clone(p.body), buyer_id: 'buy_cafe', agent_id: 'agt_cafe', approval_mode: 'SELF', approver: 'usr_owner' } };
+  return { ...clone(p), id: 'prot_bistro_v1', body: { ...clone(p.body), buyer_id: 'buy_bistro', agent_id: 'agt_bistro', approval_mode: 'SELF', approver: 'usr_owner' } };
 }
 
 export function draftFrom(p: Protocol, description: string): Protocol {

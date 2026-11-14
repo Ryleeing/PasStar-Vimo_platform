@@ -15,9 +15,11 @@ export function AuditPage() {
   const { flow } = useFlow();
   const toast = useToast();
   const valio = account.key === 'valio_reviewer';
-  // Re-fetch when the journey moves so new events show up.
-  const log = useAsync(() => getAudit(flow.request?.request_id ?? 'req_1'),
-    [account.key, flow.request?.attempt, flow.order?.status, Object.keys(flow.decisions).length]);
+  // With a request in progress, show its events; otherwise everything this account may see (the backend
+  // filters by role). Re-fetch when the journey moves so new events show up.
+  const requestId = flow.request?.request_id;
+  const log = useAsync(() => getAudit(requestId),
+    [account.key, requestId, flow.request?.attempt, flow.order?.status, Object.keys(flow.decisions).length]);
   const [verify, setVerify] = useState<AuditVerifyResult | null>(null);
   const [checking, setChecking] = useState(false);
 
@@ -35,7 +37,9 @@ export function AuditPage() {
   return (
     <>
       <PageHead title={valio ? 'Full audit log' : 'Activity log'}
-        desc={valio ? 'All buyers and agents, with the data each one was shown.' : 'Everything the agent and your team did, in order.'}
+        desc={valio ? 'All buyers and agents, with the data each one was shown.'
+          : requestId ? 'Everything that happened for your current request, in order.'
+          : 'Everything the agent and your team did, in order.'}
         actions={<Button variant="ghost" onClick={runVerify} loading={checking}><ShieldCheck size={15} /> Check it hasn’t been altered</Button>} />
 
       {verify && (

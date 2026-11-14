@@ -15,7 +15,7 @@ export interface paths {
         put?: never;
         /**
          * Draft Protocol
-         * @description agent 根据一句话起草协议（内部调用 BE3 parser.draft_protocol），返回 DRAFT + 待确认问题。
+         * @description The agent drafts a protocol from one sentence (calls parser.draft_protocol from BE3); returns a DRAFT plus open questions.
          */
         post: operations["draft_protocol_v1_protocols_draft_post"];
         delete?: never;
@@ -35,7 +35,7 @@ export interface paths {
         get: operations["get_protocol_v1_protocols__protocol_id__get"];
         /**
          * Update Protocol
-         * @description 只能改 DRAFT 状态的协议。
+         * @description Only a DRAFT protocol can be edited.
          */
         put: operations["update_protocol_v1_protocols__protocol_id__put"];
         post?: never;
@@ -56,7 +56,7 @@ export interface paths {
         put?: never;
         /**
          * Sign Protocol
-         * @description 采购经理签字：DRAFT → PENDING_VALIO_CONFIRMATION。
+         * @description The approver named in the protocol signs: DRAFT / PENDING_BUYER_SIGNATURE → PENDING_VALIO_CONFIRMATION. Agents cannot sign.
          */
         post: operations["sign_protocol_v1_protocols__protocol_id__sign_post"];
         delete?: never;
@@ -76,7 +76,7 @@ export interface paths {
         put?: never;
         /**
          * Confirm Protocol
-         * @description Valio 确认：→ ACTIVE，生成 jws；旧版本 → SUPERSEDED。
+         * @description Valio confirms: → ACTIVE with a jws; the previous version → SUPERSEDED.
          */
         post: operations["confirm_protocol_v1_protocols__protocol_id__confirm_post"];
         delete?: never;
@@ -96,7 +96,7 @@ export interface paths {
         put?: never;
         /**
          * Amend Protocol
-         * @description 收紧直接生效；扩大生成新版本并要求重新签字；越权的列入 forbidden 并拒绝。
+         * @description Tightening takes effect at once; expansion creates a new version that must be signed again; changes the caller may not make are listed in forbidden and refused.
          */
         post: operations["amend_protocol_v1_protocols__protocol_id__amend_post"];
         delete?: never;
@@ -114,7 +114,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Revoke Protocol */
+        /**
+         * Revoke Protocol
+         * @description The approver named in the protocol or Valio can revoke it at any time.
+         */
         post: operations["revoke_protocol_v1_protocols__protocol_id__revoke_post"];
         delete?: never;
         options?: never;
@@ -131,7 +134,7 @@ export interface paths {
         };
         /**
          * Jwks
-         * @description Valio 的签名公钥，任何人都能用它验证协议和报价。
+         * @description The public signing key of Valio; anyone can use it to verify protocols and quotes.
          */
         get: operations["jwks_v1__well_known_jwks_json_get"];
         put?: never;
@@ -374,7 +377,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Verify Quote */
+        /**
+         * Verify Quote
+         * @description Checks the Valio signature and expiry. Anyone may verify.
+         */
         get: operations["verify_quote_v1_quotes__quote_id__verify_get"];
         put?: never;
         post?: never;
@@ -395,11 +401,10 @@ export interface paths {
         put?: never;
         /**
          * Create Order
-         * @description 复核报价（签名、有效期、价格库存是否变化）→ 闸门 → PLACED / PENDING_* / BUYER_AUTHORIZATION_REQUIRED /
-         *     REQUOTE_REQUIRED / REJECTED。同一个 Idempotency-Key 返回同一张订单。
-         *     协议是外部审批（EXTERNAL）且超额时：没带凭证 → BUYER_AUTHORIZATION_REQUIRED（附 authorization_request）；
-         *     带了有效凭证 → PLACED；凭证无效 → 403 AUTHORIZATION_INVALID。
-         *     假服务器里 prot_hotel_ext_v1 走外部审批，其余协议返回 fx.ORDER。
+         * @description Recheck the quote (signature, expiry, price and stock) → gate → PLACED / PENDING_* /
+         *     BUYER_AUTHORIZATION_REQUIRED / REQUOTE_REQUIRED / REJECTED. The same Idempotency-Key returns the same order.
+         *     With an EXTERNAL-approval protocol and an over-limit order: no token → BUYER_AUTHORIZATION_REQUIRED (with
+         *     authorization_request); a valid token → PLACED; an invalid token → 403 AUTHORIZATION_INVALID.
          */
         post: operations["create_order_v1_orders_post"];
         delete?: never;
@@ -419,8 +424,9 @@ export interface paths {
         put?: never;
         /**
          * Authorize Order
-         * @description 外部审批：agent 带着买方系统签的凭证回来，同一张订单继续走。
-         *     先验凭证（签名、报价、金额、审批人、有效期），再复核报价；价格变了 → REQUOTE_REQUIRED，新报价要新凭证。
+         * @description External approval: the agent returns with the token signed by the buyer system and the same order continues.
+         *     The token is verified first (signature, quote, amount, approver, expiry), then the quote is rechecked;
+         *     if the price moved → REQUOTE_REQUIRED, and the new quote needs a new token.
          */
         post: operations["authorize_order_v1_orders__order_id__authorization_post"];
         delete?: never;
@@ -453,7 +459,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Approvals */
+        /**
+         * List Approvals
+         * @description The buyer side sees only its own buyer approvals; Valio sees both queues.
+         */
         get: operations["list_approvals_v1_approvals_get"];
         put?: never;
         post?: never;
@@ -491,11 +500,20 @@ export interface paths {
         put?: never;
         /**
          * Decide
-         * @description 先校验审批人，再复核报价：没变 → 下单；变了 → REQUOTE_REQUIRED（附新报价，超阈值则生成新审批）。
-         *     审批人校验（BUYER 审批）：
-         *       - 决定人必须是协议里的 approver，否则 403 NOT_APPROVER；
-         *       - SEPARATE 模式下，决定人不能是提需求的人，否则 403 SELF_APPROVAL_FORBIDDEN；
-         *       - SELF 模式下允许自批，但审计日志记为 "self-approved"。
+         * @description Checks the approver, then rechecks the quote: unchanged → order placed; changed → REQUOTE_REQUIRED (with a new
+         *     quote, which goes through the gate as usual when it is ordered).
+         *     Approver check (BUYER approvals):
+         *       - the decider must be the approver in the protocol, else 403 NOT_APPROVER;
+         *       - in SEPARATE mode the decider cannot be the requester, else 403 SELF_APPROVAL_FORBIDDEN;
+         *       - in SELF mode self-approval is allowed and logged as "self-approved".
+         *     APPROVE_WITH_CHANGES: the approver changes proposal parameters only (`changes`) and must give a reason (`note`);
+         *     the changed proposal goes back through the gateway and gets a newly signed quote.
+         *       - Changeable: `candidate_id` (a substitute from the candidates), `delivery_date`, `lines[].sales_units`
+         *         (down only); Valio may also change `lines[].unit_price_cents` (within the reviewer band, beyond it the
+         *         approval is ROUTED), `conditions` and `valid_minutes`; data requests take `disclose_fields`, a per-field
+         *         switch. Everything else is read-only.
+         *       - A Valio change is a new quote round: the order becomes REQUOTE_REQUIRED and the buyer orders again with
+         *         the new quote within the confirmation window.
          */
         post: operations["decide_v1_approvals__approval_id__decision_post"];
         delete?: never;
@@ -513,7 +531,7 @@ export interface paths {
         };
         /**
          * Audit
-         * @description 按角色过滤：买家只看到 visibility 为 BUYER / BOTH 的条目。
+         * @description Filtered by role: a buyer sees only its own entries with visibility BUYER / BOTH; Valio sees everything.
          */
         get: operations["audit_v1_audit_get"];
         put?: never;
@@ -531,8 +549,34 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Audit Verify */
+        /**
+         * Audit Verify
+         * @description Recomputes the whole hash chain and compares the buyer_id / agent_id / reason_code columns with their hashed
+         *     copies in the payload; the first tampered entry is reported in first_bad_seq.
+         */
         get: operations["audit_verify_v1_audit_verify_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Holds Report
+         * @description Held / blocked events. Buyers see their own items; Valio sees counts only. Agents cannot read reports.
+         *     since defaults to 7 days before until, until to now; a range above 90 days is refused.
+         *     buyer_id is ignored in the buyer view (always the caller's buyer) and filters the Valio view.
+         */
+        get: operations["holds_report_v1_reports_holds_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -586,7 +630,8 @@ export interface paths {
         put?: never;
         /**
          * Reset
-         * @description 清空业务表并写入演示种子数据。
+         * @description Clears the BE1 tables (buyers, users, agents, protocols, quotes, orders, approvals, audit) and writes the demo seed data;
+         *     then clears the BE3 tables and writes the demo profiles.
          */
         post: operations["reset_v1_admin_reset_post"];
         delete?: never;
@@ -611,6 +656,15 @@ export interface components {
             blocked_24h: number;
             /** Probe Alerts 24H */
             probe_alerts_24h: number;
+        };
+        /** AgentHolds */
+        AgentHolds: {
+            /** Agent Id */
+            agent_id: string;
+            /** Total */
+            total: number;
+            /** By Reason */
+            by_reason: components["schemas"]["ReasonCount"][];
         };
         /** AllergenCard */
         AllergenCard: {
@@ -794,6 +848,13 @@ export interface components {
             kid: string;
             /** X */
             x: string;
+        };
+        /** AttributeCount */
+        AttributeCount: {
+            /** Attribute */
+            attribute: string;
+            /** Count */
+            count: number;
         };
         /** AuditEntry */
         AuditEntry: {
@@ -1213,6 +1274,74 @@ export interface components {
              * @default []
              */
             requirements: components["schemas"]["Requirement"][];
+        };
+        /**
+         * HoldItem
+         * @description One held event, buyer view only.
+         */
+        HoldItem: {
+            /** Seq */
+            seq: number;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /**
+             * Event
+             * @enum {string}
+             */
+            event: "REQUEST_NEEDS_INPUT" | "ATTRIBUTE_NOT_IN_CATALOG" | "CANDIDATES_BLOCKED" | "ORDER_HELD" | "AGENT_BLOCKED";
+            /** Reason Code */
+            reason_code: string;
+            /** Summary */
+            summary: string;
+            /** Request Id */
+            request_id?: string | null;
+            /** Order Id */
+            order_id?: string | null;
+            /** Agent Id */
+            agent_id?: string | null;
+        };
+        /** HoldsReport */
+        HoldsReport: {
+            /**
+             * Audience
+             * @enum {string}
+             */
+            audience: "BUYER" | "VALIO";
+            /** Buyer Id */
+            buyer_id?: string | null;
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /**
+             * Until
+             * Format: date-time
+             */
+            until: string;
+            /** Total */
+            total: number;
+            /** By Event */
+            by_event: {
+                [key: string]: number;
+            };
+            /** By Reason */
+            by_reason: components["schemas"]["ReasonCount"][];
+            /** By Agent */
+            by_agent: components["schemas"]["AgentHolds"][];
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["HoldItem"][];
+            /**
+             * Missing Attributes
+             * @default []
+             */
+            missing_attributes: components["schemas"]["AttributeCount"][];
         };
         /** Jwk */
         Jwk: {
@@ -1638,6 +1767,13 @@ export interface components {
              */
             local: number;
         };
+        /** ReasonCount */
+        ReasonCount: {
+            /** Reason Code */
+            reason_code: string;
+            /** Count */
+            count: number;
+        };
         /** RejectNodeRequest */
         RejectNodeRequest: {
             /**
@@ -1916,6 +2052,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Agent-Key"?: string | null;
                 /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
                 "X-Demo-User"?: string | null;
             };
@@ -2005,7 +2142,11 @@ export interface operations {
     get_protocol_v1_protocols__protocol_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 protocol_id: string;
             };
@@ -2090,7 +2231,11 @@ export interface operations {
     update_protocol_v1_protocols__protocol_id__put: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 protocol_id: string;
             };
@@ -2180,6 +2325,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Agent-Key"?: string | null;
                 /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
                 "X-Demo-User"?: string | null;
             };
@@ -2268,6 +2414,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Agent-Key"?: string | null;
                 /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
                 "X-Demo-User"?: string | null;
             };
@@ -2355,7 +2502,11 @@ export interface operations {
     amend_protocol_v1_protocols__protocol_id__amend_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 protocol_id: string;
             };
@@ -2444,7 +2595,11 @@ export interface operations {
     revoke_protocol_v1_protocols__protocol_id__revoke_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 protocol_id: string;
             };
@@ -2603,7 +2758,11 @@ export interface operations {
     list_profiles_v1_buyers__buyer_id__profiles_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 buyer_id: string;
             };
@@ -2688,7 +2847,11 @@ export interface operations {
     create_profile_v1_buyers__buyer_id__profiles_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 buyer_id: string;
             };
@@ -2777,7 +2940,11 @@ export interface operations {
     get_profile_v1_profiles__profile_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 profile_id: string;
             };
@@ -2862,7 +3029,11 @@ export interface operations {
     update_profile_v1_profiles__profile_id__put: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 profile_id: string;
             };
@@ -3199,7 +3370,11 @@ export interface operations {
     parse_request_v1_requests_parse_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3377,7 +3552,11 @@ export interface operations {
     get_request_v1_requests__request_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 request_id: string;
             };
@@ -3462,7 +3641,11 @@ export interface operations {
     reject_node_v1_requests__request_id__nodes__node__reject_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 request_id: string;
                 node: number;
@@ -3554,7 +3737,11 @@ export interface operations {
             query?: {
                 attempt?: number | null;
             };
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 request_id: string;
             };
@@ -3639,7 +3826,11 @@ export interface operations {
     select_candidate_v1_requests__request_id__select_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 request_id: string;
             };
@@ -3728,7 +3919,11 @@ export interface operations {
     get_quote_v1_quotes__quote_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 quote_id: string;
             };
@@ -3901,6 +4096,8 @@ export interface operations {
             header: {
                 "Idempotency-Key": string;
                 "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -3990,6 +4187,8 @@ export interface operations {
             query?: never;
             header?: {
                 "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
             };
             path: {
                 order_id: string;
@@ -4079,7 +4278,11 @@ export interface operations {
     get_order_v1_orders__order_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 order_id: string;
             };
@@ -4167,7 +4370,11 @@ export interface operations {
                 kind?: ("BUYER" | "VALIO") | null;
                 status?: ("PENDING" | "APPROVED" | "APPROVED_WITH_CHANGES" | "REJECTED" | "ROUTED") | null;
             };
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4250,7 +4457,11 @@ export interface operations {
     get_approval_v1_approvals__approval_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
             path: {
                 approval_id: string;
             };
@@ -4336,6 +4547,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Agent-Key"?: string | null;
                 /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
                 "X-Demo-User"?: string | null;
             };
@@ -4430,6 +4642,7 @@ export interface operations {
                 request_id?: string | null;
             };
             header?: {
+                "X-Agent-Key"?: string | null;
                 /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
                 "X-Demo-User"?: string | null;
             };
@@ -4559,6 +4772,98 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    holds_report_v1_reports_holds_get: {
+        parameters: {
+            query?: {
+                since?: string | null;
+                until?: string | null;
+                buyer_id?: string | null;
+                agent_id?: string | null;
+            };
+            header?: {
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+                "X-Agent-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HoldsReport"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

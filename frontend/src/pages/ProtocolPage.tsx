@@ -196,7 +196,7 @@ function DraftCard() {
   const make = async () => {
     setBusy('draft');
     try {
-      setDraft(await draftProtocol(workspace.buyerId!, 'agt_hotel', text));
+      setDraft(await draftProtocol(workspace.buyerId!, workspace.agentId!, text));
     } catch (e) {
       toast(describeError(e), 'bad');
     } finally {

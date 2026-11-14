@@ -20,7 +20,7 @@ function fresh() {
   const s = seed();
   return {
     ...s,
-    protocols: { [s.protocol.id]: s.protocol, prot_cafe_v1: selfProtocol(s.protocol) } as Record<string, Protocol>,
+    protocols: { [s.protocol.id]: s.protocol, prot_bistro_v1: selfProtocol(s.protocol) } as Record<string, Protocol>,
     quotes: {} as Record<string, Quote>,
     orders: {} as Record<string, Order>,
     idempotency: {} as Record<string, string>,
@@ -165,7 +165,7 @@ const routes: [string, RegExp, Handler][] = [
     const c = allCandidates().find((x) => x.id === id);
     if (!c) throw err(404, 'NOT_FOUND', `Candidate ${id} not found`);
     if (!c.selectable || !c.totals) throw err(403, 'OUT_OF_SCOPE', 'Blocked options cannot be selected', { violations: c.violations });
-    const proto = db.protocols[db.requester === 'usr_owner' ? 'prot_cafe_v1' : db.protocol.id];
+    const proto = db.protocols[db.requester === 'usr_owner' ? 'prot_bistro_v1' : db.protocol.id];
     const quote: Quote = {
       id: 'quo_' + id.replace('cand_', ''), request_id: rid, candidate_id: id, protocol_id: proto.id, lines: c.lines, totals: c.totals,
       delivery_date: c.delivery_date, valid_until: new Date(Date.now() + 15 * 60_000).toISOString(), status: 'VALID', jws: db.select.quote.jws,
