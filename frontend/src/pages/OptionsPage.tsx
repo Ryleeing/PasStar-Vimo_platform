@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, LayoutGrid, PencilLine } from 'lucide-react';
+import { ChevronDown, ChevronUp, PencilLine } from 'lucide-react';
 import { selectCandidate } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Candidate } from '../api/types';
@@ -10,6 +10,7 @@ import { useSession } from '../state/session';
 import { ChainView } from '../components/ChainView';
 import { CandidateCard } from '../components/CandidateCard';
 import { CheckoutBar } from '../components/CheckoutBar';
+import { Mascot } from '../components/Mascot';
 import { Banner, Button, Empty, PageHead, Pill, useToast } from '../components/ui';
 
 const newKey = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `idem-${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -27,7 +28,7 @@ export function OptionsPage() {
     return (
       <>
         <PageHead title="Options" />
-        <Empty icon={<LayoutGrid size={22} />} title="No request yet"
+        <Empty icon={<Mascot size={92} />} title="No request yet"
           action={<Button variant="primary" onClick={() => navigate('/request')}>Start a request</Button>}>
           Tell us what you need and you’ll get up to 8 ranked options here.
         </Empty>

@@ -5,7 +5,8 @@
 // and the chosen answer visibly flies into that slot: the question exists to complete the form.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowUp, Check, ChevronDown, Sparkles, WandSparkles } from 'lucide-react';
+import { ArrowRight, ArrowUp, Check, ChevronDown, WandSparkles } from 'lucide-react';
+import { Mascot, MascotFace, type MascotMood } from '../components/Mascot';
 import { createRequest, getFacets, listProfiles, parseRequest, rejectNode } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Ambiguity, Facets, Requirement, StructuredRequest } from '../api/types';
@@ -42,6 +43,13 @@ const formFrom = (s: StructuredRequest): Form => ({
 });
 
 interface Flight { text: string; from: DOMRect; to: DOMRect }
+
+/** Example prompts: one click fills the message box, which teaches what A.I.mo can read. */
+const EXAMPLES = [
+  '1000 litres of lactose-free milk by Monday',
+  'Nut-free cream for 200 desserts, Friday',
+  'Gluten-free pasta for the ward',
+];
 
 export function RequestPage() {
   const { workspace } = useSession();
@@ -156,9 +164,11 @@ export function RequestPage() {
     }
   };
 
+  const mood: MascotMood = parsing ? 'thinking' : question && !answer ? 'asking' : flow.parse ? 'happy' : 'idle';
+
   return (
     <div className="narrow">
-      <PageHead title={flow.correcting ? 'Correct your request' : 'What do you need?'} />
+      {flow.correcting && <PageHead title="Correct your request" />}
 
       {flow.correcting ? (
         <div style={{ marginBottom: 16 }}>
@@ -169,7 +179,13 @@ export function RequestPage() {
         </div>
       ) : (
         <>
-          {/* ── Message box ── */}
+          {/* ── Hero: A.I.mo + message box + examples ── */}
+          <section className="hero" aria-labelledby="hero-title">
+          <span className="hero-mascot"><Mascot mood={mood} size={150} /></span>
+          <div>
+            <h1 id="hero-title" className="display hero-title">What does your kitchen need?</h1>
+            <p className="hero-sub">Tell A.I.mo in your own words. It fills in the order form for you to check.</p>
+          </div>
           <div className="composer">
             <textarea
               aria-label="Describe what you need"
@@ -198,6 +214,13 @@ export function RequestPage() {
               </Button>
             </div>
           </div>
+          <div className="examples">
+            <span className="small strong label">Try</span>
+            {EXAMPLES.map((ex) => (
+              <button key={ex} type="button" className="chip example" onClick={() => patch({ rawText: ex, parse: null })}>{ex}</button>
+            ))}
+          </div>
+          </section>
 
           {flow.parse && (
             <AiReply question={question} answer={answer} inFlight={!!flight} onPick={pick} highlight={tried && !!question && !answer} />
@@ -236,7 +259,7 @@ function AiReply({ question, answer, inFlight, onPick, highlight }: {
   const answered = !!question && !!answer && !inFlight;
   return (
     <div className={`ai-reply ${question && !answered ? 'asking' : ''}`} aria-live="polite">
-      <span className="ai-avatar" aria-hidden><Sparkles size={15} /></span>
+      <span className="ai-avatar" aria-hidden><MascotFace mood={question && !answered ? 'asking' : 'happy'} /></span>
       <div className="stack sm grow">
         {!question && <p>I’ve filled in the details below. Check them, then find options.</p>}
         {question && (answered ? (

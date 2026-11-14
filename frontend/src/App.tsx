@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { Menu, ShieldCheck } from 'lucide-react';
+import { Menu } from 'lucide-react';
+import { MascotFace } from './components/Mascot';
 import { SessionProvider, useSession } from './state/session';
 import { FlowProvider } from './state/flow';
 import { PAGES_BY_ROLE, type PageKey } from './config/accounts';
@@ -50,7 +51,7 @@ function Shell() {
     <div className="shell">
       <div className="mobile-bar">
         <button className="btn ghost icon-btn" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={18} /></button>
-        <ShieldCheck size={18} color="var(--accent)" aria-hidden />
+        <span className="brand-mark" style={{ width: 32, height: 32, borderRadius: 10 }}><MascotFace size={24} /></span>
         <b>The Pass</b>
       </div>
       {menuOpen && <div className="scrim" onClick={() => setMenuOpen(false)} aria-hidden />}
