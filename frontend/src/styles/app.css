@@ -168,9 +168,9 @@ b, strong { font-weight: 650; }
 .shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100%; transition: grid-template-columns var(--t-slow) var(--ease); }
 .shell.collapsed { grid-template-columns: var(--sidebar-rail) minmax(0, 1fr); }
 .sidebar {
-  position: sticky; top: 0; height: 100vh; overflow-y: auto;
-  display: flex; flex-direction: column; gap: var(--s6);
-  padding: var(--s6) var(--s4) var(--s4);
+  position: sticky; top: 0; height: 100vh; overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
+  display: flex; flex-direction: column; gap: var(--s5);
+  padding: var(--s5) var(--s4) var(--s4);
   background: var(--sidebar);
   border-right: 1px solid var(--border);
 }
@@ -1269,6 +1269,7 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
 @media (min-width: 901px) {
   .sidebar { z-index: 30; }
   .sidebar.collapsed { padding-left: 12px; padding-right: 12px; overflow: visible; align-items: center; }
+  .sidebar.collapsed .nav a { min-height: 42px; }
   .sidebar.collapsed .brand { flex-direction: column; gap: var(--s3); padding: 0; }
   .sidebar.collapsed .brand-text,
   .sidebar.collapsed .nav-label,
@@ -1296,3 +1297,12 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
   .sidebar.collapsed .foot-actions .btn { width: 40px; padding: 0; justify-content: center; margin: 0; }
 }
 @media (max-width: 900px) { .collapse-btn { display: none; } }
+
+/* Sidebar fits short laptop screens without a scrollbar; nothing wraps while it animates open/closed. */
+.sidebar::-webkit-scrollbar { display: none; }
+.nav a { min-height: 40px; white-space: nowrap; }
+.brand-text b, .account-btn .who, .side-foot .btn { white-space: nowrap; }
+.progress .step-body button, .progress .hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+@media (max-height: 760px) and (min-width: 901px) { .sidebar { gap: var(--s4); padding-top: var(--s4); } .progress .hint { display: none; } .progress { padding: var(--s3) var(--s4); } }
+
+
