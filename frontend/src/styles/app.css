@@ -1488,3 +1488,4 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
 .md code { padding: 1px 5px; border-radius: 4px; background: var(--surface); font-size: 0.85em; }
 .md hr { border: 0; border-top: 1px solid var(--border); margin: var(--s2) 0; }
 .msg-user .md code { background: rgba(255, 255, 255, 0.2); }
+.excl .inactive-grid { padding: var(--s4); border-top: 1px solid var(--border); }

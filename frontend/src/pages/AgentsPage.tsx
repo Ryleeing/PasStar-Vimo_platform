@@ -4,7 +4,7 @@
 // Valio sees every buyer's agents and the demo fault switches; a buyer sees its own, and only the approver named
 // in the protocol may issue or revoke keys.
 import { useEffect, useState, type ReactNode } from 'react';
-import { Ban, Bot, Building2, Check, Copy, KeyRound, Link2, MessagesSquare, PlugZap, ShieldAlert, ShieldCheck, Sparkles, Unplug } from 'lucide-react';
+import { Ban, Bot, Building2, Check, ChevronDown, Copy, KeyRound, Link2, MessagesSquare, PlugZap, ShieldAlert, ShieldCheck, Sparkles, Unplug } from 'lucide-react';
 import { blockAgent, issueAgentKey, listAgents, listFaults, protocolAsAgent, revokeAgentKey, setFault } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { AgentConnection, AgentKind, Fault, IssuedKey, Protocol } from '../api/types';
@@ -54,6 +54,12 @@ export function AgentsPage() {
   // Working agents first; disconnected, blocked and protocol-less ones after them.
   const rank = (a: AgentConnection) => (a.status === 'BLOCKED' ? 3 : !a.protocol_id ? 2 : !a.has_key ? 1 : 0);
   const agents = [...(list.data ?? [])].sort((a, b) => rank(a) - rank(b));
+  const working = agents.filter((a) => rank(a) === 0);
+  const inactive = agents.filter((a) => rank(a) > 0);
+  const [showInactive, setShowInactive] = useState(false);
+  const card = (a: AgentConnection) => (
+    <AgentCard key={a.agent_id} a={a} valio={valio} canManage={canManage(a)} onConnect={() => connectAgain(a)} onChanged={list.reload} />
+  );
   const openConsole = (agentId: string, key: string) => {
     setConsoleStart({ agentId, key });
     setTab('console');
@@ -85,12 +91,30 @@ export function AgentsPage() {
         <ConnectAgent agents={agents} preset={preset} onDone={() => { list.reload(); }} onOpenConsole={openConsole} />
       ) : list.loading ? <Skeleton h={320} /> : list.error ? <ErrorState error={list.error} onRetry={list.reload} /> : (
         <div className={valio ? 'grid two' : ''} style={{ alignItems: 'start' }}>
-          <div className="agent-grid">
-            {agents.map((a) => (
-              <AgentCard key={a.agent_id} a={a} valio={valio} canManage={canManage(a)}
-                onConnect={() => connectAgain(a)} onChanged={list.reload} />
-            ))}
-            {!list.data?.length && <Empty icon={<Bot size={22} />} title="No agents yet">Connect one to let it order for you.</Empty>}
+          <div>
+            <div className="agent-grid">
+              {working.map(card)}
+              {!working.length && <Empty icon={<Bot size={22} />} title="No working agents">Connect one to let it order for you.</Empty>}
+            </div>
+            {/* Blocked, disconnected and protocol-less agents: folded away, one click to see them. */}
+            {inactive.length > 0 && (
+              <section className={`excl ${showInactive ? 'open' : ''}`}>
+                <button type="button" className="excl-head" onClick={() => setShowInactive((v) => !v)} aria-expanded={showInactive} aria-controls="inactive-agents">
+                  <Ban size={18} className="excl-icon" aria-hidden />
+                  <span className="grow">
+                    <span className="excl-title">{inactive.length} inactive agent{inactive.length > 1 ? 's' : ''}</span>
+                    <span className="excl-sub">
+                      {[['Blocked by Valio', inactive.filter((a) => a.status === 'BLOCKED').length],
+                        ['no protocol', inactive.filter((a) => a.status !== 'BLOCKED' && !a.protocol_id).length],
+                        ['disconnected', inactive.filter((a) => a.status !== 'BLOCKED' && a.protocol_id && !a.has_key).length]]
+                        .filter(([, n]) => n).map(([l, n]) => `${n} ${l}`).join(' · ')}. They can’t order anything.
+                    </span>
+                  </span>
+                  <span className="excl-toggle">{showInactive ? 'Hide' : 'Show'}<ChevronDown size={16} className="chev" aria-hidden /></span>
+                </button>
+                {showInactive && <div id="inactive-agents" className="agent-grid inactive-grid">{inactive.map(card)}</div>}
+              </section>
+            )}
           </div>
           {valio && <Faults />}
         </div>
