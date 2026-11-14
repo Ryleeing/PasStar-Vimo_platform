@@ -76,6 +76,7 @@ export function OptionsPage() {
           <div className="grid three" id="options-grid">
             {top.map((c, i) => (
               <CandidateCard key={c.id} c={c} all={all} featured={i === 0} mode={mode}
+                onChooseAlt={(id) => { const alt = all.find((x) => x.id === id); if (alt?.selectable) choose(alt); }}
                 selected={flow.selection?.candidate.id === c.id} loading={selecting === c.id} onSelect={() => choose(c)} />
             ))}
           </div>

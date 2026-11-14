@@ -1,4 +1,7 @@
-import { AlertTriangle, Check, ChevronDown } from 'lucide-react';
+import type { ReactNode } from 'react';
+import {
+  AlertTriangle, BadgeCheck, Box, Check, ChevronDown, CircleAlert, Coins, Info, Leaf, Ruler, Thermometer, Truck,
+} from 'lucide-react';
 import type { Candidate, Level } from '../api/types';
 import { ALLERGEN_STATUS, AVAILABILITY, BADGE, dayLabel, eur, levelOf, num, outcomeOf } from '../lib/format';
 import { Button, Pill } from './ui';
@@ -6,6 +9,7 @@ import { Button, Pill } from './ui';
 const BAR_W: Record<string, string> = { HIGH: '100%', MEDIUM: '62%', LOW: '28%' };
 const BAR_C: Record<string, string> = { HIGH: 'var(--ok)', MEDIUM: 'var(--warn)', LOW: 'var(--bad)' };
 
+/** Compact four-bar meter (kept for other surfaces). */
 export function TrustMeter({ t }: { t: Candidate['cards']['trust'] }) {
   const dims: [string, Level][] = [['Evidence', t.evidence], ['Match', t.match], ['Delivery', t.fulfilment], ['Protocol', t.compliance]];
   return (
@@ -20,17 +24,78 @@ export function TrustMeter({ t }: { t: Candidate['cards']['trust'] }) {
   );
 }
 
-/** One option. Only what is needed to decide is visible; evidence lives under "Details". */
-export function CandidateCard({ c, selected, featured, onSelect, loading, mode, all }: {
-  c: Candidate; selected: boolean; featured?: boolean; onSelect: () => void; loading: boolean;
-  mode: 'SEPARATE' | 'SELF'; all: Candidate[];
+// ───────────── Details, ordered by what matters to the decision ─────────────
+
+const STEPS: Record<string, number> = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+const DIMENSIONS: { key: 'evidence' | 'match' | 'fulfilment' | 'compliance'; label: string; asks: string }[] = [
+  { key: 'evidence', label: 'Evidence', asks: 'Is the product data from a reliable source?' },
+  { key: 'match', label: 'Match', asks: 'Does it fit what you asked for?' },
+  { key: 'fulfilment', label: 'Delivery', asks: 'Will it arrive on time and in full?' },
+  { key: 'compliance', label: 'Protocol', asks: 'Is it within your purchasing rules?' },
+];
+const TIP_ICON: Record<string, ReactNode> = {
+  STORAGE: <Thermometer size={16} />,
+  COLD_STORAGE_SPACE: <Box size={16} />,
+  RELIABILITY: <Truck size={16} />,
+  DEPOSIT: <Coins size={16} />,
+  ROUNDING: <Ruler size={16} />,
+  CARBON: <Leaf size={16} />,
+  LABEL: <BadgeCheck size={16} />,
+};
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="dsec">
+      <h4 className="dsec-title">{title}</h4>
+      {children}
+    </section>
+  );
+}
+
+function TrustBreakdown({ t, nameFor }: { t: Candidate['cards']['trust']; nameFor: (s: string) => string }) {
+  // The improvement note explains the weakest dimension, so it sits right under that row.
+  const weakest = DIMENSIONS.reduce((w, d) => (STEPS[t[d.key]] < STEPS[t[w.key]] ? d : w), DIMENSIONS[0]);
+  return (
+    <div className="trust-rows">
+      {DIMENSIONS.map((d) => {
+        const lv = levelOf(t[d.key]);
+        return (
+          <div key={d.key}>
+            <div className="trust-row" title={d.asks}>
+              <span>{d.label}</span>
+              <span className="segs" aria-hidden>
+                {[1, 2, 3].map((i) => <i key={i} className={i <= STEPS[t[d.key]] ? `on tone-dot-${lv.tone}` : ''} />)}
+              </span>
+              <span className={`lvl lvl-${lv.tone}`}>{lv.label}</span>
+            </div>
+            {t.how_to_improve && d.key === weakest.key && t[d.key] !== 'HIGH' && (
+              <p className="trust-note"><Info size={14} aria-hidden />{nameFor(t.how_to_improve)}</p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** One option. Only what is needed to decide is visible; the evidence lives under "Details". */
+export function CandidateCard({ c, selected, featured, onSelect, onChooseAlt, loading, mode, all }: {
+  c: Candidate; selected: boolean; featured?: boolean; onSelect: () => void; onChooseAlt?: (id: string) => void;
+  loading: boolean; mode: 'SEPARATE' | 'SELF'; all: Candidate[];
 }) {
   const line = c.lines[0];
   const t = c.cards.trust;
   const out = outcomeOf(c.outcome_preview, mode);
   const av = AVAILABILITY[line.available_on_date];
   const trust = levelOf(t.overall);
-  const nameOf = (id: string) => all.find((x) => x.id === id)?.lines[0].name ?? id;
+  const byId = (id: string) => all.find((x) => x.id === id);
+  // Backend text may mention candidates by id ("cand_3"); people read product names.
+  const nameFor = (s: string) => s.replace(/cand_\w+/g, (id) => byId(id)?.lines[0].name ?? 'another option');
+  const rows = c.cards.allergen.rows;
+  // The timer lives on the quote bar, and delivery reliability is already explained under Trust → Delivery.
+  const tips = (c.cards.tips ?? []).filter((tip) => tip.kind !== 'QUOTE_TIMER' && !(tip.kind === 'RELIABILITY' && t.how_to_improve));
+  const alts = c.cards.alternatives ?? [];
+  const preview = ['requirements', 'trust', tips.length ? 'storage' : null, alts.length ? 'alternative' : null].filter(Boolean).join(', ');
 
   return (
     <article className={`cand ${selected ? 'sel' : ''} ${featured ? 'featured' : ''}`} aria-label={line.name}>
@@ -59,30 +124,71 @@ export function CandidateCard({ c, selected, featured, onSelect, loading, mode, 
       </div>
 
       <details className="details">
-        <summary>Details <ChevronDown size={14} className="chev" /></summary>
+        <summary>
+          <span className="stack" style={{ gap: 0 }}>
+            <span>Details</span>
+            <span className="xs muted" style={{ fontWeight: 450 }}>{preview[0].toUpperCase() + preview.slice(1)}</span>
+          </span>
+          <ChevronDown size={16} className="chev" />
+        </summary>
         <div className="details-body">
-          <div className="stack sm">
-            <TrustMeter t={t} />
-            {t.how_to_improve && <div className="xs muted">{t.how_to_improve}</div>}
-          </div>
-          <div className="stack sm">
-            {c.cards.allergen.rows.map((r, i) => (
-              <div key={i} className="row" style={{ gap: 8 }}>
-                <span className="grow">{r.requirement.label ?? r.requirement.code}</span>
-                <Pill tone={ALLERGEN_STATUS[r.status].tone}>{ALLERGEN_STATUS[r.status].label}</Pill>
-              </div>
-            ))}
-            {(c.cards.allergen.notes ?? []).map((n) => (
-              <div key={n} className="row top xs" style={{ gap: 6, color: 'var(--warn)' }}><AlertTriangle size={13} style={{ flex: 'none', marginTop: 2 }} />{n}</div>
-            ))}
-            {c.cards.allergen.rows[0] && <div className="xs muted">Source: {c.cards.allergen.rows[0].source}</div>}
-          </div>
-          {(c.cards.tips?.length ?? 0) > 0 && (
-            <ul className="plain">{c.cards.tips!.filter((tip) => tip.kind !== 'QUOTE_TIMER').map((tip, i) => <li key={i}>{tip.text}</li>)}</ul>
+          {rows.length > 0 && (
+            <Section title="Requirements">
+              {rows.map((r, i) => {
+                const st = ALLERGEN_STATUS[r.status];
+                const ok = st.tone === 'ok';
+                return (
+                  <div key={i} className="req-row">
+                    {ok ? <Check size={16} className="ok-ink" /> : <CircleAlert size={16} className="warn-text" />}
+                    <span className="grow strong">{r.requirement.label ?? r.requirement.code}</span>
+                    <span className={`lvl lvl-${st.tone}`}>{st.label}</span>
+                  </div>
+                );
+              })}
+              {(c.cards.allergen.notes ?? []).map((n) => (
+                <p key={n} className="callout warn"><AlertTriangle size={15} aria-hidden />{n}</p>
+              ))}
+              <p className="xs muted">Source: {rows[0].source.replace(/^Manufacturer structured claim/, 'Manufacturer data')}</p>
+            </Section>
           )}
-          {(c.cards.alternatives ?? []).map((a) => (
-            <div key={a.candidate_id} className="small"><span className="muted">Instead: </span>{nameOf(a.candidate_id)}. {a.tradeoff}.</div>
-          ))}
+
+          <Section title="Trust">
+            <TrustBreakdown t={t} nameFor={nameFor} />
+          </Section>
+
+          {tips.length > 0 && (
+            <Section title="Good to know">
+              <ul className="tips">
+                {tips.map((tip, i) => (
+                  <li key={i}><span className="tip-icon" aria-hidden>{TIP_ICON[tip.kind] ?? <Info size={16} />}</span>{tip.text}</li>
+                ))}
+              </ul>
+            </Section>
+          )}
+
+          {alts.length > 0 && (
+            <Section title={alts.length > 1 ? 'Alternatives' : 'Alternative'}>
+              {alts.map((a) => {
+                const alt = byId(a.candidate_id);
+                const [pro, con] = a.tradeoff.split(/,\s*but\s*/i);
+                return (
+                  <div key={a.candidate_id} className="alt">
+                    <div className="row between top" style={{ gap: 12 }}>
+                      <span className="strong">{alt?.lines[0].name ?? 'Another option'}</span>
+                      {alt?.totals && <span className="strong nowrap num">{eur(alt.totals.gross_cents)}</span>}
+                    </div>
+                    <div className="alt-trade">
+                      <span className="pro"><Check size={14} />{pro}</span>
+                      {con && <span className="con"><span aria-hidden>–</span>{con}</span>}
+                    </div>
+                    {onChooseAlt && alt && (
+                      <button type="button" className="btn ghost sm alt-cta" onClick={() => onChooseAlt(alt.id)}>Choose instead</button>
+                    )}
+                  </div>
+                );
+              })}
+            </Section>
+          )}
         </div>
       </details>
 
