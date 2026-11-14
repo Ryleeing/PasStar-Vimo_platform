@@ -422,6 +422,35 @@ input[type='range'] { min-height: 0; padding: 0; border: 0; background: none; ac
 .ai-avatar { flex: none; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-grad); color: #fff; }
 .needs-answer .chip { border-color: var(--bad); animation: nudge var(--t-slow) var(--ease); }
 .form-card { margin-top: var(--s5); }
+/* the slot for what the AI asked: empty → answer flies in → normal field */
+.slot {
+  display: flex; align-items: center; gap: var(--s2); min-height: 52px; padding: 5px 6px 5px 6px;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 14px;
+  background: color-mix(in srgb, var(--accent-soft) 50%, transparent);
+  transition: border-color var(--t) var(--ease), background var(--t) var(--ease), box-shadow var(--t) var(--ease);
+}
+.slot-empty { display: inline-flex; align-items: center; gap: var(--s2); padding-left: var(--s3); color: var(--accent-ink); font-size: 0.9375rem; font-weight: 560; }
+.slot-empty svg { animation: point 1.6s var(--ease) infinite; }
+.slot.needed { border-color: var(--bad); background: var(--bad-soft); animation: nudge var(--t-slow) var(--ease); }
+.slot.needed .slot-empty { color: var(--bad); }
+.slot.filled { border-style: solid; border-color: var(--border-strong); background: var(--surface-2); }
+.slot.filled .btn { margin-left: auto; }
+.slot-value, .fly-chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--s4); border-radius: 999px;
+  background: var(--accent-soft); border: 1px solid var(--accent); color: var(--text); font-size: 0.9375rem; font-weight: 560; white-space: nowrap;
+}
+.slot-value svg, .fly-chip svg { color: var(--accent); }
+.slot.landed { animation: landed 1s var(--ease); }
+.slot.landed .slot-value { animation: settle var(--t-slow) var(--ease); }
+.fly-chip {
+  position: fixed; z-index: 60; pointer-events: none; box-shadow: var(--shadow-pop);
+  animation: fly 560ms cubic-bezier(0.5, 0, 0.2, 1) forwards;
+}
+.fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--t-slow) var(--ease) 260ms, opacity var(--t) var(--ease) 200ms; }
+.fold > div { overflow: hidden; min-height: 0; }
+.fold.closed { grid-template-rows: 0fr; opacity: 0; }
+.ai-done { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; animation: arrive var(--t-slow) var(--ease); }
+.ok-ink { color: var(--ok); flex: none; }
 .form-card .field, .form-card .chip[aria-pressed='true'] { border-radius: 12px; }
 /* continuity: what the AI just filled lights up, in reading order */
 .form-card.ai-filled .three-up > .field { animation: filled 1.2s var(--ease) both; }
@@ -574,6 +603,14 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
 @keyframes nudge { 0%, 100% { transform: none; } 30% { transform: translateX(-4px); } 60% { transform: translateX(3px); } }
 @keyframes filled { 0% { background: transparent; box-shadow: 0 0 0 0 transparent; } 25% { background: var(--accent-soft); box-shadow: 0 0 0 8px var(--accent-soft); } 100% { background: transparent; box-shadow: 0 0 0 8px transparent; } }
 @keyframes filled-chip { 0% { box-shadow: 0 0 0 0 var(--accent-soft); } 30% { box-shadow: 0 0 0 6px var(--accent-soft); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@keyframes fly {
+  0% { transform: translate(0, 0) scale(1); }
+  35% { transform: translate(calc(var(--dx) * 0.3), calc(var(--dy) * 0.15 - 18px)) scale(1.06); }
+  100% { transform: translate(var(--dx), var(--dy)) scale(1); }
+}
+@keyframes landed { 0% { box-shadow: 0 0 0 0 var(--accent-soft); border-color: var(--accent); } 30% { box-shadow: 0 0 0 8px var(--accent-soft); border-color: var(--accent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@keyframes settle { 0% { transform: scale(1.05); } 100% { transform: none; } }
+@keyframes point { 0%, 100% { transform: none; } 50% { transform: translateY(-3px); } }
 @keyframes regen { from { box-shadow: 0 0 0 6px var(--accent-soft); } to { box-shadow: 0 0 0 0 transparent; } }
 @keyframes backdrop-in { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
 @keyframes lines { 0% { stroke-dashoffset: 40; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 1; } }
@@ -585,7 +622,7 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
   :root { --rise: 0px; }
   .illo-box, .illo-badge, .illo-backdrop, .nav .count, .chip[aria-pressed='true'] svg, .cand .btn[aria-pressed='true'] svg { animation-name: fade !important; }
   .meter .bar i { animation: none; }
-  .needs-answer .chip { animation: none; }
+  .needs-answer .chip, .slot.needed, .slot-empty svg, .slot.landed .slot-value { animation: none; }
   .spin { animation-duration: 2.4s; }
   .btn:active, .chip:active { transform: none; }
   .step::after { transition: none; }

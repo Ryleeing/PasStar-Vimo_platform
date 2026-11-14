@@ -39,7 +39,8 @@ export function OptionsPage() {
   const top = r.candidates.slice(0, 3);
   const more = r.candidates.slice(3);
   const all = [...r.candidates, ...(r.blocked ?? [])];
-  const summary = [s.category_label ?? s.category, ...(s.requirements ?? []).map((q) => (q.label ?? q.code).toLowerCase()),
+  const clarified = s.notes?.includes(': ') ? s.notes.split(': ').pop()!.toLowerCase() : null; // e.g. "Milk type: Semi-skimmed"
+  const summary = [s.category_label ?? s.category, ...(clarified ? [clarified] : []), ...(s.requirements ?? []).map((q) => (q.label ?? q.code).toLowerCase()),
     `${num(s.quantity.value)} ${s.quantity.unit}`, `by ${dayLabel(s.delivery_date)}`].join(' · ');
 
   const choose = async (c: Candidate) => {
