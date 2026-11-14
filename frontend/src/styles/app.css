@@ -1358,3 +1358,17 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
   .run-content { padding-top: 0; }
   .run-summary { max-width: none; }
 }
+
+/* ── Request page: chat with A.I.mo on the left, the order form on the right; stacked on narrow screens ── */
+.request-page { max-width: 1280px; }
+.request-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s6); align-items: start; }
+.request-split .hero { margin-bottom: 0; padding: var(--s6); gap: var(--s4) var(--s5); }
+.request-split .hero-title { font-size: 2.25rem; }
+.request-split .hero-mascot { margin: -12px -6px -16px -8px; }
+.request-split .examples { flex-wrap: wrap; overflow: visible; }
+.request-panel .form-card { margin-top: 0; }
+.request-panel .form-grid.three-up { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.request-panel .form-grid.three-up > .field:first-child { grid-column: 1 / -1; }
+@media (max-width: 1080px) {
+  .request-split { grid-template-columns: minmax(0, 1fr); }
+}

@@ -206,73 +206,9 @@ export function RequestPage() {
 
   const mood: MascotMood = busy === 'chat' ? 'thinking' : asking ? 'asking' : formSource === 'ai' ? 'happy' : 'idle';
 
-  return (
-    <div className="narrow">
-      {flow.correcting && <PageHead title="Correct your request" />}
-
-      {flow.correcting ? (
-        <div style={{ marginBottom: 16 }}>
-          <Banner tone="info" title="Fix the details below"
-            action={<Button size="sm" variant="ghost" onClick={() => { patch({ correcting: null }); navigate('/options'); }}>Cancel</Button>}>
-            The options are found again from here on.
-          </Banner>
-        </div>
-      ) : (
-        <>
-          <MandateStrip />
-          {/* ── Way 1: tell A.I.mo ── */}
-          <section className="hero" aria-labelledby="hero-title">
-          <span className="hero-mascot"><Mascot mood={mood} size={150} /></span>
-          <div>
-            <h1 id="hero-title" className="display hero-title">What does your kitchen need?</h1>
-            <p className="hero-sub">Tell A.I.mo in your own words and it finds the options. Or fill in the form below.</p>
-          </div>
-          <div className="composer">
-            <textarea
-              aria-label={asking ? asking.question : 'Describe what you need'}
-              rows={2}
-              value={input}
-              placeholder={asking ? `Answer: ${asking.question}` : 'e.g. 1000 litres of lactose-free milk by Monday'}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  send();
-                }
-              }}
-            />
-            <div className="composer-foot">
-              {profiles.data && profiles.data.length > 0 && (
-                <label className="profile-pick">
-                  <span className="muted">Profile</span>
-                  <select value={profile?.id ?? ''} onChange={(e) => setProfileId(e.target.value)}>
-                    {profiles.data.map((p) => <option key={p.id} value={p.id}>{p.body.name}</option>)}
-                  </select>
-                </label>
-              )}
-              <Button variant="primary" size="sm" className="ml-auto" loading={busy === 'chat'} disabled={!input.trim() || !!busy} onClick={() => send()}>
-                {asking ? <>Answer <ArrowUp size={16} /></> : <>Find options <ArrowRight size={16} /></>}
-              </Button>
-            </div>
-          </div>
-          {message === null && (
-            <div className="examples">
-              <span className="small strong label">Try</span>
-              {EXAMPLES.map((ex) => (
-                <button key={ex} type="button" className="chip example" onClick={() => setInput(ex)}>{ex}</button>
-              ))}
-            </div>
-          )}
-          </section>
-
-          {message !== null && (
-            <AiReply message={message} answers={answers} asking={asking} stuck={stuck} thinking={busy === 'chat'}
-              onPick={(o) => send(o)} onStartOver={startOver} />
-          )}
-        </>
-      )}
-
-      {/* ── Way 2: the form ── */}
+  // ── Way 2: the order form (right column; the whole page when correcting step ①) ──
+  const formPanel = (
+    <div className="request-panel">
       <section className={`card form-card ${aiFilled ? 'ai-filled' : ''}`} aria-labelledby="form-title">
         <h2 id="form-title" style={{ marginBottom: 'var(--s4)' }}>{flow.correcting ? 'Your request' : 'Order form'}</h2>
         {facets.loading ? <Skeleton h={300} /> : facets.error ? <ErrorState error={facets.error} onRetry={facets.reload} /> : (
@@ -285,6 +221,84 @@ export function RequestPage() {
         <Button variant={message === null || flow.correcting ? 'primary' : 'default'} size="lg" className="ml-auto" loading={busy === 'form'} onClick={submitForm}>
           Find options <ArrowRight size={17} />
         </Button>
+      </div>
+    </div>
+  );
+
+  if (flow.correcting) {
+    return (
+      <div className="narrow">
+        <PageHead title="Correct your request" />
+        <div style={{ marginBottom: 16 }}>
+          <Banner tone="info" title="Fix the details below"
+            action={<Button size="sm" variant="ghost" onClick={() => { patch({ correcting: null }); navigate('/options'); }}>Cancel</Button>}>
+            The options are found again from here on.
+          </Banner>
+        </div>
+        {formPanel}
+      </div>
+    );
+  }
+
+  return (
+    <div className="request-page">
+      <MandateStrip />
+      {/* Two equal ways in, side by side: chat with A.I.mo on the left, the order form on the right.
+          On narrow screens they stack, chat first. */}
+      <div className="request-split">
+        <div className="request-chat">
+          {/* ── Way 1: tell A.I.mo ── */}
+          <section className="hero" aria-labelledby="hero-title">
+            <span className="hero-mascot"><Mascot mood={mood} size={120} /></span>
+            <div>
+              <h1 id="hero-title" className="display hero-title">What does your kitchen need?</h1>
+              <p className="hero-sub">Tell A.I.mo in your own words and it finds the options. Or use the order form.</p>
+            </div>
+            <div className="composer">
+              <textarea
+                aria-label={asking ? asking.question : 'Describe what you need'}
+                rows={3}
+                value={input}
+                placeholder={asking ? `Answer: ${asking.question}` : 'e.g. 1000 litres of lactose-free milk by Monday'}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    send();
+                  }
+                }}
+              />
+              <div className="composer-foot">
+                {profiles.data && profiles.data.length > 0 && (
+                  <label className="profile-pick">
+                    <span className="muted">Profile</span>
+                    <select value={profile?.id ?? ''} onChange={(e) => setProfileId(e.target.value)}>
+                      {profiles.data.map((p) => <option key={p.id} value={p.id}>{p.body.name}</option>)}
+                    </select>
+                  </label>
+                )}
+                <Button variant="primary" size="sm" className="ml-auto" loading={busy === 'chat'} disabled={!input.trim() || !!busy} onClick={() => send()}>
+                  {asking ? <>Answer <ArrowUp size={16} /></> : <>Find options <ArrowRight size={16} /></>}
+                </Button>
+              </div>
+            </div>
+            {message === null && (
+              <div className="examples">
+                <span className="small strong label">Try</span>
+                {EXAMPLES.map((ex) => (
+                  <button key={ex} type="button" className="chip example" onClick={() => setInput(ex)}>{ex}</button>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {message !== null && (
+            <AiReply message={message} answers={answers} asking={asking} stuck={stuck} thinking={busy === 'chat'}
+              onPick={(o) => send(o)} onStartOver={startOver} />
+          )}
+        </div>
+
+        {formPanel}
       </div>
     </div>
   );
