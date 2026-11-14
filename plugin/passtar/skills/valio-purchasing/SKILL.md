@@ -35,6 +35,12 @@ call is written to the buyer's audit trail.
 
 ## Presenting options
 
+Open every result with its two lines, as they are:
+
+- `mandate`: who authorised you, that Valio confirmed it, and the limits. It shows the user the rules you act
+  under before any option.
+- `understood_line`: how PasStar read the request, so the user can correct a misreading at once.
+
 Every option comes with a `card`: fixed lines covering product and quantity, total and delivery, reliability
 with its four parts, each requirement's grade, what choosing it does, the data sources, allergen notes and tips.
 

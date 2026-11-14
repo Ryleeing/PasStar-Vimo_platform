@@ -174,3 +174,19 @@ def test_undeliverable_date_suggests_the_first_date_that_works(hotel, monkeypatc
 
 def test_deliverable_options_get_no_date_suggestion(hotel):
     assert "earliest_delivery" not in api.find_options(hotel, "200 litres of lactose-free milk tomorrow")
+
+
+def test_results_open_with_the_mandate_and_what_was_understood(hotel):
+    r = api.find_options(hotel, "200 litres of lactose-free milk tomorrow")
+    assert r["mandate"].startswith("Your mandate: protocol prot_hotel_v1")
+    assert "confirmed by Valio" in r["mandate"] and "1,000" in r["mandate"] and "3,000" in r["mandate"]
+    assert r["understood_line"].startswith("I understood: 200 L of Milk")
+    assert "mandate" in r["next_step"] and "understood_line" in r["next_step"]
+    assert api.find_options(hotel, "lactose-free milk tomorrow")["mandate"] == r["mandate"]   # NEEDS_INPUT too
+
+
+def test_cards_place_the_total_against_the_limits(hotel):
+    small = api.find_options(hotel, "200 litres of lactose-free milk tomorrow")["options"][0]["card"]
+    big = api.find_options(hotel, "2000 litres of lactose-free milk tomorrow")["options"][0]["card"]
+    assert any("within your EUR 1,000 auto limit" in l for l in small)
+    assert any("over your EUR 1,000 auto limit" in l for l in big)

@@ -136,6 +136,7 @@ def get_mandate(who: Audience) -> dict:
     buyer = db.one("SELECT name FROM buyers WHERE id = ?", (b.buyer_id,))
     agent = db.one("SELECT name FROM agents WHERE id = ?", (who.agent_id,))
     return {
+        "mandate": _mandate_line(p),
         "agent": {"id": who.agent_id, "name": agent["name"] if agent else None},
         "buyer": {"id": b.buyer_id, "name": buyer["name"] if buyer else None},
         "protocol": {
@@ -155,8 +156,34 @@ def get_mandate(who: Audience) -> dict:
     }
 
 
+def _mandate_line(p) -> str:
+    """Step 0 in one line: who authorised this agent, who confirmed it, and the limits it acts within."""
+    b = p.body
+    buyer = db.one("SELECT name FROM buyers WHERE id = ?", (b.buyer_id,))
+    who_signed = (f"signed by {buyer['name'] if buyer else b.buyer_id}" if p.buyer_signed_at else "not signed by the buyer")
+    who_signed += " and confirmed by Valio" if p.valio_confirmed_at else ", not confirmed by Valio"
+    approver = _user_name(b.approver)
+    must = ", ".join(r.label or r.code for r in b.hard_requirements)
+    cats = ", ".join(c["name"] or c["code"] for c in map(_category, b.allowed_categories))
+    return (f"Your mandate: protocol {p.id} v{p.version}, {who_signed}. May buy: {cats}"
+            + (f"; always {must}" if must else "")
+            + f". Orders up to EUR {_eur(b.auto_approve_limit_cents):,.0f} go through at once; "
+            f"EUR {_eur(b.auto_approve_limit_cents):,.0f}-{_eur(b.max_order_cents):,.0f} need {approver}'s approval; "
+            f"over EUR {_eur(b.max_order_cents):,.0f} are not allowed.")
+
+
+def _understood_line(u: dict) -> str:
+    """Step 1 in one line: how PasStar read the request, so the user can catch a misreading at once."""
+    must = f" ({', '.join(u['requirements'])})" if u["requirements"] else ""
+    return f"I understood: {u['quantity']} of {u['product']}{must}, delivered {u['delivery_date']}."
+
+
+# Categories in the demo protocols that the shared facets do not name; the catalogue has no category names yet.
+EXTRA_CATEGORY_NAMES = {"10405": "Milk powder"}
+
+
 def _category(code: str) -> dict:
-    label = next((f.label for f in fixtures.FACETS.categories if f.code == code), None)
+    label = next((f.label for f in fixtures.FACETS.categories if f.code == code), EXTRA_CATEGORY_NAMES.get(code))
     return {"code": code, "name": label}
 
 
@@ -186,7 +213,9 @@ def find_options(who: Audience, text: str, answers: Optional[dict[str, str]] = N
     blocking = [a for a in outcome.ambiguities if a["field"] in BLOCKING_REASONS]
     understood = _understood(outcome.structured.model_dump(mode="json"))
     if blocking:
-        return {"status": "NEEDS_INPUT", "understood": understood,
+        mandate = _mandate_line(service._active_protocol(protocol_id, who))
+        return {"status": "NEEDS_INPUT", "mandate": mandate, "understood_line": _understood_line(understood),
+                "understood": understood,
                 "questions": [{"field": a["field"], "question": a["question"], "options": a.get("options", [])}
                               for a in blocking],
                 "next_step": "Ask the user these questions, then call find_options again with the same text "
@@ -300,14 +329,18 @@ def _options(r: dict, who: Audience) -> dict:
            "blocked": [{"product": l["name"], "brand": l.get("brand"),
                         "why": [v["detail"] for v in c.get("violations", [])]}
                        for c in r.get("blocked", []) for l in c["lines"][:1]]}
-    approver = _user_name(service._active_protocol(_protocol_id(who), who).body.approver)
+    protocol = service._active_protocol(_protocol_id(who), who)
+    out["mandate"] = _mandate_line(protocol)
+    out["understood_line"] = _understood_line(out["understood"])
+    approver = _user_name(protocol.body.approver)
     for o in out["options"]:
-        o["card"] = _card(o, approver)
+        o["card"] = _card(o, approver, protocol.body)
     if status == "NO_OPTIONS":
         out["why_none"] = r.get("no_candidate_reason")
         out["next_step"] = "Tell the user why nothing matched; they can change the request and you call find_options again."
     else:
-        out["next_step"] = ("Show the user each option's card, line by line (translate it if the user writes in "
+        out["next_step"] = ("Start with the mandate line and the understood_line, as they are. Then show the user "
+                            "each option's card, line by line (translate it if the user writes in "
                             "another language, but keep every line: reliability with its four parts, requirement "
                             "grades, what choosing it does, and the tips). Show at least the top three. Then use "
                             "place_order with the option_id the user picks, or adjust_options to change the list.")
@@ -323,7 +356,18 @@ SOURCE_WORDS = {"VALIO_PRICE_API": "Valio live price", "VALIO_STOCK_API": "Valio
                 "NAME_PARSE": "read from the product name, check it", "UNKNOWN": "unknown"}
 
 
-def _card(o: dict, approver: str) -> list[str]:
+def _against_limits(total: Optional[float], rules) -> str:
+    auto, top = _eur(rules.auto_approve_limit_cents), _eur(rules.max_order_cents)
+    if total is None:
+        return "total unknown"
+    if total <= auto:
+        return f"EUR {total:,.2f} is within your EUR {auto:,.0f} auto limit"
+    if total <= top:
+        return f"EUR {total:,.2f} is over your EUR {auto:,.0f} auto limit"
+    return f"EUR {total:,.2f} is over your EUR {top:,.0f} maximum"
+
+
+def _card(o: dict, approver: str, rules) -> list[str]:
     """The option as fixed lines the assistant shows as they are, so no dimension is left out."""
     rel = o["reliability"]
     head = f"#{o['rank']}" + (f" {o['badge']}" if o["badge"] else "")
@@ -336,7 +380,8 @@ def _card(o: dict, approver: str) -> list[str]:
     lines += [f"{r['need']}: {r['status'].lower().replace('_', ' ')}, grade {r['grade']} ({GRADE_WORDS[r['grade']]})"
               for r in o["requirements"]]
     lines.append("If chosen: " + OUTCOME_WORDS[o["if_chosen"]["outcome"]].format(approver=approver)
-                 + "".join(f" - {r}" for r in o["if_chosen"]["reasons"][:2]))
+                 + f" ({_against_limits(o['total_eur'], rules)})"
+                 + "".join(f" - {r}" for r in o["if_chosen"]["reasons"][:2] if "limit" not in r))
     src = o["sources"]
     lines.append(f"Sources: price {SOURCE_WORDS[src['price']]}; delivery {SOURCE_WORDS[src['deliverable']]}; "
                  f"pack size {', '.join(SOURCE_WORDS[x] for x in src['pack_size'])}")
