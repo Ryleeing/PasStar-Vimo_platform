@@ -262,12 +262,24 @@ class ValioClient:
     def _consume_probes(
         self, product_ids: list[str], sales_units: dict[str, float], agent_id: str,
     ) -> None:
+        """Budget: at most max_probes_per_day *different quantities* per product per day (design doc,
+        valio_scope). Re-checking a quantity already asked about today (selection, quote, recheck before
+        ordering) costs nothing; asking for a new one does. Every probe is still logged in
+        availability_probes so quantity-searching patterns stay visible."""
         current = self._local_now()
         day = current.date().isoformat()
         with self._lock:
             try:
                 self._probes.execute("BEGIN IMMEDIATE")
+                new_quantities = []
                 for product_id in product_ids:
+                    seen = self._probes.execute(
+                        """SELECT 1 FROM availability_probes WHERE agent_id=? AND product_id=?
+                           AND quantity=? AND substr(at, 1, 10)=? LIMIT 1""",
+                        (agent_id, product_id, float(sales_units[product_id]), day),
+                    ).fetchone()
+                    if seen:
+                        continue
                     identity = (self.buyer_id, self.customer_id, agent_id, product_id, day)
                     row = self._probes.execute(
                         """SELECT count FROM valio_probe_budgets WHERE buyer_id=? AND
@@ -279,13 +291,14 @@ class ValioClient:
                             "PROBE_LIMIT", "Daily availability probe limit exceeded",
                             status_code=429,
                         )
-                for product_id in product_ids:
-                    identity = (self.buyer_id, self.customer_id, agent_id, product_id, day)
+                    new_quantities.append(identity)
+                for identity in new_quantities:
                     self._probes.execute(
                         """INSERT INTO valio_probe_budgets VALUES (?,?,?,?,?,1)
                            ON CONFLICT(buyer_id,customer_id,agent_id,product_id,day)
                            DO UPDATE SET count=count+1""", identity,
                     )
+                for product_id in product_ids:
                     self._probes.execute(
                         "INSERT INTO availability_probes VALUES (?,?,?,?)",
                         (agent_id, product_id, sales_units[product_id], current.isoformat()),

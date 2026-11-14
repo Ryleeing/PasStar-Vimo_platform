@@ -234,3 +234,15 @@ def test_timeline_events_are_in_time_order(env):
     t = p.timeline(rid)
     assert t.attempt == 1 and len(t.events) >= 4
     assert [e.at for e in t.events] == sorted(e.at for e in t.events)
+
+
+def test_options_the_gate_would_reject_go_last_without_a_badge(env):
+    p, _ = env
+    big = fx.STRUCTURED.model_copy(update={"quantity": Quantity(value=30000, unit="L")})   # far over the €3,000 maximum
+    rid = p.create_request("buy_hotel", "usr_chef", CreateRequest(
+        protocol_id="prot_hotel_v1", profile_id="prof_banquet", input_mode="PANEL", structured=big))
+    r = p.result(rid)
+    outcomes = [c.outcome_preview for c in r.candidates]
+    assert outcomes == sorted(outcomes, key=lambda o: o == "REJECT")          # every REJECT after the rest
+    assert all(c.badge is None for c in r.candidates if c.outcome_preview == "REJECT")
+    assert [c.rank for c in r.candidates] == list(range(1, len(r.candidates) + 1))

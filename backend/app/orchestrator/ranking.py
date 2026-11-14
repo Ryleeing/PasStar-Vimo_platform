@@ -38,12 +38,23 @@ def score(drafts: list[Draft], weights: dict[str, float]) -> None:
                    + (weights.get("carbon", 0) + weights.get("local", 0)) * 0.5)
 
 
+def deliverable(d: Draft) -> bool:
+    """False when no line can be delivered on the requested date (the gate would reject it: R-DELIVERY-NONE)."""
+    return any(line.available_on_date != "NO" for line in d.lines)
+
+
 def rank(drafts: list[Draft], weights: dict[str, float], limit: int = 8) -> list[Draft]:
-    """Order drafts and set rank/badge: #1 best score, #2 cheapest of the rest, #3 most reliable of the rest."""
+    """Order drafts and set rank/badge: #1 best score, #2 cheapest of the rest, #3 most reliable of the rest.
+
+    Options that cannot be delivered on the requested date come last and never get a badge: they stay
+    visible (the buyer sees why) but are never recommended."""
+    for d in drafts:
+        d.rank, d.badge = None, None
     if not drafts:
         return []
     score(drafts, weights)
-    pool = sorted(drafts, key=lambda d: (-d.score, d.totals.gross_cents))
+    by_score = sorted(drafts, key=lambda d: (-d.score, d.totals.gross_cents))
+    pool = [d for d in by_score if deliverable(d)]
     ordered: list[Draft] = []
 
     def take(d: Draft, badge: str) -> None:
@@ -51,12 +62,14 @@ def rank(drafts: list[Draft], weights: dict[str, float], limit: int = 8) -> list
         d.badge = badge
         ordered.append(d)
 
-    take(pool[0], "RECOMMENDED")
+    if pool:
+        take(pool[0], "RECOMMENDED")
     if pool:
         take(min(pool, key=lambda d: d.totals.gross_cents), "CHEAPEST")
     if pool:
         take(max(pool, key=lambda d: (RELIABILITY_ORDER[d.reliability_level], d.score)), "MOST_RELIABLE")
     ordered.extend(pool)
+    ordered.extend(d for d in by_score if not deliverable(d))
     for i, d in enumerate(ordered[:limit], start=1):
         d.rank = i
     return ordered[:limit]

@@ -279,6 +279,12 @@ class Pipeline:
                              outcome_reasons=reasons, cards=cards, explanation="")
             candidates.append(cand)
 
+        # Ranking ran before the gate. Options the gate would reject (over the order maximum, nothing
+        # deliverable) go last and lose their badge: they stay visible but are never recommended.
+        candidates = [c for c in candidates if c.outcome_preview != "REJECT"] + [
+            c.model_copy(update={"badge": None}) for c in candidates if c.outcome_preview == "REJECT"]
+        candidates = [c.model_copy(update={"rank": i}) for i, c in enumerate(candidates, start=1)]
+
         for p, violations in blocked:
             conv = self.d.units.convert(p, structured.quantity)
             line = CandidateLine(product_id=p.id, name=p.name_en, brand=p.brand, sales_unit=p.sales_unit,

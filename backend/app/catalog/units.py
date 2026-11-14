@@ -33,6 +33,10 @@ def _finite_float(value: Decimal, name: str) -> float:
     return number
 
 
+# Sales units that can be bought in fractions (sold by weight). Every other unit is counted in whole units.
+FRACTIONAL_SALES_UNITS = {"KG"}
+
+
 class UnitsConverter:
     """Implementation of ``UnitsApi`` using exact lot-count arithmetic.
 
@@ -49,6 +53,10 @@ class UnitsConverter:
         if qty.unit not in {"L", "kg", "pcs"}:
             raise ValueError("requested quantity unit must be L, kg or pcs")
         lot_size = _positive_decimal(product.lot_size, "lot_size")
+        if product.sales_unit not in FRACTIONAL_SALES_UNITS and lot_size < 1:
+            # The Valio export gives almost every product a 0.01 step, but cases, pieces and packs are
+            # bought whole: 53.34 cases is not an order line. Only weight units keep fractional steps.
+            lot_size = Decimal(1)
 
         capacity = None
         if product.qty_per_sales_unit is not None:

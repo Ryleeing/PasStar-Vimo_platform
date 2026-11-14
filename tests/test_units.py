@@ -44,7 +44,7 @@ def test_golden_milk_conversion_covers_one_thousand_litres():
 
 def test_decimal_lot_ceiling_does_not_add_an_unnecessary_lot():
     result = convert(
-        product(qty_per_sales_unit=0.1, lot_size=0.01),
+        product(sales_unit="KG", qty_per_sales_unit=0.1, lot_size=0.01),   # weight: fractional steps allowed
         Quantity(value=0.003, unit="L"),
     )
 
@@ -116,3 +116,11 @@ def test_non_finite_or_non_positive_request_is_rejected(value):
     requested = Quantity.model_construct(value=value, unit="L")
     with pytest.raises(ValueError, match="requested quantity"):
         convert(product(), requested)
+
+
+def test_count_units_are_bought_whole_despite_a_fractional_lot_size():
+    # 1000 L of 2.5 dl cartons sold in cases of 3.75 L: 266.67 cases is not orderable, 267 is.
+    result = convert(product(sales_unit="KI", qty_per_sales_unit=3.75, lot_size=0.01, qty_source="NAME_PARSE"),
+                     Quantity(value=1000, unit="L"))
+    assert result.sales_units == 267
+    assert result.qty_covered.value == 1001.25 and result.overbuy.value == 1.25

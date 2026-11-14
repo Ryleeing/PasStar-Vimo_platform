@@ -346,7 +346,8 @@ def test_unverified_server_time_cannot_confirm_stock_or_enter_cache(timing):
     assert len(calls) == 2
 
 
-def test_probe_budget_persists_across_clients_and_cache_hits(tmp_path):
+def test_probe_budget_persists_across_clients_and_counts_distinct_quantities(tmp_path):
+    """Three different quantities per product per day; re-checking one already asked about is free."""
     path = tmp_path / "runtime.sqlite"
     calls = []
 
@@ -359,14 +360,17 @@ def test_probe_budget_persists_across_clients_and_cache_hits(tmp_path):
         api.availability(["p1"], DAY, {"p1": 50}, "agent")
         assert len(calls) == 1
     with client(handler, probe_db_path=path) as api:
-        api.availability(["p1"], DAY, {"p1": 50}, "agent")
+        for _ in range(3):                                   # selection, quote, recheck: same quantity
+            api.availability(["p1"], DAY, {"p1": 50}, "agent")
+        api.availability(["p1"], DAY, {"p1": 60}, "agent")
+        api.availability(["p1"], DAY, {"p1": 70}, "agent")
         with pytest.raises(ValioClientError) as caught:
-            api.availability(["p1"], DAY, {"p1": 60}, "agent")
+            api.availability(["p1"], DAY, {"p1": 80}, "agent")
         assert caught.value.code == "PROBE_LIMIT"
+        api.availability(["p1"], DAY, {"p1": 60}, "agent")   # a quantity already asked about still works
     with sqlite3.connect(path) as db:
         assert db.execute("SELECT count FROM valio_probe_budgets").fetchone()[0] == 3
-        assert db.execute("SELECT count(*) FROM availability_probes").fetchone()[0] == 3
-    assert len(calls) == 2
+        assert db.execute("SELECT count(DISTINCT quantity) FROM availability_probes").fetchone()[0] == 3
 
 
 def test_catalogue_sales_unit_mismatch_keeps_availability_unknown():
@@ -383,7 +387,7 @@ def test_batch_probe_limit_is_atomic(tmp_path):
                 max_probes_per_day=1) as api:
         api.availability(["p1"], DAY, {"p1": 50}, "agent")
         with pytest.raises(ValioClientError):
-            api.availability(["p2", "p1"], DAY, {"p1": 50, "p2": 1}, "agent")
+            api.availability(["p2", "p1"], DAY, {"p1": 51, "p2": 1}, "agent")   # p1: a new quantity
     with sqlite3.connect(path) as db:
         assert db.execute("SELECT product_id,count FROM valio_probe_budgets").fetchall() == [("p1", 1)]
 
