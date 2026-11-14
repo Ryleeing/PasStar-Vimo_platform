@@ -27,3 +27,15 @@ def test_faults_through_a_tunnel_are_refused(client):
     h = {"Cf-Connecting-Ip": "203.0.113.7"}
     assert client.get("/v1/admin/faults", headers=h).status_code == 403
     assert client.put("/v1/admin/faults/TIMEOUT", json={"enabled": True}, headers=h).status_code == 403
+
+
+def test_people_cannot_sign_in_through_a_tunnel(client):
+    tunnel = {"Cf-Connecting-Ip": "203.0.113.7", "X-Demo-User": "usr_manager"}
+    r = client.get("/v1/approvals", headers=tunnel)
+    assert r.status_code == 403 and r.json()["error"]["code"] == "OUT_OF_SCOPE"
+    assert client.get("/v1/approvals", headers={"X-Demo-User": "usr_manager"}).status_code == 200
+
+
+def test_agents_still_work_through_a_tunnel(client):
+    r = client.get("/v1/agents/agt_hotel/protocol", headers={"Cf-Connecting-Ip": "203.0.113.7", "X-Agent-Key": "demo-hotel"})
+    assert r.status_code == 200

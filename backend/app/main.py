@@ -51,6 +51,26 @@ app = FastAPI(
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+# Requests through a tunnel or proxy carry one of these (cloudflared adds Cf-Connecting-Ip).
+PROXY_HEADERS = ("cf-connecting-ip", "x-forwarded-for", "forwarded")
+LOCAL_HOSTS = {"127.0.0.1", "::1", "localhost", "testclient"}
+
+
+def _is_local(request: Request) -> bool:
+    client = request.client.host if request.client else None
+    return client in LOCAL_HOSTS and not any(h in request.headers for h in PROXY_HEADERS)
+
+
+@app.middleware("http")
+async def _people_only_locally(request: Request, call_next):
+    """People are identified by the X-Demo-User header, with no login (demo only). Through a public tunnel anyone
+    could send it and act as the manager, so it is accepted only on the machine running PasStar. Agents still reach
+    PasStar from anywhere with their X-Agent-Key (MCP and the HTTP API)."""
+    if "x-demo-user" in request.headers and not _is_local(request):
+        return errors.response("OUT_OF_SCOPE", "Signing in as a person only works on the machine running PasStar; "
+                                               "agents use X-Agent-Key", {})
+    return await call_next(request)
+
 if mcp_server is not None:
     app.router.routes.extend(mcp_server.routes)      # POST /mcp
 
@@ -320,16 +340,11 @@ def holds_report(since: Optional[datetime] = None, until: Optional[datetime] = N
 
 # ───── 管理（BE2 / BE1）─────
 
-PROXY_HEADERS = ("cf-connecting-ip", "x-forwarded-for", "forwarded")
-LOCAL_HOSTS = {"127.0.0.1", "::1", "localhost", "testclient"}
-
-
 def _local_only(request: Request) -> None:
     """Admin routes (reset, faults) answer only on the machine running the backend. A request that came through a
     tunnel or proxy (e.g. cloudflared, which adds Cf-Connecting-Ip) is refused, so a public demo URL cannot wipe the
     data or bring back the public demo agent keys."""
-    client = request.client.host if request.client else None
-    if client not in LOCAL_HOSTS or any(h in request.headers for h in PROXY_HEADERS):
+    if not _is_local(request):
         raise errors.ApiError("OUT_OF_SCOPE", "Admin endpoints are only available on the machine running PasStar")
 
 LocalOnly = Depends(_local_only)
