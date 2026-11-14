@@ -4,11 +4,11 @@ export function OrderedIllustration() {
   return (
     <svg className="illo" viewBox="0 0 280 220" role="img" aria-label="A parcel on its way">
       {/* backdrop */}
-      <circle cx="140" cy="108" r="90" fill="var(--accent-soft)" />
+      <circle className="illo-backdrop" cx="140" cy="108" r="90" fill="var(--accent-soft)" />
       <ellipse cx="140" cy="198" rx="78" ry="8" fill="var(--illo-shadow)" />
 
       {/* motion lines: on its way */}
-      <g stroke="var(--border-strong)" strokeWidth="5" strokeLinecap="round">
+      <g className="illo-lines" stroke="var(--border-strong)" strokeWidth="5" strokeLinecap="round">
         <line x1="34" y1="132" x2="62" y2="132" />
         <line x1="22" y1="150" x2="62" y2="150" />
         <line x1="40" y1="168" x2="62" y2="168" />
@@ -35,7 +35,7 @@ export function OrderedIllustration() {
       </g>
 
       {/* sparkles */}
-      <g fill="var(--accent)">
+      <g className="illo-sparkles" fill="var(--accent)">
         <path d="M66 62 l3 9 l9 3 l-9 3 l-3 9 l-3 -9 l-9 -3 l9 -3 z" />
         <path d="M232 132 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 l6 -2 z" opacity=".7" />
         <circle cx="96" cy="40" r="3.5" opacity=".6" />

@@ -76,7 +76,7 @@ function ApprovalDetail({ a }: { a: ApprovalCard }) {
     <article className="card stack lg">
       <div className="stack sm">
         <div className="row wrap">
-          <h2 className="grow" style={{ fontSize: 20 }}>{a.title}</h2>
+          <h2 className="grow">{a.title}</h2>
           {a.status !== 'PENDING' && <Pill tone={APPROVAL_STATUS[a.status].tone}>{APPROVAL_STATUS[a.status].label}</Pill>}
         </div>
         <p className="small muted">

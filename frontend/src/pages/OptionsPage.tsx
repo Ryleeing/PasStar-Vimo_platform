@@ -86,7 +86,7 @@ export function OptionsPage() {
                 {showMore ? 'Fewer options' : `${more.length} more option${more.length > 1 ? 's' : ''}`}
               </Button>
               {showMore && (
-                <div className="card fade-in" style={{ marginTop: 8, padding: 6 }}>
+                <div className="card" style={{ marginTop: 8, padding: 8 }}>
                   <div className="table-wrap">
                     <table className="table">
                       <tbody>

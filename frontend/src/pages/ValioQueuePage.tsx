@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bot, Eye, FileSignature, Inbox, Route, ShieldX, ThumbsUp } from 'lucide-react';
+import { Eye, Inbox, Route, ShieldX, ThumbsUp } from 'lucide-react';
 import { confirmProtocol, decideApproval, listApprovals } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { ApprovalCard } from '../api/types';
@@ -45,7 +45,6 @@ function ConfirmProtocolCard() {
   };
   return (
     <section className="card row wrap">
-      <div className="icon-tile info"><FileSignature size={18} /></div>
       <div className="grow">
         <h3>New protocol {d.id} signed by the buyer</h3>
         <div className="small muted">Auto-order up to {eur(d.body.auto_approve_limit_cents)} · max {eur(d.body.max_order_cents)} · confirm the customer and set Valio’s scope</div>
@@ -80,8 +79,7 @@ function ValioCard({ a }: { a: ApprovalCard }) {
   return (
     <article className="card stack lg">
       <div className="row wrap">
-        <div className="icon-tile bad"><Bot size={18} /></div>
-        <h2 className="grow" style={{ fontSize: 19 }}>{a.title}</h2>
+        <h2 className="grow">{a.title}</h2>
         <Pill tone={st.tone}>{st.label}</Pill>
       </div>
 
@@ -105,17 +103,14 @@ function ValioCard({ a }: { a: ApprovalCard }) {
             <section className="stack sm">
               <h3>Agent behaviour · 24 h</h3>
               <div className="small muted">{ag.name} · <span className="mono">{ag.agent_id}</span></div>
-              <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+              <div className="stats">
                 <div className="stat"><div className="v">{ag.requests_24h}</div><div className="l">Requests</div></div>
                 <div className="stat"><div className="v" style={{ color: 'var(--warn)' }}>{ag.blocked_24h}</div><div className="l">Blocked</div></div>
                 <div className="stat"><div className="v" style={{ color: 'var(--bad)' }}>{ag.probe_alerts_24h}</div><div className="l">Probe alerts</div></div>
               </div>
             </section>
           )}
-          <div className="card inset tight small">
-            <b>Suggestion: {a.suggested_action.toLowerCase()}</b>
-            <div className="text-2">{a.suggested_reason}</div>
-          </div>
+          <p className="small"><span className="muted">Suggested: </span><b>{a.suggested_action.toLowerCase()}</b>. {a.suggested_reason}.</p>
         </div>
       </div>
 

@@ -119,7 +119,7 @@ export function ChainView({ request }: { request: RequestResult }) {
       </div>
 
       {showTimeline && (
-        <div style={{ marginTop: 20 }} className="fade-in">
+        <div style={{ marginTop: 24 }}>
           {loadingTl || !timeline ? <Skeleton h={160} /> : (
             <ol className="timeline">
               {timeline.events.map((e, i) => (

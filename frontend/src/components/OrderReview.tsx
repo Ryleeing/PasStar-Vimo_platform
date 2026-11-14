@@ -46,9 +46,9 @@ export function OrderDetails({ line, candidate, deliveryDate, address }: {
             {rows.map((r, i) => {
               const st = ALLERGEN_STATUS[r.status];
               return (
-                <div key={i} className="row" style={{ gap: 8 }}>
+                <div key={i} className="row wrap" style={{ gap: 8 }}>
                   {st.tone === 'ok' ? <Check size={16} color="var(--ok)" /> : <AlertTriangle size={16} color="var(--warn)" />}
-                  <span className="grow">{r.requirement.label ?? r.requirement.code}</span>
+                  <span className="grow nowrap">{r.requirement.label ?? r.requirement.code}</span>
                   <span className="small muted">{st.label} by the manufacturer</span>
                 </div>
               );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Ban, Plus, Save, SlidersHorizontal, Star, X } from 'lucide-react';
+import { Plus, Save, X } from 'lucide-react';
 import { getProtocol, listProfiles, updateProfile } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Profile, ProfileBody } from '../api/types';
@@ -87,7 +87,7 @@ function ProfileForm({ profile, limitCents, onSaved }: { profile: Profile; limit
     <div className="stack lg">
       <div className="grid two" style={{ alignItems: 'start' }}>
         <section className="card stack">
-          <div className="row"><div className="icon-tile bad"><Ban size={18} /></div><div><h2>Never</h2><div className="small muted">Hard exclusions: shown in red, never selectable</div></div></div>
+          <div className="stack sm"><h2>Never</h2><div className="small muted">Hard exclusions: shown in red, never selectable</div></div>
           <div className="field"><span className="label">Brands</span>
             <TagInput tone="bad" values={b.hard_exclusions?.brands ?? []} placeholder="Add a brand, e.g. Arla" onChange={(brands) => set({ hard_exclusions: { ...b.hard_exclusions, brands } })} />
           </div>
@@ -98,15 +98,15 @@ function ProfileForm({ profile, limitCents, onSaved }: { profile: Profile; limit
         </section>
 
         <section className="card stack">
-          <div className="row"><div className="icon-tile"><Star size={18} /></div><div><h2>Prefer</h2><div className="small muted">Soft preferences: only change the ranking</div></div></div>
-          <label className="row between small"><span>Prefer large packs</span>
+          <div className="stack sm"><h2>Prefer</h2><div className="small muted">Soft preferences: only change the ranking</div></div>
+          <label className="row between"><span>Prefer large packs</span>
             <Switch checked={!!b.soft_preferences?.prefer_large_packs} label="Prefer large packs" onChange={(v) => set({ soft_preferences: { ...b.soft_preferences, prefer_large_packs: v } })} />
           </label>
-          <label className="row between small"><span>Prefer Finnish products</span>
+          <label className="row between"><span>Prefer Finnish products</span>
             <Switch checked={!!b.soft_preferences?.countries?.includes('fi')} label="Prefer Finnish products"
               onChange={(v) => set({ soft_preferences: { ...b.soft_preferences, countries: v ? ['fi'] : [] } })} />
           </label>
-          <label className="row between small"><span>Prefer EU organic</span>
+          <label className="row between"><span>Prefer EU organic</span>
             <Switch checked={!!b.soft_preferences?.labels?.includes('EU_ORGANIC_FARMING')} label="Prefer EU organic"
               onChange={(v) => set({ soft_preferences: { ...b.soft_preferences, labels: v ? ['EU_ORGANIC_FARMING'] : [] } })} />
           </label>
@@ -115,7 +115,7 @@ function ProfileForm({ profile, limitCents, onSaved }: { profile: Profile; limit
 
       <div className="grid two" style={{ alignItems: 'start' }}>
         <section className="card stack">
-          <div className="row"><div className="icon-tile info"><SlidersHorizontal size={18} /></div><div><h2>What matters most</h2><div className="small muted">Ranking weights, normalised to 100%</div></div></div>
+          <div className="stack sm"><h2>What matters most</h2><div className="small muted">Ranking weights, normalised to 100%</div></div>
           {(Object.keys(W_LABEL) as (keyof Weights)[]).map((k) => (
             <div key={k} className="weight">
               <label htmlFor={`w-${k}`} className="small">{W_LABEL[k]}</label>

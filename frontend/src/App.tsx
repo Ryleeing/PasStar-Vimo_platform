@@ -56,7 +56,7 @@ function Shell() {
       {menuOpen && <div className="scrim" onClick={() => setMenuOpen(false)} aria-hidden />}
       <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} />
       <main className="content" id="main">
-        <div className="content-inner fade-in" key={location.pathname + account.key}>
+        <div className="content-inner" key={location.pathname + account.key}>
           <Routes>
             {(Object.keys(ROUTES) as PageKey[]).map((k) => {
               const Page = ROUTES[k];

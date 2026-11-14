@@ -66,7 +66,7 @@ export function DiffList({ d }: { d: ProtocolDiff }) {
       {groups.map(([k, tone, label, icon]) =>
         (d[k] ?? []).map((c) => (
           <div key={k + c.field} className="diff-row">
-            <div className={`icon-tile ${tone}`} style={{ width: 30, height: 30 }}>{icon}</div>
+            <div className={`diff-icon ${tone}`}>{icon}</div>
             <div className="stack sm">
               <div className="row wrap" style={{ gap: 8 }}><b className="small">{c.field}</b><Pill tone={tone}>{label}</Pill></div>
               <div className="diff-vals"><span className="before">{fmtVal(c.field, c.before)}</span>→<span>{fmtVal(c.field, c.after)}</span></div>
@@ -169,7 +169,7 @@ function AmendCard({ p }: { p: Protocol }) {
       <Button onClick={submit} loading={busy === 'amend'} disabled={!limit}>Submit change</Button>
 
       {diff && (
-        <div className="stack fade-in">
+        <div className="stack">
           <DiffList d={diff} />
           {done === 'signed' && <Banner tone="ok" title="Signed">Valio confirms it next.</Banner>}
           {done === 'rejected' && <Banner tone="info" title="Not signed">Only the stricter changes apply.</Banner>}
@@ -231,7 +231,7 @@ function DraftCard() {
           <Button onClick={make} loading={busy === 'draft'} disabled={!text.trim()}><Sparkles size={15} /> Draft it</Button>
         </>
       ) : (
-        <div className="stack fade-in">
+        <div className="stack">
           <div className="row"><b className="grow">Draft, version {draft.version}</b><Pill tone={PROTOCOL_STATUS[draft.status].tone}>{PROTOCOL_STATUS[draft.status].label}</Pill></div>
           {(draft.open_questions?.length ?? 0) > 0 && draft.status === 'DRAFT' && (
             <div className="stack sm">

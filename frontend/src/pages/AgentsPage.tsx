@@ -60,10 +60,10 @@ export function AgentsPage() {
         <section className="card stack">
           <div><h2>Simulate problems</h2><div className="small muted">For demos and tests</div></div>
           {faults.loading ? <Skeleton h={220} /> : faults.error ? <ErrorState error={faults.error} onRetry={faults.reload} /> : (
-            <div className="stack sm">
+            <div className="list-rows">
               {faults.data!.map((f) => (
-                <label key={f.name} className="row between card inset tight" style={{ cursor: 'pointer' }}>
-                  <span><b className="mono small">{f.name}</b><div className="small muted">{FAULT_TEXT[f.name]}</div></span>
+                <label key={f.name} className="row between" style={{ cursor: 'pointer' }}>
+                  <span><b>{FAULT_TEXT[f.name]}</b><div className="xs muted mono">{f.name}</div></span>
                   <Switch checked={f.enabled} label={f.name} onChange={(v) => toggle(f, v)} />
                 </label>
               ))}

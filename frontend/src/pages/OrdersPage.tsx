@@ -56,7 +56,7 @@ export function OrdersPage() {
       <article className="card stack">
         <div className="row wrap">
           <div className="grow">
-            <div className="strong" style={{ fontSize: 16 }}>{title}</div>
+            <h3>{title}</h3>
             <div className="small muted">{detail}</div>
           </div>
           <Pill tone={status.tone}>{status.label}</Pill>

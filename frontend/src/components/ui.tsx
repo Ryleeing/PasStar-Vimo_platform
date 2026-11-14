@@ -57,7 +57,7 @@ export function PageHead({ eyebrow, title, desc, actions }: { eyebrow?: string; 
 export function Empty({ icon, title, children, action }: { icon: ReactNode; title: string; children?: ReactNode; action?: ReactNode }) {
   return (
     <div className="card empty">
-      <div className="icon-tile">{icon}</div>
+      <div className="empty-icon" aria-hidden>{icon}</div>
       <h3>{title}</h3>
       {children && <p>{children}</p>}
       {action}

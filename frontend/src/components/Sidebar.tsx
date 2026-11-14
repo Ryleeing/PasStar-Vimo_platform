@@ -26,7 +26,7 @@ export function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () =>
         <div className="brand-mark"><ShieldCheck size={18} /></div>
         <div>
           <b>The Pass</b>
-          <span>Valio Aimo open procurement channel</span>
+          <span>Valio Aimo ordering channel</span>
         </div>
       </div>
 
@@ -123,7 +123,7 @@ function ProgressTracker({ mode, onNavigate }: { mode: 'SEPARATE' | 'SELF'; onNa
       <ol className="steps">
         {steps.map((s, i) => (
           <li key={s.key} className={`step ${s.state}`} aria-current={s.state === 'current' ? 'step' : undefined}>
-            <span className="step-dot">{s.state === 'done' ? <Check size={12} strokeWidth={3} /> : s.state === 'blocked' ? '!' : s.state === 'skipped' ? '–' : i + 1}</span>
+            <span className="step-dot">{s.state === 'done' ? <Check size={14} strokeWidth={3} /> : s.state === 'blocked' ? '!' : s.state === 'skipped' ? '–' : i + 1}</span>
             <div className="step-body">
               <button onClick={() => go(s.page)}>{s.label}</button>
               {s.hint && <div className="hint" title={s.hint}>{s.hint}</div>}

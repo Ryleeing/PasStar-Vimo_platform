@@ -34,8 +34,8 @@ export function CandidateCard({ c, selected, featured, onSelect, loading, mode, 
 
   return (
     <article className={`cand ${selected ? 'sel' : ''} ${featured ? 'featured' : ''}`} aria-label={line.name}>
-      <div className="row between" style={{ minHeight: 22 }}>
-        <span className="badge">{c.badge ? BADGE[c.badge] : `Option ${c.rank}`}</span>
+      <div className="row between wrap" style={{ gap: 8 }}>
+        <span className={`badge ${c.badge ? '' : 'plain'}`}>{c.badge ? BADGE[c.badge] : `Option ${c.rank}`}</span>
         {c.outcome_preview !== 'AUTO' && <Pill tone={out.tone}>{out.label}</Pill>}
       </div>
 
