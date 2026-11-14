@@ -1,14 +1,19 @@
 from dataclasses import replace
 from datetime import date, datetime, timezone
 from pathlib import Path
+import json
 import sqlite3
 
+import httpx
 import pytest
 
 from app.catalog.cards import CardsBuilder
+from app.catalog.disclosure import DisclosureFilter
 from app.catalog.repository import CatalogRepository
 from app.catalog.service import CatalogService, RankingPolicy, effective_rules
-from app.internal import AvailabilityInfo, FilterResult, PriceInfo, ProductRecord
+from app.internal import Audience, AvailabilityInfo, FilterResult, PriceInfo, ProductRecord
+from app.valio.client import ValioClient, ValioClientError
+from app.valio.faults import FaultProxy, FaultStore
 from app.schemas import (
     GateDecision, HardExclusions, ProfileBody, ProtocolBody, Quantity,
     Requirement, StructuredRequest, Violation,
@@ -78,8 +83,8 @@ class Dynamic:
         self.stock = availability or AvailabilityInfo("YES", None)
         self.calls = []
 
-    def prices(self, ids, buyer):
-        self.calls.append(("prices", list(ids), buyer))
+    def prices(self, ids, buyer, *, delivery_date=None):
+        self.calls.append(("prices", list(ids), buyer, delivery_date))
         return {pid: self.price for pid in ids}
 
     def availability(self, ids, day, amounts, agent):
@@ -94,6 +99,7 @@ class AutoGate:
 
 def service(products=None, **kwargs):
     catalog = Catalog(products or [product()])
+    kwargs.setdefault("disclosure", DisclosureFilter(connection=sqlite3.connect(":memory:")))
     return CatalogService(catalog, today=TODAY, **kwargs), catalog
 
 
@@ -142,6 +148,7 @@ def test_injected_dynamic_prices_totals_and_gate_are_combined():
     )
     assert candidate.outcome_preview == "AUTO"
     assert candidate.reliability_level == "UNKNOWN"
+    assert dynamic.calls[0][3] == request().delivery_date
     assert dynamic.calls[1][3] == {"milk": 50.0}
 
 
@@ -301,7 +308,7 @@ def test_weighted_ranking_is_explicit_opt_in_and_rejects_bad_weights():
 
 def test_rejected_options_do_not_change_selectable_weighted_ranking():
     class ProductPrices(Dynamic):
-        def prices(self, ids, buyer):
+        def prices(self, ids, buyer, *, delivery_date=None):
             return {pid: PriceInfo({"a": 100, "b": 200, "c": 100_000}[pid], .135, 0)
                     for pid in ids}
 
@@ -314,3 +321,126 @@ def test_rejected_options_do_not_change_selectable_weighted_ranking():
     assert [item.lines[0].product_id for item in first.candidates] == ["a", "b"]
     assert [item.lines[0].product_id for item in second.candidates] == ["a", "b"]
     assert second.blocked[0].lines[0].product_id == "c"
+
+
+@pytest.fixture
+def dynamic_pipeline(tmp_path):
+    calls = []
+    modes = {"logistic_model": "Stock", "amount": 80}
+
+    def handler(http_request):
+        payload = json.loads(http_request.content)
+        calls.append((http_request.url.path, payload))
+        if http_request.url.path == "/api/price":
+            return httpx.Response(200, json={
+                "customerId": "customer", "currency": "EUR",
+                "pricingDate": payload["requestedDate"],
+                "products": [{
+                    "productId": pid, "quantity": 1.0, "error": False,
+                    "netPriceFound": True,
+                    "catalogPrice": {
+                        "value": 17.6, "valueWithTax": 19.976, "currency": "EUR",
+                        "validFrom": "2026-11-01", "validTo": "2026-11-30",
+                    },
+                    "tax": {"taxRate": 13.5, "taxValue": 2.376},
+                } for pid in payload["products"]],
+            })
+        return httpx.Response(200, json={
+            "timeNow": "2026-11-14T12:00:00+0200",
+            "requestedDate": payload["requestedDate"],
+            "products": [{
+                "productId": pid, "salesBlock": False,
+                "logisticModel": modes["logistic_model"],
+                "closingTime": "2026-11-15T20:00:00+0200",
+                "scheduleLines": [{
+                    "availableAmount": modes["amount"],
+                    "availableDate": payload["requestedDate"],
+                    "salesUnit": "KI", "salesBlock": False,
+                }],
+            } for pid in payload["products"]],
+        })
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as transport:
+        with ValioClient(
+            base_url="https://valio.invalid", buyer_id="buyer", customer_id="customer",
+            api_key="test-only-key", http_client=transport,
+            probe_db_path=tmp_path / "runtime.sqlite",
+            now=lambda: datetime(2026, 11, 14, 10, tzinfo=timezone.utc),
+            sales_unit_resolver=lambda _: "KI",
+        ) as api, FaultStore() as faults:
+            audit = sqlite3.connect(":memory:")
+            try:
+                app, _ = service(
+                    valio=FaultProxy(api, faults), gate=AutoGate(),
+                    disclosure=DisclosureFilter(connection=audit),
+                )
+                yield app, api, faults, audit, calls, modes
+            finally:
+                audit.close()
+
+
+def test_http_client_to_candidate_to_audited_llm_pack(dynamic_pipeline):
+    app, _, _, audit, calls, _ = dynamic_pipeline
+    req = request()
+    result = app.generate(req, effective_rules(protocol()), request_id="req-live-mock")
+    candidate = result.candidates[0]
+    assert candidate.totals.gross_cents == 99_900
+    assert candidate.totals.vat_cents == 11_900
+    assert candidate.outcome_preview == "AUTO"
+    assert all(payload["requestedDate"] == req.delivery_date.isoformat() for _, payload in calls)
+    pack = app.pack_for_llm(result, req, Audience("LLM", "buyer", "agent", "L3"))
+    assert pack.max_sensitivity == "L1"
+    assert pack.data["candidates"][0]["totals"]["gross_cents"] == 99_900
+    text = json.dumps(pack.data)
+    assert "0.975" not in text
+    assert "availableAmount" not in text
+    assert "test-only-key" not in text
+    assert audit.execute(
+        "SELECT count(*) FROM disclosures WHERE request_id = 'req-live-mock'"
+    ).fetchone()[0] > 0
+
+
+def test_price_change_fault_triggers_approval_without_poisoning_client_cache(dynamic_pipeline):
+    app, _, faults, _, _, _ = dynamic_pipeline
+    faults.set("PRICE_CHANGE", enabled=True, params={"multiplier": 1.1, "times": 1})
+    changed = app.generate(request(), effective_rules(protocol())).candidates[0]
+    normal = app.generate(request(), effective_rules(protocol())).candidates[0]
+    assert changed.lines[0].unit_price_cents == 1936
+    assert changed.outcome_preview == "BUYER_APPROVAL"
+    assert normal.lines[0].unit_price_cents == 1760
+    assert normal.outcome_preview == "AUTO"
+
+
+def test_partial_stock_fault_triggers_approval_with_request_capped_quantity(dynamic_pipeline):
+    app, _, faults, _, _, _ = dynamic_pipeline
+    faults.set("PARTIAL_STOCK", enabled=True, params={"ratio": .5})
+    candidate = app.generate(request(), effective_rules(protocol())).candidates[0]
+    assert candidate.outcome_preview == "BUYER_APPROVAL"
+    assert candidate.lines[0].deliverable_sales_units == 25
+
+
+@pytest.mark.parametrize(("fault", "code"), [("TIMEOUT", "UPSTREAM_ERROR"), ("RATE_LIMIT", "RATE_LIMITED")])
+def test_fault_errors_reach_orchestrator_without_network_calls(dynamic_pipeline, fault, code):
+    app, _, faults, _, calls, _ = dynamic_pipeline
+    faults.set(fault, enabled=True)
+    with pytest.raises(ValioClientError) as caught:
+        app.generate(request(), effective_rules(protocol()))
+    assert caught.value.code == code
+    assert calls == []
+
+
+def test_empty_price_fault_requires_custom_review(dynamic_pipeline):
+    app, _, faults, _, _, _ = dynamic_pipeline
+    faults.set("EMPTY_RESULT", enabled=True, params={"endpoint": "prices"})
+    candidate = app.generate(request(), effective_rules(protocol())).candidates[0]
+    assert candidate.totals is None
+    assert candidate.outcome_preview == "VALIO_REVIEW"
+
+
+def test_terminal_sentinel_never_becomes_known_stock_or_automatic(dynamic_pipeline):
+    app, _, _, _, _, modes = dynamic_pipeline
+    modes.update(logistic_model="Terminal", amount=999999)
+    candidate = app.generate(request(), effective_rules(protocol())).candidates[0]
+    assert candidate.lines[0].available_on_date == "UNKNOWN"
+    assert candidate.lines[0].deliverable_sales_units is None
+    assert candidate.outcome_preview == "BUYER_APPROVAL"

@@ -16,8 +16,8 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 from ..internal import (
-    AvailabilityInfo, CardsApi, CatalogApi, EffectiveRules, GateApi, PriceInfo,
-    Conversion, ProductRecord, UnitsApi, ValioApi,
+    Audience, AvailabilityInfo, CardsApi, CatalogApi, DisclosablePack, DisclosureApi,
+    EffectiveRules, GateApi, PriceInfo, Conversion, ProductRecord, UnitsApi, ValioApi,
 )
 from ..schemas import (
     AllergenStatus, AlternativeRef, Candidate, CandidateLine, ChainEvent,
@@ -25,6 +25,7 @@ from ..schemas import (
     Protocol, ProtocolBody, Requirement, RuleHit, StructuredRequest, Totals, Violation,
 )
 from .cards import CardsBuilder
+from .disclosure import DisclosureFilter
 from .repository import CatalogRepository, NON_CERTIFICATION_LABELS, requirement_check
 from .units import UnitsConverter
 
@@ -120,6 +121,7 @@ class CatalogResult:
     unconvertible_product_ids: list[str] = field(default_factory=list)
     unconverted_blocked: dict[str, list[Violation]] = field(default_factory=dict)
     no_candidate_reason: str | None = None
+    request_id: str | None = None
 
 
 class CatalogService:
@@ -127,7 +129,7 @@ class CatalogService:
         self, catalog: CatalogApi | None = None, *, units: UnitsApi | None = None,
         cards: CardsApi | None = None, valio: ValioApi | None = None,
         gate: GateApi | None = None, today: date | None = None,
-        ranking: RankingPolicy | None = None,
+        ranking: RankingPolicy | None = None, disclosure: DisclosureApi | None = None,
     ) -> None:
         self.today = today or datetime.now(HELSINKI).date()
         self.catalog = catalog if catalog is not None else CatalogRepository(today=self.today)
@@ -136,14 +138,50 @@ class CatalogService:
         self.valio = valio
         self.gate = gate
         self.ranking = ranking or RankingPolicy()
+        self._disclosure = disclosure
 
-    def get_product(self, product_id: str) -> ProductPublic:
-        return self._public(self.catalog.get(product_id))
+    def _disclosure_filter(self) -> DisclosureApi:
+        if self._disclosure is None:
+            self._disclosure = DisclosureFilter()
+        return self._disclosure
 
-    def search(self, request: ProductSearchRequest) -> list[ProductPublic]:
-        # Explicit projection exposes only ProductPublic fields.  The eventual
-        # HTTP/LLM integration must additionally apply disclosure.field_policy.
-        return [self._public(product) for product in self.catalog.search(request)]
+    def get_product(
+        self, product_id: str, *, audience: Audience | None = None,
+    ) -> ProductPublic:
+        return self._public_response(self.catalog.get(product_id), audience)
+
+    def search(
+        self, request: ProductSearchRequest, *, audience: Audience | None = None,
+    ) -> list[ProductPublic]:
+        return [self._public_response(product, audience) for product in self.catalog.search(request)]
+
+    def _public_response(
+        self, product: ProductRecord, audience: Audience | None,
+    ) -> ProductPublic:
+        public = self._public(product)
+        filtered = self._disclosure_filter().filter(
+            {"product": public.model_dump(mode="json")},
+            audience or Audience("BUYER_USER", None, None, "L0"),
+        )
+        return ProductPublic.model_validate(filtered.get("product", {}))
+
+    def pack_for_llm(
+        self, result: CatalogResult, req: StructuredRequest, audience: Audience,
+    ) -> DisclosablePack:
+        """Export only policy-approved facts; generate() remains an internal result.
+
+        The caller must verify buyer/protocol ownership before constructing the
+        audience. Free text in the returned data must remain data in LLM prompts.
+        """
+        return self._disclosure_filter().pack_for_llm({
+            "request": req.model_dump(mode="json"),
+            "candidates": [item.model_dump(mode="json") for item in result.candidates],
+            "blocked": [item.model_dump(mode="json") for item in result.blocked],
+            "events": [item.model_dump(mode="json") for item in result.events],
+            "dropped_count": result.dropped_count,
+            "unconvertible_product_ids": list(result.unconvertible_product_ids),
+            "no_candidate_reason": result.no_candidate_reason,
+        }, audience, request_id=result.request_id)
 
     def _public(self, product: ProductRecord) -> ProductPublic:
         flags = set(product.flags)
@@ -225,7 +263,9 @@ class CatalogService:
         if self.valio is not None and ids:
             # Upstream errors deliberately propagate to BE3; retries and error
             # translation belong to the injected client/orchestrator.
-            prices = self.valio.prices(ids, working.protocol.buyer_id)
+            prices = self.valio.prices(
+                ids, working.protocol.buyer_id, delivery_date=req.delivery_date
+            )
             availability = self.valio.availability(
                 ids, req.delivery_date,
                 {product_id: conversions[product_id].sales_units for product_id in ids},
@@ -319,6 +359,7 @@ class CatalogService:
                     "No selectable product has a supported quantity conversion and policy preview."
                 )
             ),
+            request_id=request_id,
         )
 
     @staticmethod
@@ -367,6 +408,12 @@ class CatalogService:
                 for value in (price.unit_price_cents, price.deposit_cents_per_unit)
             ) or not math.isfinite(price.vat_rate) or not 0 <= price.vat_rate <= 1:
                 raise ValueError("invalid price, deposit or VAT from price provider")
+            if price.unit_gross_cents is not None and (
+                not isinstance(price.unit_gross_cents, int)
+                or isinstance(price.unit_gross_cents, bool)
+                or price.unit_gross_cents < price.unit_price_cents
+            ):
+                raise ValueError("invalid tax-inclusive unit price from price provider")
             count = Decimal(str(conversion.sales_units))
             def cents(value: Decimal) -> int:
                 return int(value.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
@@ -374,11 +421,16 @@ class CatalogService:
             vat_rate = price.vat_rate
             line_net = cents(count * unit_price)
             deposit = cents(count * price.deposit_cents_per_unit)
-            vat = cents(Decimal(line_net) * Decimal(str(vat_rate)))
+            product_gross = (
+                cents(count * price.unit_gross_cents)
+                if price.unit_gross_cents is not None else
+                line_net + cents(Decimal(line_net) * Decimal(str(vat_rate)))
+            )
+            vat = product_gross - line_net
             if not product.deposits or price.deposit_cents_per_unit > 0:
                 totals = Totals(
                     net_cents=line_net, vat_cents=vat, deposit_cents=deposit,
-                    gross_cents=line_net + vat + deposit,
+                    gross_cents=product_gross + deposit,
                 )
         line = CandidateLine(
             product_id=product.id, name=product.name_en, brand=product.brand,

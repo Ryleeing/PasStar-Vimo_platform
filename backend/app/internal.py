@@ -86,6 +86,7 @@ class PriceInfo:
     unit_price_cents: int
     vat_rate: float  # Fraction, e.g. 0.135; Valio's taxRate percent is normalised by its client.
     deposit_cents_per_unit: int
+    unit_gross_cents: Optional[int] = None  # Preserve the upstream tax-inclusive unit price.
 
 
 @dataclass
@@ -130,7 +131,9 @@ class UnitsApi(Iface):
         """
 
 class ValioApi(Iface):                # All calls use the proxy for faults, caching and retries.
-    def prices(self, product_ids: list[str], buyer_id: str) -> dict[str, PriceInfo]: ...
+    def prices(self, product_ids: list[str], buyer_id: str, *,
+               delivery_date: Optional[date] = None) -> dict[str, PriceInfo]:
+        """Query buyer-scoped prices for the requested delivery date."""
     def availability(self, product_ids: list[str], delivery_date: date, sales_units: dict[str, float],
                      agent_id: str) -> dict[str, AvailabilityInfo]:
         """Record availability_probes and raise PROBE_LIMIT when a product exceeds its limit."""
@@ -144,13 +147,15 @@ class CardsApi(Iface):
               gate_preview: GateDecision) -> Cards: ...
 
 class DisclosureApi(Iface):
-    def filter(self, obj: dict, audience: Audience) -> dict:
+    def filter(self, obj: dict, audience: Audience, *,
+               request_id: Optional[str] = None) -> dict:
         """Apply field_policy.yaml and remove fields above audience.ceiling.
 
         Every external response must pass through this filter.
         """
     def record(self, audience: Audience, request_id: Optional[str], fields: list[tuple[str, Sensitivity, Optional[str]]]) -> None: ...
-    def pack_for_llm(self, obj: dict, audience: Audience) -> DisclosablePack: ...
+    def pack_for_llm(self, obj: dict, audience: Audience, *,
+                     request_id: Optional[str] = None) -> DisclosablePack: ...
 
 
 # ───────────── BE1 channel/transaction interfaces for BE3 ─────────────
