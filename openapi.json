@@ -715,6 +715,278 @@
         }
       }
     },
+    "/v1/console/turn": {
+      "post": {
+        "tags": [
+          "BE3 · console"
+        ],
+        "summary": "Console Turn",
+        "description": "One message to the console agent; streams its tool calls, PasStar's answers and what happened behind them.",
+        "operationId": "console_turn_v1_console_turn_post",
+        "parameters": [
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsoleTurn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/console/attacks": {
+      "post": {
+        "tags": [
+          "BE3 · console"
+        ],
+        "summary": "Console Attacks",
+        "description": "The agent tries to break the rules in several ways; streams each attempt and PasStar's refusal.",
+        "operationId": "console_attacks_v1_console_attacks_post",
+        "parameters": [
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsoleAttacks"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/agents/{agent_id}/protocol": {
       "get": {
         "tags": [
@@ -6788,6 +7060,61 @@
           "events"
         ],
         "title": "ChainTimeline"
+      },
+      "ConsoleAttacks": {
+        "properties": {
+          "agent_key": {
+            "type": "string",
+            "title": "Agent Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agent_key"
+        ],
+        "title": "ConsoleAttacks"
+      },
+      "ConsoleTurn": {
+        "properties": {
+          "agent_key": {
+            "type": "string",
+            "title": "Agent Key"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "llm",
+              "script"
+            ],
+            "title": "Mode",
+            "default": "llm"
+          },
+          "history": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "History",
+            "default": []
+          },
+          "state": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "State",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "agent_key",
+          "text"
+        ],
+        "title": "ConsoleTurn"
       },
       "CreateOrderRequest": {
         "properties": {

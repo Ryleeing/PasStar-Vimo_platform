@@ -6,6 +6,7 @@ Run: uvicorn app.main:app --reload    Docs: http://localhost:8000/docs
 Tags name the owner: BE1 channel & transactions, BE2 catalogue & data, BE3 orchestration & AI.
 """
 import functools
+import json
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Literal, Optional
@@ -14,11 +15,12 @@ import pydantic
 from fastapi import Depends, FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from . import db, errors, fixtures as fx
 from .channel import agents, approvals, audit as audit_store, checkpoints, identity, orders, protocols, quotes, reports, seed, signing
 from .internal import Audience
-from .orchestrator import parser_api, seed as be3_seed, service as be3
+from .orchestrator import console, parser_api, seed as be3_seed, service as be3
 from .orchestrator.holds import HoldCaller, record_parse
 from .schemas import *  # noqa: F401,F403
 
@@ -145,6 +147,55 @@ def issue_agent_key(agent_id: str, body: IssueKeyRequest, who: Audience = Caller
 def revoke_agent_key(agent_id: str, who: Audience = Caller):
     """Revoke the agent's key: every call with it is refused from now on (and shows up in the hold report)."""
     return _out(who, agents.revoke_key(agent_id, who))
+
+# ───── Agent console (BE3): watch an external agent work, and what PasStar did behind each answer ─────
+
+class ConsoleTurn(pydantic.BaseModel):
+    agent_key: str
+    text: str
+    mode: Literal["llm", "script"] = "llm"
+    history: list[dict] = []      # llm mode: the conversation so far, as returned in the last "done" event
+    state: dict = {}              # script mode: what the scripted agent remembers
+
+
+class ConsoleAttacks(pydantic.BaseModel):
+    agent_key: str
+
+
+def _console_guard(who: Audience, agent_key: str) -> None:
+    """People only (so the model budget cannot be spent through a tunnel), and a buyer drives only its own agents."""
+    if who.kind == "AGENT":
+        raise errors.ApiError("OUT_OF_SCOPE", "The console is for people; agents call /mcp directly")
+    try:
+        agent = identity.caller(agent_key, None)
+    except errors.ApiError:
+        return                      # an unknown key is allowed: watching it be refused is part of the demo
+    if who.kind == "BUYER_USER" and agent.buyer_id != who.buyer_id:
+        raise errors.ApiError("OUT_OF_SCOPE", "That key belongs to another buyer's agent")
+
+
+def _sse(events):
+    async def stream():
+        async for e in events:
+            yield f"data: {json.dumps(e, default=str)}\n\n"
+    return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+
+
+@app.post("/v1/console/turn", tags=["BE3 · console"])
+def console_turn(body: ConsoleTurn, who: Audience = Caller):
+    """One message to the console agent; streams its tool calls, PasStar's answers and what happened behind them."""
+    _console_guard(who, body.agent_key)
+    if body.mode == "script":
+        return _sse(console.run_script(body.agent_key, dict(body.state), body.text))
+    return _sse(console.run_llm(body.agent_key, body.history, body.text))
+
+
+@app.post("/v1/console/attacks", tags=["BE3 · console"])
+def console_attacks(body: ConsoleAttacks, who: Audience = Caller):
+    """The agent tries to break the rules in several ways; streams each attempt and PasStar's refusal."""
+    _console_guard(who, body.agent_key)
+    return _sse(console.run_attacks(body.agent_key))
+
 
 @app.get("/v1/agents/{agent_id}/protocol", response_model=Protocol, tags=["BE1 · protocols"])
 def active_protocol(agent_id: str, who: Audience = Caller):
