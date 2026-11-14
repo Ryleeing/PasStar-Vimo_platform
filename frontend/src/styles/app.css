@@ -1849,3 +1849,21 @@ html:not([data-theme='light']) .composer textarea { background: transparent; bor
   .sidebar.collapsed .side-foot { align-items: center; }
   .sidebar.collapsed .foot-actions { align-items: center; }
 }
+
+/* ── TEMPORARY: the brand colour picker (ThemeLab.tsx) ── */
+.theme-lab { position: fixed; right: calc(env(safe-area-inset-right, 0px) + 20px); bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); z-index: 120; display: flex; flex-direction: column; align-items: flex-end; gap: var(--s3); }
+.theme-lab-fab { width: 52px; height: 52px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center; color: #fff; background: var(--accent-grad); box-shadow: var(--accent-shadow), 0 4px 14px rgba(0, 0, 0, 0.18); }
+.theme-lab-fab:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.theme-lab-panel { width: min(380px, calc(100vw - 40px)); max-height: min(640px, calc(100vh - 110px)); overflow-y: auto; display: flex; flex-direction: column; gap: var(--s3); box-shadow: var(--shadow-pop); }
+.theme-lab-list { display: flex; flex-direction: column; gap: var(--s2); }
+.theme-lab-item { display: flex; align-items: center; gap: var(--s3); width: 100%; padding: var(--s3); text-align: left; cursor: pointer; font: inherit; color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.theme-lab-item:hover { border-color: var(--border-strong); }
+.theme-lab-item.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.theme-lab-item .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.theme-lab-swatches { display: flex; gap: 4px; flex: none; }
+.theme-lab-swatches i { width: 18px; height: 34px; border-radius: 6px; border: 1px solid transparent; }
+.theme-lab-codes { font-size: 0.75rem; color: var(--muted); overflow-wrap: anywhere; }
+/* The primary button's glow and text shadow follow the brand colour instead of a fixed teal. */
+.btn.primary { text-shadow: 0 1px 1px rgba(0, 0, 0, 0.22); }
+.btn.primary:hover { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.22) inset, var(--accent-shadow); }

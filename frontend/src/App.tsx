@@ -20,6 +20,7 @@ import { AuditPage } from './pages/AuditPage';
 import { ValioQueuePage } from './pages/ValioQueuePage';
 import { AgentsPage } from './pages/AgentsPage';
 import { OnboardingPage } from './pages/OnboardingPage';
+import { ThemeLab } from './components/ThemeLab';   // TEMPORARY: choosing the brand colour
 import { ErrorState, Skeleton } from './components/ui';
 
 const ROUTES: Record<PageKey, () => JSX.Element> = {
@@ -85,6 +86,7 @@ function Shell() {
           </ProtocolGate>
         </div>
       </main>
+      <ThemeLab />
     </div>
   );
 }
