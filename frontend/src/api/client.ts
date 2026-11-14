@@ -53,6 +53,9 @@ export const apiState = {
   setDemoUser(u: string) {
     demoUser = u;
   },
+  get demoUser() {
+    return demoUser;
+  },
   subscribe(l: () => void) {
     listeners.add(l);
     return () => {

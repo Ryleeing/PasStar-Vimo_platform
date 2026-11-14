@@ -5,7 +5,7 @@ import { ACCOUNTS, PAGES_BY_ROLE, WORKSPACES, type RoleKey } from '../config/acc
 import { useSession } from '../state/session';
 import { progressSteps, useFlow } from '../state/flow';
 import { useActiveProtocol } from '../state/protocol';
-import { listApprovals, resetDemo } from '../api/endpoints';
+import { listAgents, listApprovals, resetDemo } from '../api/endpoints';
 import { describeError } from '../api/client';
 import { API_BASE, type ApiMode } from '../api/client';
 import { Avatar, Button, useAsync, useDismiss, useToast } from './ui';
@@ -149,13 +149,26 @@ function ProgressTracker({ mode, onNavigate }: { mode: 'SEPARATE' | 'SELF'; onNa
 }
 
 function ValioSummary({ pending }: { pending: number }) {
+  const agents = useAsync(listAgents, [pending]);
+  const all = agents.data ?? [];
+  const connected = all.filter((a) => a.status === 'ACTIVE' && a.protocol_id && a.has_key).length;
+  const blocked = all.reduce((n, a) => n + a.activity.blocked_24h, 0);
+  const probes = all.reduce((n, a) => n + a.activity.probe_alerts_24h, 0);
+  const rows: [string, string, boolean][] = [
+    ['Review queue', `${pending} pending`, false],
+    ['Connected agents', agents.data ? String(connected) : '…', false],
+    ['Blocked calls (24 h)', agents.data ? String(blocked) : '…', blocked > 0],
+    ['Probe alerts (24 h)', agents.data ? String(probes) : '…', probes > 0],
+  ];
   return (
-    <section className="progress" aria-label="Channel status">
+    <section className="progress valio-summary" aria-label="Channel status">
       <div className="side-label" style={{ padding: 0 }}>Channel today</div>
       <div className="stack sm" style={{ marginTop: 8 }}>
-        <div className="row between small"><span className="muted">Review queue</span><b>{pending} pending</b></div>
-        <div className="row between small"><span className="muted">Connected agents</span><b>3</b></div>
-        <div className="row between small"><span className="muted">Probe alerts (24 h)</span><b style={{ color: 'var(--bad)' }}>3</b></div>
+        {rows.map(([label, value, alert]) => (
+          <div key={label} className="summary-row small">
+            <span className="muted">{label}</span><b className={alert ? 'bad-text' : undefined}>{value}</b>
+          </div>
+        ))}
       </div>
     </section>
   );

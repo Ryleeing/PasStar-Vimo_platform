@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import db  # noqa: E402
-from app.channel.identity import key_hash  # noqa: E402
+from app.channel.agents import store_key  # noqa: E402
 
 
 def main(agent_ids: list[str]) -> None:
@@ -25,7 +25,7 @@ def main(agent_ids: list[str]) -> None:
         sys.exit(f"No such agent. Agents: {', '.join(r['id'] for r in rows)}")
     for r in chosen:
         key = f"tp_{secrets.token_urlsafe(24)}"
-        db.run("UPDATE agents SET api_key_hash = ? WHERE id = ?", (key_hash(key), r["id"]))
+        store_key(r["id"], key)
         print(f"{r['id']:<16} {key}   ({r['name']})")
     print(f"\nDatabase: {db.DB_PATH}. Keep these keys out of chat and out of git.")
 

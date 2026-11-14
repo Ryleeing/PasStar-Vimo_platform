@@ -174,6 +174,16 @@ export function AuditPage() {
         return { kind: 'bad', title: 'A change to the purchasing rules was refused', detail: 'It asked for more than the buyer may grant' };
       case 'PROTOCOL_REVOKED':
         return { kind: 'bad', title: 'Purchasing rules withdrawn', detail: 'The agent can no longer order' };
+      case 'AGENT_KEY_ISSUED':
+        return { kind: 'person', title: 'Gave an AI agent a new key',
+                 detail: `${typeof e.payload?.agent_id === 'string' ? e.payload.agent_id : 'The agent'} can now order under ${typeof e.payload?.protocol_id === 'string' ? e.payload.protocol_id : 'your protocol'}; any older key stopped working`,
+                 link: canSee('agents') ? { to: '/agents', label: 'View agents' } : undefined };
+      case 'AGENT_KEY_REVOKED':
+        return { kind: 'person', title: 'Disconnected an AI agent', detail: 'Its key no longer works; its history stays in this log' };
+      case 'AGENT_BLOCKED_BY_VALIO':
+        return { kind: 'bad', title: 'Valio blocked an AI agent', detail: 'It is refused on Valio’s channel, even with a valid key' };
+      case 'AGENT_UNBLOCKED_BY_VALIO':
+        return { kind: 'system', title: 'Valio unblocked an AI agent' };
       case 'SEED_LOADED':
         return { kind: 'system', title: 'Demo data loaded' };
       case 'REQUEST_BLOCKED':

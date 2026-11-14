@@ -16,7 +16,7 @@ from typing import Optional
 from .. import db
 from ..errors import ApiError
 from ..internal import Audience
-from ..schemas import GateDecision, Order, Protocol, Quote
+from ..schemas import GateDecision, Order, OrderSummary, PlacedBy, Protocol, Quote, StructuredRequest
 from . import approvals, audit, checkpoints, gate, protocols, quotes, requests_view
 from .authorization import AuthorizationError, build_request, resolve_buyer_gate, verify as verify_authorization
 from .identity import actor
@@ -55,6 +55,36 @@ def get(order_id: str, audience: Optional[Audience] = None) -> Order:
     if audience and audience.kind != "VALIO_USER" and audience.buyer_id != quotes.buyer_of(r["quote_id"]):
         raise ApiError("NOT_FOUND", f"Order {order_id} does not exist")
     return _load(r)
+
+
+def list_for(audience: Audience, limit: int = 50) -> list[OrderSummary]:
+    """Every order of the caller's buyer, newest first, whoever placed it: a person on the screens or an agent
+    (ChatGPT, Claude, the ERP). Valio sees every buyer's orders. Agents read single orders by id instead."""
+    if audience.kind == "AGENT":
+        raise ApiError("OUT_OF_SCOPE", "Agents read their orders one by one (GET /v1/orders/{order_id})")
+    sql = ("SELECT o.id, r.buyer_id, r.created_by, r.structured_json FROM orders o JOIN requests r ON r.id = o.request_id"
+           + ("" if audience.kind == "VALIO_USER" else " WHERE r.buyer_id = ?") + " ORDER BY o.created_at DESC, o.id DESC LIMIT ?")
+    rows = db.all(sql, ((limit,) if audience.kind == "VALIO_USER" else (audience.buyer_id, limit)))
+    out = []
+    for r in rows:
+        order = _load(_row(r["id"]))
+        quote = quotes.get(order.quote_id)
+        line = quote.lines[0]
+        structured = StructuredRequest.model_validate_json(r["structured_json"])
+        out.append(OrderSummary(order=order, buyer_id=r["buyer_id"], product=line.name, brand=line.brand,
+                                quantity=structured.quantity, total_gross_cents=quote.totals.gross_cents,
+                                delivery_date=quote.delivery_date, placed_by=_placed_by(r["created_by"])))
+    return out
+
+
+def _placed_by(created_by: str) -> PlacedBy:
+    if created_by.startswith("agent:"):
+        agent_id = created_by[len("agent:"):]
+        a = db.one("SELECT a.name, c.kind FROM agents a LEFT JOIN agent_connections c ON c.agent_id = a.id WHERE a.id = ?",
+                   (agent_id,))
+        return PlacedBy(kind="AGENT", id=agent_id, name=a["name"] if a else agent_id, agent_kind=a["kind"] if a else None)
+    u = db.one("SELECT name FROM users WHERE id = ?", (created_by,))
+    return PlacedBy(kind="PERSON", id=created_by, name=u["name"] if u else created_by)
 
 
 def _waived(order_id: str, quote_id: str) -> set[str]:

@@ -6,6 +6,7 @@ Run: uvicorn app.main:app --reload    Docs: http://localhost:8000/docs
 Tags name the owner: BE1 channel & transactions, BE2 catalogue & data, BE3 orchestration & AI.
 """
 import functools
+import json
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Literal, Optional
@@ -14,11 +15,12 @@ import pydantic
 from fastapi import Depends, FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from . import db, errors, fixtures as fx
-from .channel import approvals, audit as audit_store, checkpoints, identity, orders, protocols, quotes, reports, seed, signing
+from .channel import agents, approvals, audit as audit_store, checkpoints, identity, orders, protocols, quotes, reports, seed, signing
 from .internal import Audience
-from .orchestrator import parser_api, seed as be3_seed, service as be3
+from .orchestrator import console, parser_api, seed as be3_seed, service as be3
 from .orchestrator.holds import HoldCaller, record_parse
 from .schemas import *  # noqa: F401,F403
 
@@ -50,6 +52,26 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# Requests through a tunnel or proxy carry one of these (cloudflared adds Cf-Connecting-Ip).
+PROXY_HEADERS = ("cf-connecting-ip", "x-forwarded-for", "forwarded")
+LOCAL_HOSTS = {"127.0.0.1", "::1", "localhost", "testclient"}
+
+
+def _is_local(request: Request) -> bool:
+    client = request.client.host if request.client else None
+    return client in LOCAL_HOSTS and not any(h in request.headers for h in PROXY_HEADERS)
+
+
+@app.middleware("http")
+async def _people_only_locally(request: Request, call_next):
+    """People are identified by the X-Demo-User header, with no login (demo only). Through a public tunnel anyone
+    could send it and act as the manager, so it is accepted only on the machine running PasStar. Agents still reach
+    PasStar from anywhere with their X-Agent-Key (MCP and the HTTP API)."""
+    if "x-demo-user" in request.headers and not _is_local(request):
+        return errors.response("OUT_OF_SCOPE", "Signing in as a person only works on the machine running PasStar; "
+                                               "agents use X-Agent-Key", {})
+    return await call_next(request)
 
 if mcp_server is not None:
     app.router.routes.extend(mcp_server.routes)      # POST /mcp
@@ -103,6 +125,89 @@ def list_protocols(status: Optional[ProtocolStatus] = None, who: Audience = Call
     if who.kind == "AGENT":
         raise errors.ApiError("OUT_OF_SCOPE", "Agents read their own protocol at /v1/agents/{agent_id}/protocol")
     return [_out(who, p) for p in protocols.list_for(who, status)]
+
+@app.get("/v1/agents", response_model=list[AgentConnection], tags=["BE1 · agents"])
+def list_agents(who: Audience = Caller):
+    """External agents: kind, how they connect, key status, protocol and activity. Valio: all; a buyer: its own."""
+    return [_out(who, a) for a in agents.list_for(who)]
+
+@app.get("/v1/agents/{agent_id}", response_model=AgentConnection, tags=["BE1 · agents"])
+def get_agent(agent_id: str, who: Audience = Caller):
+    return _out(who, agents.get(agent_id, who))
+
+@app.post("/v1/agents/{agent_id}/key", response_model=IssuedKey, tags=["BE1 · agents"])
+@_atomic
+def issue_agent_key(agent_id: str, body: IssueKeyRequest, who: Audience = Caller):
+    """Issue a new key (shown once; PasStar keeps only its hash). The previous key stops working. Only the approver of
+    the agent's active protocol may do this, so no agent gets a key before step 0."""
+    return agents.issue_key(agent_id, body.kind, who)
+
+@app.post("/v1/agents/{agent_id}/block", response_model=AgentConnection, tags=["BE1 · agents"])
+@_atomic
+def block_agent(agent_id: str, who: Audience = Caller):
+    """Valio blocks an agent on its channel: every call is refused, even with a valid key. Nothing is deleted."""
+    return _out(who, agents.set_blocked(agent_id, True, who))
+
+@app.post("/v1/agents/{agent_id}/unblock", response_model=AgentConnection, tags=["BE1 · agents"])
+@_atomic
+def unblock_agent(agent_id: str, who: Audience = Caller):
+    return _out(who, agents.set_blocked(agent_id, False, who))
+
+@app.post("/v1/agents/{agent_id}/revoke", response_model=AgentConnection, tags=["BE1 · agents"])
+@_atomic
+def revoke_agent_key(agent_id: str, who: Audience = Caller):
+    """Revoke the agent's key: every call with it is refused from now on (and shows up in the hold report)."""
+    return _out(who, agents.revoke_key(agent_id, who))
+
+# ───── Agent console (BE3): watch an external agent work, and what PasStar did behind each answer ─────
+
+class ConsoleTurn(pydantic.BaseModel):
+    agent_key: str
+    text: str
+    mode: Literal["llm", "script"] = "llm"
+    history: list[dict] = []      # llm mode: the conversation so far, as returned in the last "done" event
+    state: dict = {}              # script mode: what the scripted agent remembers
+
+
+class ConsoleAttacks(pydantic.BaseModel):
+    agent_key: str
+
+
+def _console_guard(who: Audience, agent_key: str) -> None:
+    """The buyer's people only: it is their agent and their key (Valio holds no buyer keys), and the model budget
+    cannot be spent through a tunnel. A buyer drives only its own agents."""
+    if who.kind != "BUYER_USER":
+        raise errors.ApiError("OUT_OF_SCOPE", "The console is for the buyer's people; agents call /mcp directly")
+    try:
+        agent = identity.caller(agent_key, None)
+    except errors.ApiError:
+        return                      # an unknown key is allowed: watching it be refused is part of the demo
+    if who.kind == "BUYER_USER" and agent.buyer_id != who.buyer_id:
+        raise errors.ApiError("OUT_OF_SCOPE", "That key belongs to another buyer's agent")
+
+
+def _sse(events):
+    async def stream():
+        async for e in events:
+            yield f"data: {json.dumps(e, default=str)}\n\n"
+    return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+
+
+@app.post("/v1/console/turn", tags=["BE3 · console"])
+def console_turn(body: ConsoleTurn, who: Audience = Caller):
+    """One message to the console agent; streams its tool calls, PasStar's answers and what happened behind them."""
+    _console_guard(who, body.agent_key)
+    if body.mode == "script":
+        return _sse(console.run_script(body.agent_key, dict(body.state), body.text))
+    return _sse(console.run_llm(body.agent_key, body.history, body.text))
+
+
+@app.post("/v1/console/attacks", tags=["BE3 · console"])
+def console_attacks(body: ConsoleAttacks, who: Audience = Caller):
+    """The agent tries to break the rules in several ways; streams each attempt and PasStar's refusal."""
+    _console_guard(who, body.agent_key)
+    return _sse(console.run_attacks(body.agent_key))
+
 
 @app.get("/v1/agents/{agent_id}/protocol", response_model=Protocol, tags=["BE1 · protocols"])
 def active_protocol(agent_id: str, who: Audience = Caller):
@@ -254,6 +359,11 @@ def authorize_order(order_id: str, body: AuthorizeOrderRequest, who: Audience = 
     if the price moved → REQUOTE_REQUIRED, and the new quote needs a new token."""
     return _out(who, orders.authorize(order_id, body.buyer_authorization, who))
 
+@app.get("/v1/orders", response_model=list[OrderSummary], tags=["BE1 · orders"])
+def list_orders(who: Audience = Caller):
+    """The buyer's orders, newest first, whoever placed them: a person or one of its agents. Valio: every buyer's."""
+    return [_out(who, o) for o in orders.list_for(who)]
+
 @app.get("/v1/orders/{order_id}", response_model=Order, tags=["BE1 · orders"])
 def get_order(order_id: str, who: Audience = Caller):
     return _out(who, orders.get(order_id, who))
@@ -320,16 +430,11 @@ def holds_report(since: Optional[datetime] = None, until: Optional[datetime] = N
 
 # ───── 管理（BE2 / BE1）─────
 
-PROXY_HEADERS = ("cf-connecting-ip", "x-forwarded-for", "forwarded")
-LOCAL_HOSTS = {"127.0.0.1", "::1", "localhost", "testclient"}
-
-
 def _local_only(request: Request) -> None:
     """Admin routes (reset, faults) answer only on the machine running the backend. A request that came through a
     tunnel or proxy (e.g. cloudflared, which adds Cf-Connecting-Ip) is refused, so a public demo URL cannot wipe the
     data or bring back the public demo agent keys."""
-    client = request.client.host if request.client else None
-    if client not in LOCAL_HOSTS or any(h in request.headers for h in PROXY_HEADERS):
+    if not _is_local(request):
         raise errors.ApiError("OUT_OF_SCOPE", "Admin endpoints are only available on the machine running PasStar")
 
 LocalOnly = Depends(_local_only)
@@ -350,4 +455,7 @@ def reset():
     then clears the BE3 tables and writes the demo profiles."""
     seed.reset()
     be3_seed.reset()
-    return {"ok": True}
+    # Valio probe budgets live in BE2's runtime database: a demo reset starts every agent from zero there too.
+    # Only the budgets are cleared; the probe log stays.
+    from .valio.client import reset_probe_budgets
+    return {"ok": True, "probe_budgets_cleared": reset_probe_budgets()}

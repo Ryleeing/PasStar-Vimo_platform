@@ -578,3 +578,14 @@ class ValioClient:
         if amount >= quantity:
             return AvailabilityInfo("YES", None)
         return AvailabilityInfo("PARTIAL", min(float(amount), quantity))
+
+
+def reset_probe_budgets(path: Path | str | None = None) -> int:
+    """Clear the daily probe budgets (not the probe log), so a demo reset also starts every agent from zero.
+    Returns how many budget rows were cleared; 0 when there is no runtime database yet."""
+    path = Path(path if path is not None else DEFAULT_RUNTIME_DATABASE)
+    if not path.exists():
+        return 0
+    with sqlite3.connect(path, timeout=5) as c:
+        exists = c.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'valio_probe_budgets'").fetchone()
+        return c.execute("DELETE FROM valio_probe_budgets").rowcount if exists else 0

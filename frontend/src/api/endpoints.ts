@@ -1,9 +1,9 @@
 // One function per backend route (see backend/app/main.py and the design doc §4).
 import { api } from './client';
 import type {
-  ApprovalCard, ApprovalDecision, ApprovalDecisionResult, AuditEntry, AuditVerifyResult, ChainTimeline,
+  AgentConnection, AgentKind, ApprovalCard, ApprovalDecision, ApprovalDecisionResult, AuditEntry, AuditVerifyResult, ChainTimeline,
   CreateRequest, Facets, Fault, FaultName, Order, ParseResult, Profile, ProfileBody, Protocol, ProtocolBody,
-  ProtocolDiff, Quote, QuoteVerifyResult, RejectNodeRequest, RequestResult, SelectResult,
+  IssuedKey, OrderSummary, ProtocolDiff, Quote, QuoteVerifyResult, RejectNodeRequest, RequestResult, SelectResult,
 } from './types';
 
 const enc = encodeURIComponent;
@@ -65,3 +65,18 @@ export const listFaults = () => api<Fault[]>('GET', '/v1/admin/faults');
 export const setFault = (name: FaultName, enabled: boolean) =>
   api<Fault>('PUT', `/v1/admin/faults/${name}`, { body: { enabled, params: {} } });
 export const resetDemo = () => api<{ ok: boolean }>('POST', '/v1/admin/reset');
+
+// ── External agents and their keys ──
+export const listAgents = () => api<AgentConnection[]>('GET', '/v1/agents');
+export const issueAgentKey = (agentId: string, kind: AgentKind) =>
+  api<IssuedKey>('POST', `/v1/agents/${enc(agentId)}/key`, { body: { kind } });
+export const revokeAgentKey = (agentId: string) => api<AgentConnection>('POST', `/v1/agents/${enc(agentId)}/revoke`);
+/** Valio only: a blocked agent is refused even with a valid key. */
+export const blockAgent = (agentId: string, blocked: boolean) =>
+  api<AgentConnection>('POST', `/v1/agents/${enc(agentId)}/${blocked ? 'block' : 'unblock'}`);
+/** Calls PasStar the way the agent itself would: with its key. Used to test a fresh connection. */
+export const protocolAsAgent = (agentId: string, key: string) =>
+  api<Protocol>('GET', `/v1/agents/${enc(agentId)}/protocol`, { headers: { 'X-Agent-Key': key } });
+
+/** Every order of the signed-in person's buyer, newest first, whoever placed it (a person or an agent). */
+export const listOrders = () => api<OrderSummary[]>('GET', '/v1/orders');

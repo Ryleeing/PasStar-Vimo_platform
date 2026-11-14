@@ -570,6 +570,61 @@ class AgentActivity(BaseModel):
     probe_alerts_24h: int
 
 
+class PlacedBy(BaseModel):
+    """Who asked for the order: a person in the buyer's team, or one of its agents (ChatGPT, Claude, the ERP)."""
+    kind: Literal["PERSON", "AGENT"]
+    id: str
+    name: str
+    agent_kind: Optional[str] = None
+
+
+class OrderSummary(BaseModel):
+    """One row of a buyer's order list: the order and what it is for, in a form people read."""
+    order: Order
+    buyer_id: str
+    product: str
+    brand: Optional[str] = None
+    quantity: Quantity
+    total_gross_cents: int
+    delivery_date: date
+    placed_by: PlacedBy
+
+
+AgentKind = Literal["CHATGPT", "CLAUDE", "ERP", "UNKNOWN"]
+
+
+class AgentConnection(BaseModel):
+    """An external agent as the buyer (or Valio) sees it: what it is, how it connects, its key and its protocol."""
+    agent_id: str
+    name: str
+    buyer_id: str
+    buyer_name: str
+    kind: AgentKind
+    status: Literal["ACTIVE", "BLOCKED"] = "ACTIVE"  # BLOCKED by Valio: refused even with a valid key
+    connection: Literal["MCP", "REST", "NONE"]      # how it talks to PasStar
+    has_key: bool
+    key_hint: Optional[str] = None                  # first characters of the current key
+    key_issued_at: Optional[datetime] = None
+    last_used_at: Optional[datetime] = None
+    protocol_id: Optional[str] = None               # the active protocol it acts under; None: it can do nothing
+    protocol_version: Optional[int] = None
+    approver: Optional[str] = None                  # who may issue or revoke its key
+    activity: AgentActivity
+
+
+class IssueKeyRequest(BaseModel):
+    kind: AgentKind
+
+
+class IssuedKey(BaseModel):
+    """Returned once. PasStar keeps only the hash; a lost key is replaced, never shown again."""
+    agent_id: str
+    key: str
+    key_hint: str
+    kind: AgentKind
+    protocol_id: str
+
+
 class ApprovalCard(BaseModel):
     id: str
     kind: Literal["BUYER", "VALIO"]
