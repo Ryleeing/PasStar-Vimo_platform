@@ -1823,3 +1823,13 @@ html:not([data-theme='light']) .composer textarea { background: transparent; bor
 @media (max-width: 900px) {
   .sidebar { overflow: hidden; }
 }
+/* In the scrolling middle, nothing may shrink to fit: circles stay round and the part scrolls instead. */
+.side-scroll > *, .side-scroll .nav > a, .side-scroll .steps > li, .side-foot .foot-actions > * { flex-shrink: 0; }
+.side-scroll .step-dot, .sidebar .account-btn .avatar, .sidebar .brand-logo { flex-shrink: 0; aspect-ratio: 1; }
+@media (min-width: 901px) {
+  .sidebar.collapsed .side-scroll .nav a { aspect-ratio: 1; height: auto; }
+}
+/* Room for the round buttons' shadows, which the scrolling part would otherwise clip. */
+@media (min-width: 901px) {
+  .sidebar.collapsed .side-scroll { margin: 0 -12px; padding: 8px 12px; width: calc(100% + 24px); }
+}
