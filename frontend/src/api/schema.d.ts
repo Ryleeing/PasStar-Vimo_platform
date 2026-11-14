@@ -593,7 +593,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Orders
+         * @description The buyer's orders, newest first, whoever placed them: a person or one of its agents. Valio: every buyer's.
+         */
+        get: operations["list_orders_v1_orders_get"];
         put?: never;
         /**
          * Create Order
@@ -1713,6 +1717,28 @@ export interface components {
             /** Placed At */
             placed_at?: string | null;
         };
+        /**
+         * OrderSummary
+         * @description One row of a buyer's order list: the order and what it is for, in a form people read.
+         */
+        OrderSummary: {
+            order: components["schemas"]["Order"];
+            /** Buyer Id */
+            buyer_id: string;
+            /** Product */
+            product: string;
+            /** Brand */
+            brand?: string | null;
+            quantity: components["schemas"]["Quantity"];
+            /** Total Gross Cents */
+            total_gross_cents: number;
+            /**
+             * Delivery Date
+             * Format: date
+             */
+            delivery_date: string;
+            placed_by: components["schemas"]["PlacedBy"];
+        };
         /** ParseRequest */
         ParseRequest: {
             /** Text */
@@ -1733,6 +1759,23 @@ export interface components {
              * @default []
              */
             profile_applied: string[];
+        };
+        /**
+         * PlacedBy
+         * @description Who asked for the order: a person in the buyer's team, or one of its agents (ChatGPT, Claude, the ERP).
+         */
+        PlacedBy: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "PERSON" | "AGENT";
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Agent Kind */
+            agent_kind?: string | null;
         };
         /**
          * ProductPublic
@@ -5237,6 +5280,93 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuoteVerifyResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    list_orders_v1_orders_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderSummary"][];
                 };
             };
             /** @description Bad Request */

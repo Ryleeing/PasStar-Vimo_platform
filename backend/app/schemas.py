@@ -570,6 +570,26 @@ class AgentActivity(BaseModel):
     probe_alerts_24h: int
 
 
+class PlacedBy(BaseModel):
+    """Who asked for the order: a person in the buyer's team, or one of its agents (ChatGPT, Claude, the ERP)."""
+    kind: Literal["PERSON", "AGENT"]
+    id: str
+    name: str
+    agent_kind: Optional[str] = None
+
+
+class OrderSummary(BaseModel):
+    """One row of a buyer's order list: the order and what it is for, in a form people read."""
+    order: Order
+    buyer_id: str
+    product: str
+    brand: Optional[str] = None
+    quantity: Quantity
+    total_gross_cents: int
+    delivery_date: date
+    placed_by: PlacedBy
+
+
 AgentKind = Literal["CHATGPT", "CLAUDE", "ERP", "UNKNOWN"]
 
 

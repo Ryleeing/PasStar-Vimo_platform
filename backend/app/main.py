@@ -359,6 +359,11 @@ def authorize_order(order_id: str, body: AuthorizeOrderRequest, who: Audience = 
     if the price moved → REQUOTE_REQUIRED, and the new quote needs a new token."""
     return _out(who, orders.authorize(order_id, body.buyer_authorization, who))
 
+@app.get("/v1/orders", response_model=list[OrderSummary], tags=["BE1 · orders"])
+def list_orders(who: Audience = Caller):
+    """The buyer's orders, newest first, whoever placed them: a person or one of its agents. Valio: every buyer's."""
+    return [_out(who, o) for o in orders.list_for(who)]
+
 @app.get("/v1/orders/{order_id}", response_model=Order, tags=["BE1 · orders"])
 def get_order(order_id: str, who: Audience = Caller):
     return _out(who, orders.get(order_id, who))

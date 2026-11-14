@@ -3,7 +3,7 @@ import { api } from './client';
 import type {
   AgentConnection, AgentKind, ApprovalCard, ApprovalDecision, ApprovalDecisionResult, AuditEntry, AuditVerifyResult, ChainTimeline,
   CreateRequest, Facets, Fault, FaultName, Order, ParseResult, Profile, ProfileBody, Protocol, ProtocolBody,
-  IssuedKey, ProtocolDiff, Quote, QuoteVerifyResult, RejectNodeRequest, RequestResult, SelectResult,
+  IssuedKey, OrderSummary, ProtocolDiff, Quote, QuoteVerifyResult, RejectNodeRequest, RequestResult, SelectResult,
 } from './types';
 
 const enc = encodeURIComponent;
@@ -77,3 +77,6 @@ export const blockAgent = (agentId: string, blocked: boolean) =>
 /** Calls PasStar the way the agent itself would: with its key. Used to test a fresh connection. */
 export const protocolAsAgent = (agentId: string, key: string) =>
   api<Protocol>('GET', `/v1/agents/${enc(agentId)}/protocol`, { headers: { 'X-Agent-Key': key } });
+
+/** Every order of the signed-in person's buyer, newest first, whoever placed it (a person or an agent). */
+export const listOrders = () => api<OrderSummary[]>('GET', '/v1/orders');

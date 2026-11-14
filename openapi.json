@@ -4579,6 +4579,136 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "BE1 · orders"
+        ],
+        "summary": "List Orders",
+        "description": "The buyer's orders, newest first, whoever placed them: a person or one of its agents. Valio: every buyer's.",
+        "operationId": "list_orders_v1_orders_get",
+        "parameters": [
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderSummary"
+                  },
+                  "title": "Response List Orders V1 Orders Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/orders/{order_id}/authorization": {
@@ -8237,6 +8367,59 @@
         ],
         "title": "Order"
       },
+      "OrderSummary": {
+        "properties": {
+          "order": {
+            "$ref": "#/components/schemas/Order"
+          },
+          "buyer_id": {
+            "type": "string",
+            "title": "Buyer Id"
+          },
+          "product": {
+            "type": "string",
+            "title": "Product"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "quantity": {
+            "$ref": "#/components/schemas/Quantity"
+          },
+          "total_gross_cents": {
+            "type": "integer",
+            "title": "Total Gross Cents"
+          },
+          "delivery_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Delivery Date"
+          },
+          "placed_by": {
+            "$ref": "#/components/schemas/PlacedBy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "order",
+          "buyer_id",
+          "product",
+          "quantity",
+          "total_gross_cents",
+          "delivery_date",
+          "placed_by"
+        ],
+        "title": "OrderSummary",
+        "description": "One row of a buyer's order list: the order and what it is for, in a form people read."
+      },
       "ParseRequest": {
         "properties": {
           "text": {
@@ -8288,6 +8471,45 @@
           "structured"
         ],
         "title": "ParseResult"
+      },
+      "PlacedBy": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PERSON",
+              "AGENT"
+            ],
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "agent_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Kind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "id",
+          "name"
+        ],
+        "title": "PlacedBy",
+        "description": "Who asked for the order: a person in the buyer's team, or one of its agents (ChatGPT, Claude, the ERP)."
       },
       "ProductPublic": {
         "properties": {
