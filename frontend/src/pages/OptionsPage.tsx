@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, PencilLine } from 'lucide-react';
+import { Ban, ChevronDown, ChevronUp, CircleX, PencilLine } from 'lucide-react';
 import { selectCandidate } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Candidate } from '../api/types';
-import { dayLabel, num } from '../lib/format';
+import { dayLabel, eur, num } from '../lib/format';
 import { useFlow } from '../state/flow';
 import { useSession } from '../state/session';
 import { ChainView } from '../components/ChainView';
@@ -16,6 +16,14 @@ import { Banner, Button, Empty, PageHead, useToast } from '../components/ui';
 /** "Milk type: Semi-skimmed" → ["semi-skimmed"]: the answer to the AI's question, if any. */
 const clarifiedOf = (notes?: string | null) => (notes?.includes(': ') ? [notes.split(': ').pop()!.toLowerCase()] : []);
 
+/** "€998.80–€1,044.20" for a set of options. */
+const priceRange = (cs: Candidate[]) => {
+  const p = cs.map((c) => c.totals?.gross_cents).filter((v): v is number => v != null);
+  if (!p.length) return '';
+  const lo = Math.min(...p), hi = Math.max(...p);
+  return lo === hi ? eur(lo) : `${eur(lo)}–${eur(hi)}`;
+};
+
 const newKey = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `idem-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
 export function OptionsPage() {
@@ -24,6 +32,7 @@ export function OptionsPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const [showMore, setShowMore] = useState(false);
+  const [showExcluded, setShowExcluded] = useState(false);
   const [selecting, setSelecting] = useState<string | null>(null);
   const r = flow.request;
   const run = flow.run;
@@ -74,7 +83,7 @@ export function OptionsPage() {
   return (
     <>
       <PageHead title={working && !run?.error ? 'Finding options' : 'Choose an option'} desc={summary}
-        actions={!working && <Button variant="ghost" onClick={() => navigate('/request')}><PencilLine size={15} /> Edit request</Button>} />
+        actions={!working && <Button className="edit-req" onClick={() => navigate('/request')}><PencilLine size={16} /> Edit request</Button>} />
 
       <div className="run-slot">
         <ChainView request={r} />
@@ -96,26 +105,38 @@ export function OptionsPage() {
           </ol>
 
           {more.length > 0 && (
-            <button type="button" className="opts-more" onClick={() => setShowMore((v) => !v)} aria-expanded={showMore}>
-              {showMore ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            <button type="button" className="opts-more" onClick={() => setShowMore((v) => !v)} aria-expanded={showMore} aria-controls="options-grid">
+              {showMore ? <ChevronUp size={17} aria-hidden /> : <ChevronDown size={17} aria-hidden />}
               {showMore ? 'Show fewer options' : `Show ${more.length} more option${more.length > 1 ? 's' : ''}`}
+              {!showMore && <span className="opts-more-hint">{priceRange(more)}</span>}
             </button>
           )}
         </>
       )}
 
       {(r.blocked?.length ?? 0) > 0 && (
-        <details className="details excluded" style={{ marginTop: 16 }}>
-          <summary>{r.blocked!.length} excluded by your requirements <ChevronDown size={14} className="chev" /></summary>
-          <div className="details-body">
-            {r.blocked!.map((b) => (
-              <div key={b.id} className="row top" style={{ gap: 10 }}>
-                <span className="dot tone-dot-bad" style={{ marginTop: 7 }} aria-hidden />
-                <div><span className="strong">{b.lines[0].name}</span><div className="small muted">{(b.violations ?? []).map((v) => v.detail).join('; ')}</div></div>
-              </div>
-            ))}
-          </div>
-        </details>
+        <section className={`excl ${showExcluded ? 'open' : ''}`}>
+          <button type="button" className="excl-head" onClick={() => setShowExcluded((v) => !v)} aria-expanded={showExcluded} aria-controls="excluded-list">
+            <Ban size={18} className="excl-icon" aria-hidden />
+            <span className="grow">
+              <span className="excl-title">{r.blocked!.length} product{r.blocked!.length > 1 ? 's' : ''} left out</span>
+              <span className="excl-sub">They don’t meet your hard requirements, so they can’t be ordered here.</span>
+            </span>
+            <span className="excl-toggle">{showExcluded ? 'Hide' : 'See why'}<ChevronDown size={16} className="chev" aria-hidden /></span>
+          </button>
+          {showExcluded && (
+            <ul id="excluded-list" className="excl-list">
+              {r.blocked!.map((b) => (
+                <li key={b.id}>
+                  <div className="excl-name">{b.lines[0].name}</div>
+                  {(b.violations ?? []).map((v, i) => (
+                    <div key={i} className="excl-why"><CircleX size={15} aria-hidden />{v.detail}</div>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       )}
 
       {flow.sentToApproval && !flow.selection && (
