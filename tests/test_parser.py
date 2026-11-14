@@ -268,6 +268,7 @@ def test_parse_route_uses_real_parser(monkeypatch):
     from app.main import app
     from app.orchestrator import parser_api
     monkeypatch.setattr(parser_api, "llm", LlmClient(api_key="", model="m"))
-    r = TestClient(app).post("/v1/requests/parse", json={"text": "200 l lactose-free milk tomorrow", "profile_id": "prof_banquet"})
+    r = TestClient(app).post("/v1/requests/parse", json={"text": "200 l lactose-free milk tomorrow", "profile_id": "prof_banquet"},
+                             headers={"X-Demo-User": "usr_chef"})
     assert r.status_code == 200
     assert r.json()["structured"]["quantity"] == {"value": 200.0, "unit": "L"}

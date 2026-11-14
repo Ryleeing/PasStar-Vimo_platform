@@ -63,7 +63,7 @@ def main() -> None:
     ap.add_argument("--url")
     args = ap.parse_args()
     structured = json.loads(args.request.read_text()) if args.request else DEFAULT_REQUEST
-    print_outcome(run(PassClient(base_url=args.url), args.protocol, structured, args.profile))
+    print_outcome(run(PassClient.for_protocol(args.protocol, base_url=args.url), args.protocol, structured, args.profile))
 
 
 if __name__ == "__main__":

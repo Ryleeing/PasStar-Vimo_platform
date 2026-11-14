@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "The Pass · Valio Aimo open procurement channel",
-    "description": "Open, verifiable gateway for AI purchasing agents. Mock server (M1).",
+    "description": "Open, verifiable gateway for AI purchasing agents.",
     "version": "0.1.0"
   },
   "paths": {
@@ -12,9 +12,25 @@
           "BE1 · protocols"
         ],
         "summary": "Draft Protocol",
-        "description": "agent 根据一句话起草协议（内部调用 BE3 parser.draft_protocol），返回 DRAFT + 待确认问题。",
+        "description": "The agent drafts a protocol from one sentence (calls parser.draft_protocol from BE3); returns a DRAFT plus open questions.",
         "operationId": "draft_protocol_v1_protocols_draft_post",
         "parameters": [
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
           {
             "name": "X-Demo-User",
             "in": "header",
@@ -144,6 +160,40 @@
               "type": "string",
               "title": "Protocol Id"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "responses": {
@@ -234,7 +284,7 @@
           "BE1 · protocols"
         ],
         "summary": "Update Protocol",
-        "description": "只能改 DRAFT 状态的协议。",
+        "description": "Only a DRAFT protocol can be edited.",
         "operationId": "update_protocol_v1_protocols__protocol_id__put",
         "parameters": [
           {
@@ -245,6 +295,40 @@
               "type": "string",
               "title": "Protocol Id"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "requestBody": {
@@ -347,7 +431,7 @@
           "BE1 · protocols"
         ],
         "summary": "Sign Protocol",
-        "description": "采购经理签字：DRAFT → PENDING_VALIO_CONFIRMATION。",
+        "description": "The approver named in the protocol signs: DRAFT / PENDING_BUYER_SIGNATURE → PENDING_VALIO_CONFIRMATION. Agents cannot sign.",
         "operationId": "sign_protocol_v1_protocols__protocol_id__sign_post",
         "parameters": [
           {
@@ -357,6 +441,22 @@
             "schema": {
               "type": "string",
               "title": "Protocol Id"
+            }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
             }
           },
           {
@@ -468,7 +568,7 @@
           "BE1 · protocols"
         ],
         "summary": "Confirm Protocol",
-        "description": "Valio 确认：→ ACTIVE，生成 jws；旧版本 → SUPERSEDED。",
+        "description": "Valio confirms: → ACTIVE with a jws; the previous version → SUPERSEDED.",
         "operationId": "confirm_protocol_v1_protocols__protocol_id__confirm_post",
         "parameters": [
           {
@@ -478,6 +578,22 @@
             "schema": {
               "type": "string",
               "title": "Protocol Id"
+            }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
             }
           },
           {
@@ -589,7 +705,7 @@
           "BE1 · protocols"
         ],
         "summary": "Amend Protocol",
-        "description": "收紧直接生效；扩大生成新版本并要求重新签字；越权的列入 forbidden 并拒绝。",
+        "description": "Tightening takes effect at once; expansion creates a new version that must be signed again; changes the caller may not make are listed in forbidden and refused.",
         "operationId": "amend_protocol_v1_protocols__protocol_id__amend_post",
         "parameters": [
           {
@@ -600,6 +716,40 @@
               "type": "string",
               "title": "Protocol Id"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "requestBody": {
@@ -702,6 +852,7 @@
           "BE1 · protocols"
         ],
         "summary": "Revoke Protocol",
+        "description": "The approver named in the protocol or Valio can revoke it at any time.",
         "operationId": "revoke_protocol_v1_protocols__protocol_id__revoke_post",
         "parameters": [
           {
@@ -712,6 +863,40 @@
               "type": "string",
               "title": "Protocol Id"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "responses": {
@@ -804,7 +989,7 @@
           "BE1 · protocols"
         ],
         "summary": "Jwks",
-        "description": "Valio 的签名公钥，任何人都能用它验证协议和报价。",
+        "description": "The public signing key of Valio; anyone can use it to verify protocols and quotes.",
         "operationId": "jwks_v1__well_known_jwks_json_get",
         "responses": {
           "200": {
@@ -896,6 +1081,40 @@
               "type": "string",
               "title": "Buyer Id"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "responses": {
@@ -1000,6 +1219,40 @@
               "type": "string",
               "title": "Buyer Id"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "requestBody": {
@@ -1112,6 +1365,40 @@
               "type": "string",
               "title": "Profile Id"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "responses": {
@@ -1212,6 +1499,40 @@
               "type": "string",
               "title": "Profile Id"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "requestBody": {
@@ -1624,15 +1945,51 @@
         "summary": "Parse Request",
         "description": "自然语言 → 预填面板。没有副作用，不建 request。",
         "operationId": "parse_request_v1_requests_parse_post",
+        "parameters": [
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ParseRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1646,64 +2003,64 @@
             }
           },
           "400": {
-            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorBody"
                 }
               }
-            }
+            },
+            "description": "Bad Request"
           },
           "403": {
-            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorBody"
                 }
               }
-            }
+            },
+            "description": "Forbidden"
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "409": {
-            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorBody"
                 }
               }
-            }
+            },
+            "description": "Conflict"
           },
           "429": {
-            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorBody"
                 }
               }
-            }
+            },
+            "description": "Too Many Requests"
           },
           "502": {
-            "description": "Bad Gateway",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorBody"
                 }
               }
-            }
+            },
+            "description": "Bad Gateway"
           },
           "422": {
             "description": "Validation Error",
@@ -1872,6 +2229,40 @@
               "type": "string",
               "title": "Request Id"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "responses": {
@@ -1984,6 +2375,40 @@
               "type": "integer",
               "title": "Node"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "requestBody": {
@@ -2112,6 +2537,40 @@
               ],
               "title": "Attempt"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "responses": {
@@ -2215,6 +2674,40 @@
               "type": "string",
               "title": "Request Id"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "requestBody": {
@@ -2327,6 +2820,40 @@
               "type": "string",
               "title": "Quote Id"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "responses": {
@@ -2419,6 +2946,7 @@
           "BE1 · orders"
         ],
         "summary": "Verify Quote",
+        "description": "Checks the Valio signature and expiry. Anyone may verify.",
         "operationId": "verify_quote_v1_quotes__quote_id__verify_get",
         "parameters": [
           {
@@ -2521,7 +3049,7 @@
           "BE1 · orders"
         ],
         "summary": "Create Order",
-        "description": "复核报价（签名、有效期、价格库存是否变化）→ 闸门 → PLACED / PENDING_* / BUYER_AUTHORIZATION_REQUIRED /\nREQUOTE_REQUIRED / REJECTED。同一个 Idempotency-Key 返回同一张订单。\n协议是外部审批（EXTERNAL）且超额时：没带凭证 → BUYER_AUTHORIZATION_REQUIRED（附 authorization_request）；\n带了有效凭证 → PLACED；凭证无效 → 403 AUTHORIZATION_INVALID。\n假服务器里 prot_hotel_ext_v1 走外部审批，其余协议返回 fx.ORDER。",
+        "description": "Recheck the quote (signature, expiry, price and stock) → gate → PLACED / PENDING_* /\nBUYER_AUTHORIZATION_REQUIRED / REQUOTE_REQUIRED / REJECTED. The same Idempotency-Key returns the same order.\nWith an EXTERNAL-approval protocol and an over-limit order: no token → BUYER_AUTHORIZATION_REQUIRED (with\nauthorization_request); a valid token → PLACED; an invalid token → 403 AUTHORIZATION_INVALID.",
         "operationId": "create_order_v1_orders_post",
         "parameters": [
           {
@@ -2548,6 +3076,24 @@
               ],
               "title": "X-Agent-Key"
             }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "requestBody": {
@@ -2650,7 +3196,7 @@
           "BE1 · orders"
         ],
         "summary": "Authorize Order",
-        "description": "外部审批：agent 带着买方系统签的凭证回来，同一张订单继续走。\n先验凭证（签名、报价、金额、审批人、有效期），再复核报价；价格变了 → REQUOTE_REQUIRED，新报价要新凭证。",
+        "description": "External approval: the agent returns with the token signed by the buyer system and the same order continues.\nThe token is verified first (signature, quote, amount, approver, expiry), then the quote is rechecked;\nif the price moved → REQUOTE_REQUIRED, and the new quote needs a new token.",
         "operationId": "authorize_order_v1_orders__order_id__authorization_post",
         "parameters": [
           {
@@ -2677,6 +3223,24 @@
               ],
               "title": "X-Agent-Key"
             }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "requestBody": {
@@ -2789,6 +3353,40 @@
               "type": "string",
               "title": "Order Id"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "responses": {
@@ -2881,6 +3479,7 @@
           "BE1 · approvals"
         ],
         "summary": "List Approvals",
+        "description": "The buyer side sees only its own buyer approvals; Valio sees both queues.",
         "operationId": "list_approvals_v1_approvals_get",
         "parameters": [
           {
@@ -2925,6 +3524,40 @@
               ],
               "title": "Status"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "responses": {
@@ -3031,6 +3664,40 @@
               "type": "string",
               "title": "Approval Id"
             }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
           }
         ],
         "responses": {
@@ -3123,7 +3790,7 @@
           "BE1 · approvals"
         ],
         "summary": "Decide",
-        "description": "先校验审批人，再复核报价：没变 → 下单；变了 → REQUOTE_REQUIRED（附新报价，超阈值则生成新审批）。\n审批人校验（BUYER 审批）：\n  - 决定人必须是协议里的 approver，否则 403 NOT_APPROVER；\n  - SEPARATE 模式下，决定人不能是提需求的人，否则 403 SELF_APPROVAL_FORBIDDEN；\n  - SELF 模式下允许自批，但审计日志记为 \"self-approved\"。",
+        "description": "Checks the approver, then rechecks the quote: unchanged → order placed; changed → REQUOTE_REQUIRED (with a new\nquote, which goes through the gate as usual when it is ordered).\nApprover check (BUYER approvals):\n  - the decider must be the approver in the protocol, else 403 NOT_APPROVER;\n  - in SEPARATE mode the decider cannot be the requester, else 403 SELF_APPROVAL_FORBIDDEN;\n  - in SELF mode self-approval is allowed and logged as \"self-approved\".\nAPPROVE_WITH_CHANGES: the approver changes proposal parameters only (`changes`) and must give a reason (`note`);\nthe changed proposal goes back through the gateway and gets a newly signed quote.\n  - Changeable: `candidate_id` (a substitute from the candidates), `delivery_date`, `lines[].sales_units`\n    (down only); Valio may also change `lines[].unit_price_cents` (within the reviewer band, beyond it the\n    approval is ROUTED), `conditions` and `valid_minutes`; data requests take `disclose_fields`, a per-field\n    switch. Everything else is read-only.\n  - A Valio change is a new quote round: the order becomes REQUOTE_REQUIRED and the buyer orders again with\n    the new quote within the confirmation window.",
         "operationId": "decide_v1_approvals__approval_id__decision_post",
         "parameters": [
           {
@@ -3133,6 +3800,22 @@
             "schema": {
               "type": "string",
               "title": "Approval Id"
+            }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
             }
           },
           {
@@ -3254,7 +3937,7 @@
           "BE1 · audit"
         ],
         "summary": "Audit",
-        "description": "按角色过滤：买家只看到 visibility 为 BUYER / BOTH 的条目。",
+        "description": "Filtered by role: a buyer sees only its own entries with visibility BUYER / BOTH; Valio sees everything.",
         "operationId": "audit_v1_audit_get",
         "parameters": [
           {
@@ -3271,6 +3954,22 @@
                 }
               ],
               "title": "Request Id"
+            }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
             }
           },
           {
@@ -3386,6 +4085,7 @@
           "BE1 · audit"
         ],
         "summary": "Audit Verify",
+        "description": "Recomputes the whole hash chain and compares the buyer_id / agent_id / reason_code columns with their hashed\ncopies in the payload; the first tampered entry is reported in first_bad_seq.",
         "operationId": "audit_verify_v1_audit_verify_get",
         "responses": {
           "200": {
@@ -3457,6 +4157,200 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/v1/reports/holds": {
+      "get": {
+        "tags": [
+          "BE1 · audit"
+        ],
+        "summary": "Holds Report",
+        "description": "Held / blocked events. Buyers see their own items; Valio sees counts only. Agents cannot read reports.\nsince defaults to 7 days before until, until to now; a range above 90 days is refused.\nbuyer_id is ignored in the buyer view (always the caller's buyer) and filters the Valio view.",
+        "operationId": "holds_report_v1_reports_holds_get",
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "name": "buyer_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Buyer Id"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agent Id"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldsReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
           }
         }
       }
@@ -3671,7 +4565,7 @@
           "BE1 · admin"
         ],
         "summary": "Reset",
-        "description": "清空业务表并写入演示种子数据。",
+        "description": "Clears the BE1 tables (buyers, users, agents, protocols, quotes, orders, approvals, audit) and writes the demo seed data;\nthen clears the BE3 tables and writes the demo profiles.",
         "operationId": "reset_v1_admin_reset_post",
         "responses": {
           "200": {
@@ -3780,6 +4674,32 @@
           "probe_alerts_24h"
         ],
         "title": "AgentActivity"
+      },
+      "AgentHolds": {
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "by_reason": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonCount"
+            },
+            "type": "array",
+            "title": "By Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agent_id",
+          "total",
+          "by_reason"
+        ],
+        "title": "AgentHolds"
       },
       "AllergenCard": {
         "properties": {
@@ -4265,6 +5185,24 @@
         ],
         "title": "ApproverKey",
         "description": "审批人的 Ed25519 公钥（JWK）。外部审批时，买方系统用对应的私钥签授权凭证。"
+      },
+      "AttributeCount": {
+        "properties": {
+          "attribute": {
+            "type": "string",
+            "title": "Attribute"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attribute",
+          "count"
+        ],
+        "title": "AttributeCount"
       },
       "AuditEntry": {
         "properties": {
@@ -5303,6 +6241,175 @@
         "type": "object",
         "title": "HardExclusions"
       },
+      "HoldItem": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "event": {
+            "type": "string",
+            "enum": [
+              "REQUEST_NEEDS_INPUT",
+              "ATTRIBUTE_NOT_IN_CATALOG",
+              "CANDIDATES_BLOCKED",
+              "ORDER_HELD",
+              "AGENT_BLOCKED"
+            ],
+            "title": "Event"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "at",
+          "event",
+          "reason_code",
+          "summary"
+        ],
+        "title": "HoldItem",
+        "description": "One held event, buyer view only."
+      },
+      "HoldsReport": {
+        "properties": {
+          "audience": {
+            "type": "string",
+            "enum": [
+              "BUYER",
+              "VALIO"
+            ],
+            "title": "Audience"
+          },
+          "buyer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buyer Id"
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Since"
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Until"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "by_event": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "REQUEST_NEEDS_INPUT",
+                "ATTRIBUTE_NOT_IN_CATALOG",
+                "CANDIDATES_BLOCKED",
+                "ORDER_HELD",
+                "AGENT_BLOCKED"
+              ]
+            },
+            "type": "object",
+            "title": "By Event"
+          },
+          "by_reason": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonCount"
+            },
+            "type": "array",
+            "title": "By Reason"
+          },
+          "by_agent": {
+            "items": {
+              "$ref": "#/components/schemas/AgentHolds"
+            },
+            "type": "array",
+            "title": "By Agent"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HoldItem"
+            },
+            "type": "array",
+            "title": "Items",
+            "default": []
+          },
+          "missing_attributes": {
+            "items": {
+              "$ref": "#/components/schemas/AttributeCount"
+            },
+            "type": "array",
+            "title": "Missing Attributes",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "audience",
+          "since",
+          "until",
+          "total",
+          "by_event",
+          "by_reason",
+          "by_agent"
+        ],
+        "title": "HoldsReport"
+      },
       "Jwk": {
         "properties": {
           "kty": {
@@ -6287,6 +7394,24 @@
         },
         "type": "object",
         "title": "RankingWeights"
+      },
+      "ReasonCount": {
+        "properties": {
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_code",
+          "count"
+        ],
+        "title": "ReasonCount"
       },
       "RejectNodeRequest": {
         "properties": {

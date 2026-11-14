@@ -1,24 +1,24 @@
 {
   "quote": {
-    "id": "quo_1",
-    "request_id": "req_1",
-    "candidate_id": "cand_1",
+    "id": "quo_651f5129",
+    "request_id": "req_3fc1091b",
+    "candidate_id": "cand_d57bb16b",
     "protocol_id": "prot_hotel_v1",
     "lines": [
       {
-        "product_id": "463038",
-        "name": "Valio Eila® 10 l novobox lactose free",
+        "product_id": "464306",
+        "name": "Valio Hyvä suomalainen Arki® Eila® 1 l lactose free",
         "brand": "Valio",
-        "sales_unit": "KI",
-        "sales_units": 50.0,
+        "sales_unit": "ST",
+        "sales_units": 1000.0,
         "qty_covered": {
           "value": 1000.0,
           "unit": "L"
         },
         "overbuy": null,
         "conversion_source": "UNIT_CONVERSIONS",
-        "unit_price_cents": 1760,
-        "line_net_cents": 88000,
+        "unit_price_cents": 85,
+        "line_net_cents": 85000,
         "vat_rate": 0.135,
         "deposit_cents": 0,
         "available_on_date": "YES",
@@ -28,25 +28,25 @@
       }
     ],
     "totals": {
-      "net_cents": 88000,
-      "vat_cents": 11880,
+      "net_cents": 85000,
+      "vat_cents": 11475,
       "deposit_cents": 0,
-      "gross_cents": 99880
+      "gross_cents": 96475
     },
     "delivery_date": "2026-11-16",
-    "valid_until": "2026-11-14T10:15:00+02:00",
+    "valid_until": "2026-11-14T14:35:19.599058+02:00",
     "status": "VALID",
-    "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6InZhbGlvLTEifQ.mock.mock"
+    "jws": "eyJhbGciOiJFZDI1NTE5Iiwia2lkIjoidmFsaW8tMSIsInR5cCI6InF1b3RlK2p3cyJ9.eyJjYW5kaWRhdGVfaWQiOiJjYW5kX2Q1N2JiMTZiIiwiZGVsaXZlcnlfZGF0ZSI6IjIwMjYtMTEtMTYiLCJpZCI6InF1b182NTFmNTEyOSIsImxpbmVzIjpbeyJhdmFpbGFibGVfb25fZGF0ZSI6IllFUyIsImJyYW5kIjoiVmFsaW8iLCJjb252ZXJzaW9uX3NvdXJjZSI6IlVOSVRfQ09OVkVSU0lPTlMiLCJkZWxpdmVyYWJsZV9zYWxlc191bml0cyI6bnVsbCwiZGVwb3NpdF9jZW50cyI6MCwibGluZV9uZXRfY2VudHMiOjg1MDAwLCJuYW1lIjoiVmFsaW8gSHl2XHUwMGU0IHN1b21hbGFpbmVuIEFya2lcdTAwYWUgRWlsYVx1MDBhZSAxIGwgbGFjdG9zZSBmcmVlIiwib3ZlcmJ1eSI6bnVsbCwicHJvZHVjdF9pZCI6IjQ2NDMwNiIsInF0eV9jb3ZlcmVkIjp7InVuaXQiOiJMIiwidmFsdWUiOjEwMDAuMH0sInNhbGVzX3VuaXQiOiJTVCIsInNhbGVzX3VuaXRzIjoxMDAwLjAsInN1YnN0aXR1dGVzX2ZvciI6bnVsbCwic3Vic3RpdHV0aW9uX3RpZXIiOiJOT05FIiwidW5pdF9wcmljZV9jZW50cyI6ODUsInZhdF9yYXRlIjowLjEzNX1dLCJwcm90b2NvbF9pZCI6InByb3RfaG90ZWxfdjEiLCJyZXF1ZXN0X2lkIjoicmVxXzNmYzEwOTFiIiwidG90YWxzIjp7ImRlcG9zaXRfY2VudHMiOjAsImdyb3NzX2NlbnRzIjo5NjQ3NSwibmV0X2NlbnRzIjo4NTAwMCwidmF0X2NlbnRzIjoxMTQ3NX0sInZhbGlkX3VudGlsIjoiMjAyNi0xMS0xNFQxNDozNToxOS41OTkwNTgrMDI6MDAifQ.ioq0cuf0gXT4m8GqTBNkP5sOCcRiAZwdjsvk610ySEQLIpe5K3A8ELk9WtoGTiiVjKF8m8FH3FMZQieZlo_BBA"
   },
   "gate": {
     "outcome": "AUTO",
     "rules_hit": [
       {
         "rule_id": "R-SPEND-AUTO",
-        "description": "Total ≤ auto-approve limit",
+        "description": "Total €964.75 is within the auto-approve limit of €1,000.00",
         "outcome": "AUTO"
       }
     ],
-    "summary": "Within the auto-approve limit; all hard requirements explicitly declared"
+    "summary": "Total €964.75 is within the auto-approve limit of €1,000.00"
   }
 }

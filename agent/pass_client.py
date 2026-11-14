@@ -22,6 +22,14 @@ import httpx
 REPO = pathlib.Path(__file__).resolve().parents[1]
 BUYER_ERP = REPO / "backend" / "scripts" / "buyer_erp.py"
 PENDING = {"PENDING_BUYER_APPROVAL", "PENDING_VALIO_REVIEW"}
+# Demo agent keys from the seed data (backend/app/channel/seed.py): each protocol names one agent.
+DEMO_AGENT_KEYS = {"prot_hotel_v1": "demo-hotel", "prot_hotel_ext_v1": "demo",
+                   "prot_hospital_v1": "demo-hospital", "prot_bistro_v1": "demo-bistro"}
+
+
+def key_for(protocol_id: str) -> str:
+    """THE_PASS_AGENT_KEY if set, else the demo key of the agent named in this protocol."""
+    return os.environ.get("THE_PASS_AGENT_KEY") or DEMO_AGENT_KEYS.get(protocol_id, "demo-hotel")
 
 
 class ApiError(Exception):
@@ -68,11 +76,19 @@ class PassClient:
         self.http = http or httpx.Client(base_url=base_url or os.environ.get("THE_PASS_URL", "http://localhost:8000"),
                                          timeout=30)
         self.headers: dict[str, str] = {}
-        key = agent_key if agent_key is not None else os.environ.get("THE_PASS_AGENT_KEY", "demo")
+        key = agent_key if agent_key is not None else os.environ.get("THE_PASS_AGENT_KEY", "demo-hotel")
         if key:
             self.headers["X-Agent-Key"] = key
         if demo_user:
             self.headers["X-Demo-User"] = demo_user
+
+    @classmethod
+    def for_protocol(cls, protocol_id: str, **kw) -> "PassClient":
+        return cls(agent_key=key_for(protocol_id), **kw)
+
+    def as_agent(self, agent_key: str) -> "PassClient":
+        """The same connection, acting as another agent."""
+        return PassClient(http=self.http, agent_key=agent_key)
 
     def call(self, method: str, path: str, body: Any = None, headers: Optional[dict] = None) -> Any:
         r = self.http.request(method, path, json=body, headers={**self.headers, **(headers or {})})

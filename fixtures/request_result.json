@@ -1,5 +1,5 @@
 {
-  "request_id": "req_1",
+  "request_id": "req_3fc1091b",
   "status": "CANDIDATES_READY",
   "attempt": 1,
   "structured": {
@@ -27,7 +27,7 @@
       "name": "UNDERSTAND",
       "attempt": 1,
       "status": "OK",
-      "summary": "You need: milk, lactose-free, 1,000 L, delivered by Monday 16 Nov; profile 'Hotel banquets' applied.",
+      "summary": "You need: Milk, Lactose-free, 1000 L, delivered by 2026-11-16; profile 'Hotel banquets' applied.",
       "can_reject": true,
       "retries_left": 3,
       "reject_options": [
@@ -39,18 +39,13 @@
       ],
       "events": [
         {
-          "at": "2026-11-14T10:00:00+02:00",
+          "at": "2026-11-14T14:20:19.566593+02:00",
           "title": "Understood the request",
-          "logic": "Extracted category, attributes, quantity and date from your words",
+          "logic": "Used the confirmed structured request as is",
           "evidence": [
             {
               "source": "BUYER_INPUT",
-              "detail": "1000 litres of lactose-free milk by Monday",
-              "trust_grade": null
-            },
-            {
-              "source": "PROFILE",
-              "detail": "Hotel banquets: prefer large packs, exclude Arla",
+              "detail": "{\"category\": \"Milk\", \"requirements\": [\"Lactose-free\"], \"quantity\": \"1000 L\", \"delivery_date\": \"2026-11-16\", \"profile\": \"Hotel banquets\", \"submitted_by_agent\": null}",
               "trust_grade": null
             }
           ]
@@ -62,7 +57,7 @@
       "name": "FILTER",
       "attempt": 1,
       "status": "OK",
-      "summary": "Found 35 milks with a lactose-free claim; excluded 27 (not liquid milk, excluded brand); kept 8.",
+      "summary": "Kept 4 products that meet every hard requirement; 1 flagged red, 2 not relevant.",
       "can_reject": true,
       "retries_left": 3,
       "reject_options": [
@@ -74,7 +69,7 @@
       ],
       "events": [
         {
-          "at": "2026-11-14T10:00:01+02:00",
+          "at": "2026-11-14T10:00:00+02:00",
           "title": "Filtered the catalogue",
           "logic": "Used manufacturer structured claims only, not product names",
           "evidence": [
@@ -92,7 +87,7 @@
       "name": "RANK",
       "attempt": 1,
       "status": "OK",
-      "summary": "Ranked by your preferences: fulfilment first, then price. #1 is the 10 L pack, 50 cases.",
+      "summary": "Built 4 options ranked by your weights (fulfilment 0.5, price 0.3, carbon 0.1, local 0.1). #1 is Valio Hyvä suomalainen Arki® Eila® 1 l lactose free.",
       "can_reject": true,
       "retries_left": 3,
       "reject_options": [
@@ -103,18 +98,18 @@
       ],
       "events": [
         {
-          "at": "2026-11-14T10:00:02+02:00",
+          "at": "2026-11-14T14:20:19.569498+02:00",
           "title": "Checked price and stock, then ranked",
-          "logic": "Queried only these 8 candidates, then ranked by profile weights",
+          "logic": "Queried only these 4 products in one batch, then ranked by profile weights",
           "evidence": [
             {
               "source": "VALIO_PRICE_API",
-              "detail": "Customer prices for 8 products",
+              "detail": "Customer prices for 4 products",
               "trust_grade": null
             },
             {
               "source": "VALIO_STOCK_API",
-              "detail": "Deliverable on 16 Nov?",
+              "detail": "Deliverable on 2026-11-16?",
               "trust_grade": null
             }
           ]
@@ -126,7 +121,7 @@
       "name": "GATE",
       "attempt": 1,
       "status": "OK",
-      "summary": "#1 is €998.80, within the €1,000 auto-approve limit, and every requirement is explicitly declared: it can be ordered automatically.",
+      "summary": "#1 costs €964.75: Total €964.75 is within the auto-approve limit of €1,000.00.",
       "can_reject": true,
       "retries_left": 3,
       "reject_options": [
@@ -135,13 +130,13 @@
       ],
       "events": [
         {
-          "at": "2026-11-14T10:00:03+02:00",
+          "at": "2026-11-14T14:20:19.569821+02:00",
           "title": "Checked against the protocol",
           "logic": "Compared rule by rule with the authorization protocol",
           "evidence": [
             {
               "source": "RULE",
-              "detail": "R-SPEND-AUTO: total ≤ auto-approve limit",
+              "detail": "Total €964.75 is within the auto-approve limit of €1,000.00",
               "trust_grade": null
             }
           ]
@@ -151,107 +146,9 @@
   ],
   "candidates": [
     {
-      "id": "cand_1",
+      "id": "cand_d57bb16b",
       "rank": 1,
       "badge": "RECOMMENDED",
-      "selectable": true,
-      "lines": [
-        {
-          "product_id": "463038",
-          "name": "Valio Eila® 10 l novobox lactose free",
-          "brand": "Valio",
-          "sales_unit": "KI",
-          "sales_units": 50.0,
-          "qty_covered": {
-            "value": 1000.0,
-            "unit": "L"
-          },
-          "overbuy": null,
-          "conversion_source": "UNIT_CONVERSIONS",
-          "unit_price_cents": 1760,
-          "line_net_cents": 88000,
-          "vat_rate": 0.135,
-          "deposit_cents": 0,
-          "available_on_date": "YES",
-          "deliverable_sales_units": null,
-          "substitution_tier": "NONE",
-          "substitutes_for": null
-        }
-      ],
-      "totals": {
-        "net_cents": 88000,
-        "vat_cents": 11880,
-        "deposit_cents": 0,
-        "gross_cents": 99880
-      },
-      "delivery_date": "2026-11-16",
-      "reliability_level": "UNKNOWN",
-      "outcome_preview": "AUTO",
-      "outcome_reasons": [
-        "€998.80, within the auto-approve limit of €1,000",
-        "Lactose-free backed by a manufacturer structured claim"
-      ],
-      "cards": {
-        "allergen": {
-          "rows": [
-            {
-              "product_id": "463038",
-              "requirement": {
-                "kind": "CLAIM",
-                "code": "FREE_FROM_LACTOSE",
-                "label": "Lactose-free"
-              },
-              "status": "CLAIMED",
-              "trust_grade": "A",
-              "source": "Manufacturer structured claim (GS1 Synkka)"
-            }
-          ],
-          "data_updated_at": "2026-10-05T10:00:00+02:00",
-          "notes": [
-            "Lactose-free is not milk-free: contains milk protein, not suitable for milk allergy"
-          ]
-        },
-        "trust": {
-          "evidence": "HIGH",
-          "match": "HIGH",
-          "fulfilment": "MEDIUM",
-          "compliance": "HIGH",
-          "overall": "MEDIUM",
-          "how_to_improve": "No delivery history for this product; cand_3 scores high on fulfilment"
-        },
-        "alternatives": [
-          {
-            "candidate_id": "cand_2",
-            "tradeoff": "€34 cheaper, but 1,000 cartons to receive",
-            "tier": "NONE"
-          }
-        ],
-        "tips": [
-          {
-            "kind": "STORAGE",
-            "text": "Keep chilled at 2–6 °C"
-          },
-          {
-            "kind": "COLD_STORAGE_SPACE",
-            "text": "50 cases take about 1.1 m³ of cold storage"
-          },
-          {
-            "kind": "RELIABILITY",
-            "text": "No delivery history; fulfilment treated as unknown"
-          },
-          {
-            "kind": "QUOTE_TIMER",
-            "text": "Quote is valid for 15 minutes after you select it"
-          }
-        ]
-      },
-      "violations": [],
-      "explanation": "10 L bag-in-box packs are the easiest to handle and match your large-pack preference; within the auto-approve limit."
-    },
-    {
-      "id": "cand_2",
-      "rank": 2,
-      "badge": "CHEAPEST",
       "selectable": true,
       "lines": [
         {
@@ -286,7 +183,7 @@
       "reliability_level": "HIGH",
       "outcome_preview": "AUTO",
       "outcome_reasons": [
-        "€964.75, within the auto-approve limit"
+        "Total €964.75 is within the auto-approve limit of €1,000.00"
       ],
       "cards": {
         "allergen": {
@@ -300,13 +197,11 @@
               },
               "status": "CLAIMED",
               "trust_grade": "A",
-              "source": "Manufacturer structured claim (GS1 Synkka)"
+              "source": "Manufacturer structured claim"
             }
           ],
-          "data_updated_at": "2026-10-05T10:00:00+02:00",
-          "notes": [
-            "Lactose-free is not milk-free: contains milk protein, not suitable for milk allergy"
-          ]
+          "data_updated_at": null,
+          "notes": []
         },
         "trust": {
           "evidence": "HIGH",
@@ -319,16 +214,93 @@
         "alternatives": [],
         "tips": [
           {
-            "kind": "LABEL",
-            "text": "Made in Finland"
+            "kind": "QUOTE_TIMER",
+            "text": "Quote is valid for 15 minutes after you select it"
           }
         ]
       },
       "violations": [],
-      "explanation": "Lowest total and a good delivery record; 1 L cartons mean more unpacking."
+      "explanation": "Best match for your priorities: Valio Hyvä suomalainen Arki® Eila® 1 l lactose free. Total €964.75 is within the auto-approve limit of €1,000.00."
     },
     {
-      "id": "cand_3",
+      "id": "cand_dcd39dd7",
+      "rank": 2,
+      "badge": "CHEAPEST",
+      "selectable": true,
+      "lines": [
+        {
+          "product_id": "999001",
+          "name": "Farm milk 1 l lactose free",
+          "brand": "Tila",
+          "sales_unit": "ST",
+          "sales_units": 1000.0,
+          "qty_covered": {
+            "value": 1000.0,
+            "unit": "L"
+          },
+          "overbuy": null,
+          "conversion_source": "UNIT_CONVERSIONS",
+          "unit_price_cents": 80,
+          "line_net_cents": 80000,
+          "vat_rate": 0.135,
+          "deposit_cents": 0,
+          "available_on_date": "YES",
+          "deliverable_sales_units": null,
+          "substitution_tier": "NONE",
+          "substitutes_for": null
+        }
+      ],
+      "totals": {
+        "net_cents": 80000,
+        "vat_cents": 10800,
+        "deposit_cents": 0,
+        "gross_cents": 90800
+      },
+      "delivery_date": "2026-11-16",
+      "reliability_level": "LOW",
+      "outcome_preview": "BUYER_APPROVAL",
+      "outcome_reasons": [
+        "A hard requirement is not confirmed by manufacturer data (unverified)"
+      ],
+      "cards": {
+        "allergen": {
+          "rows": [
+            {
+              "product_id": "999001",
+              "requirement": {
+                "kind": "CLAIM",
+                "code": "FREE_FROM_LACTOSE",
+                "label": "Lactose-free"
+              },
+              "status": "CLAIMED",
+              "trust_grade": "C",
+              "source": "Product name only"
+            }
+          ],
+          "data_updated_at": null,
+          "notes": []
+        },
+        "trust": {
+          "evidence": "LOW",
+          "match": "HIGH",
+          "fulfilment": "LOW",
+          "compliance": "MEDIUM",
+          "overall": "LOW",
+          "how_to_improve": null
+        },
+        "alternatives": [],
+        "tips": [
+          {
+            "kind": "QUOTE_TIMER",
+            "text": "Quote is valid for 15 minutes after you select it"
+          }
+        ]
+      },
+      "violations": [],
+      "explanation": "Lowest total: Farm milk 1 l lactose free. A hard requirement is not confirmed by manufacturer data (unverified)."
+    },
+    {
+      "id": "cand_b84121ad",
       "rank": 3,
       "badge": "MOST_RELIABLE",
       "selectable": true,
@@ -365,7 +337,7 @@
       "reliability_level": "HIGH",
       "outcome_preview": "BUYER_APPROVAL",
       "outcome_reasons": [
-        "€1,078.25, above the auto-approve limit of €1,000"
+        "Total €1,078.25 is above the auto-approve limit of €1,000.00"
       ],
       "cards": {
         "allergen": {
@@ -379,13 +351,11 @@
               },
               "status": "CLAIMED",
               "trust_grade": "A",
-              "source": "Manufacturer structured claim (GS1 Synkka)"
+              "source": "Manufacturer structured claim"
             }
           ],
-          "data_updated_at": "2026-10-05T10:00:00+02:00",
-          "notes": [
-            "Lactose-free is not milk-free: contains milk protein, not suitable for milk allergy"
-          ]
+          "data_updated_at": null,
+          "notes": []
         },
         "trust": {
           "evidence": "HIGH",
@@ -393,23 +363,100 @@
           "fulfilment": "HIGH",
           "compliance": "MEDIUM",
           "overall": "MEDIUM",
-          "how_to_improve": "Above the auto-approve limit; needs manager approval"
+          "how_to_improve": null
         },
         "alternatives": [],
         "tips": [
           {
-            "kind": "STORAGE",
-            "text": "UHT, store at room temperature"
+            "kind": "QUOTE_TIMER",
+            "text": "Quote is valid for 15 minutes after you select it"
           }
         ]
       },
       "violations": [],
-      "explanation": "UHT keeps at room temperature and has the best delivery record; total is above the auto-approve limit, so it needs approval."
+      "explanation": "Most reliable delivery: Valio semi skimmed milk 1 l lactose free UHT. Total €1,078.25 is above the auto-approve limit of €1,000.00."
+    },
+    {
+      "id": "cand_68841230",
+      "rank": 4,
+      "badge": null,
+      "selectable": true,
+      "lines": [
+        {
+          "product_id": "463038",
+          "name": "Valio Eila® 10 l novobox lactose free",
+          "brand": "Valio",
+          "sales_unit": "KI",
+          "sales_units": 50.0,
+          "qty_covered": {
+            "value": 1000.0,
+            "unit": "L"
+          },
+          "overbuy": null,
+          "conversion_source": "UNIT_CONVERSIONS",
+          "unit_price_cents": 1760,
+          "line_net_cents": 88000,
+          "vat_rate": 0.135,
+          "deposit_cents": 0,
+          "available_on_date": "YES",
+          "deliverable_sales_units": null,
+          "substitution_tier": "NONE",
+          "substitutes_for": null
+        }
+      ],
+      "totals": {
+        "net_cents": 88000,
+        "vat_cents": 11880,
+        "deposit_cents": 0,
+        "gross_cents": 99880
+      },
+      "delivery_date": "2026-11-16",
+      "reliability_level": "UNKNOWN",
+      "outcome_preview": "AUTO",
+      "outcome_reasons": [
+        "Total €998.80 is within the auto-approve limit of €1,000.00"
+      ],
+      "cards": {
+        "allergen": {
+          "rows": [
+            {
+              "product_id": "463038",
+              "requirement": {
+                "kind": "CLAIM",
+                "code": "FREE_FROM_LACTOSE",
+                "label": "Lactose-free"
+              },
+              "status": "CLAIMED",
+              "trust_grade": "A",
+              "source": "Manufacturer structured claim"
+            }
+          ],
+          "data_updated_at": null,
+          "notes": []
+        },
+        "trust": {
+          "evidence": "HIGH",
+          "match": "HIGH",
+          "fulfilment": "MEDIUM",
+          "compliance": "HIGH",
+          "overall": "MEDIUM",
+          "how_to_improve": null
+        },
+        "alternatives": [],
+        "tips": [
+          {
+            "kind": "QUOTE_TIMER",
+            "text": "Quote is valid for 15 minutes after you select it"
+          }
+        ]
+      },
+      "violations": [],
+      "explanation": "Another option: Valio Eila® 10 l novobox lactose free. Total €998.80 is within the auto-approve limit of €1,000.00."
     }
   ],
   "blocked": [
     {
-      "id": "cand_x1",
+      "id": "cand_a6be6669",
       "rank": null,
       "badge": null,
       "selectable": false,
@@ -453,13 +500,11 @@
               },
               "status": "CLAIMED",
               "trust_grade": "A",
-              "source": "Manufacturer structured claim (GS1 Synkka)"
+              "source": "Manufacturer structured claim"
             }
           ],
-          "data_updated_at": "2026-10-05T10:00:00+02:00",
-          "notes": [
-            "Lactose-free is not milk-free: contains milk protein, not suitable for milk allergy"
-          ]
+          "data_updated_at": null,
+          "notes": []
         },
         "trust": {
           "evidence": "HIGH",
@@ -470,16 +515,21 @@
           "how_to_improve": null
         },
         "alternatives": [],
-        "tips": []
+        "tips": [
+          {
+            "kind": "QUOTE_TIMER",
+            "text": "Quote is valid for 15 minutes after you select it"
+          }
+        ]
       },
       "violations": [
         {
           "rule": "PROFILE_EXCLUDED_BRAND",
-          "detail": "Brand Arla is excluded in profile 'Hotel banquets'",
+          "detail": "Brand Arla is excluded in your profile",
           "product_id": "464179"
         }
       ],
-      "explanation": "Meets the lactose-free requirement, but you excluded this brand in your profile."
+      "explanation": "Not selectable: Brand Arla is excluded in your profile."
     }
   ],
   "no_candidate_reason": null

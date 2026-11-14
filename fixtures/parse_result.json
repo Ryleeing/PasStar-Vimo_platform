@@ -18,20 +18,6 @@
     "substitution": "SAME_CATEGORY",
     "notes": null
   },
-  "ambiguities": [
-    {
-      "field": "requirements",
-      "question": "Whole, semi-skimmed or skimmed?",
-      "options": [
-        "Any",
-        "Whole",
-        "Semi-skimmed",
-        "Skimmed"
-      ]
-    }
-  ],
-  "profile_applied": [
-    "Same-category substitutes allowed by default",
-    "Prefer large packs"
-  ]
+  "ambiguities": [],
+  "profile_applied": []
 }

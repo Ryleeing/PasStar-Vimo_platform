@@ -7,9 +7,9 @@ from fastapi.testclient import TestClient
 
 from app import fixtures as fx
 from app.main import app
-from app.orchestrator import audit_api
+from app.channel import audit
 from app.orchestrator.explain import TemplateExplain
-from app.orchestrator.holds import Caller, normalize_attribute, record_parse
+from app.orchestrator.holds import HoldCaller, normalize_attribute, record_parse
 from app.orchestrator.parser import ParseOutcome
 from app.orchestrator.pipeline import Deps, Pipeline
 from app.orchestrator.profiles import ProfileRepo
@@ -19,7 +19,7 @@ from app.orchestrator.stubs import (
 from app.schemas import CreateRequest, RejectNodeRequest
 
 SCHEMA = Path(__file__).resolve().parents[1] / "backend" / "app" / "schema.sql"
-CALLER = Caller(buyer_id="buy_hotel", agent_id="agt_hotel", actor="agent:agt_hotel")
+CALLER = HoldCaller(buyer_id="buy_hotel", agent_id="agt_hotel", actor="agent:agt_hotel")
 
 
 def outcome(ambiguity_fields=(), unknown=()):
@@ -57,15 +57,22 @@ def test_attribute_is_capped_at_40_characters():
     assert len(normalize_attribute("x" * 100)) == 40
 
 
-def test_parse_route_writes_hold_events():
-    before = len(audit_api.entries)
+def test_parse_route_writes_hold_events_to_the_real_audit_log():
+    before = len(audit.entries())
     r = TestClient(app).post("/v1/requests/parse", json={"text": "lactose-free milk tomorrow", "profile_id": "prof_banquet"},
                              headers={"X-Demo-User": "usr_chef"})
     assert r.status_code == 200
-    new = audit_api.entries[before:]
+    new = audit.entries()[before:]
     assert [e["event"] for e in new] == ["REQUEST_NEEDS_INPUT"]
-    assert new[0]["reason_code"] == "NEEDS_QUANTITY" and new[0]["buyer_id"] == "buy_hotel"
-    assert new[0]["actor"] == "user:REQUESTER"
+    e = new[0]
+    assert e["payload"]["reason_code"] == "NEEDS_QUANTITY" and e["payload"]["buyer_id"] == "buy_hotel"
+    assert e["actor"] == "user:usr_chef" and e["visibility"] == "BUYER"
+    assert audit.verify().ok                                   # columns and hashed payload still agree
+
+
+def test_parse_route_needs_a_known_caller():
+    r = TestClient(app).post("/v1/requests/parse", json={"text": "milk"})
+    assert r.status_code == 403 and r.json()["error"]["code"] == "OUT_OF_SCOPE"
 
 
 # ───── pipeline ─────

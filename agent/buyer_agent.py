@@ -90,7 +90,7 @@ def main() -> None:
     ap.add_argument("--profile")
     ap.add_argument("--url")
     args = ap.parse_args()
-    print_outcome(run(PassClient(base_url=args.url), args.text, args.protocol, args.profile))
+    print_outcome(run(PassClient.for_protocol(args.protocol, base_url=args.url), args.text, args.protocol, args.profile))
 
 
 if __name__ == "__main__":

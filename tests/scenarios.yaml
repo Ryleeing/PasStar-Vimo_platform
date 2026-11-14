@@ -43,19 +43,19 @@ scenarios:
       delivery: next_monday
       final: [PLACED]
 
-  - id: S3-quark-nut-free
-    description: Hospital kitchen with an allergen requirement and a relative date.
-    protocol: prot_hotel_v1
+  - id: S3-hospital-nut-free
+    description: Hospital kitchen with an allergen requirement and a relative date, under the hospital's protocol.
+    protocol: prot_hospital_v1
     phrasings:
-      - 50 kg of nut-free quark for tomorrow
-      - quark 50kg tomorrow, must be nut free
-      - 50 kiloa pähkinätöntä rahkaa huomiseksi
-      - 50 kg nötfri kvarg till i morgon
-      - We need fifty kilos of quark delivered tomorrow; it has to be free from nuts because of patient allergies
+      - 200 litres of nut-free milk for tomorrow
+      - milk 200l tomorrow, must be nut free
+      - 200 litraa pähkinätöntä maitoa huomiseksi
+      - 200 liter nötfri mjölk till i morgon
+      - We need two hundred litres of milk delivered tomorrow; it has to be free from nuts because of patient allergies
     expect:
-      category: "10430"
+      category: "10400"
       requirements: [AN, AP]          # "nut-free" covers tree nuts and peanuts: the stricter reading
-      quantity: {value: 50, unit: kg}
+      quantity: {value: 200, unit: L}
       delivery: tomorrow
       final: [PLACED, PENDING_BUYER_APPROVAL, NO_CANDIDATES]
 

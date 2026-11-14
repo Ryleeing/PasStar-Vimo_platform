@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import sys
 import time
@@ -36,7 +37,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / "agent"), str(ROOT / "backend")]
 
 import buyer_agent  # noqa: E402
-from pass_client import ApiError, PassClient  # noqa: E402
+from pass_client import ApiError, PassClient, key_for  # noqa: E402
 
 SCENARIOS = pathlib.Path(__file__).with_name("scenarios.yaml")
 REPORTS = pathlib.Path(__file__).with_name("reports")
@@ -125,7 +126,9 @@ def set_fault(client: PassClient, name: str, enabled: bool) -> None:
 
 
 def run_all(client: PassClient, scenarios: list[dict], faults: list[Optional[str]], k: int,
-            poll_every_s: float = 1.0, today: Optional[date] = None, quiet: bool = False) -> list[RunResult]:
+            poll_every_s: float = 1.0, today: Optional[date] = None, quiet: bool = False,
+            fixed_key: bool = False) -> list[RunResult]:
+    """Each scenario runs as the agent named in its protocol, unless fixed_key (THE_PASS_AGENT_KEY) is set."""
     today = today or date.today()
     results: list[RunResult] = []
     for fault in faults:
@@ -136,7 +139,8 @@ def run_all(client: PassClient, scenarios: list[dict], faults: list[Optional[str
                 for i, text in enumerate(s["phrasings"]):
                     for n in range(k):
                         t0 = time.perf_counter()
-                        out = buyer_agent.run(client, text, s["protocol"], s.get("profile"),
+                        agent = client if fixed_key else client.as_agent(key_for(s["protocol"]))
+                        out = buyer_agent.run(agent, text, s["protocol"], s.get("profile"),
                                               poll_every_s=poll_every_s, max_polls=3)
                         r = RunResult(s["id"], i, text, fault, n, out.status, seconds=time.perf_counter() - t0,
                                       questions=[st.detail for st in out.steps if st.what == "Needs an answer before ordering"])
@@ -205,7 +209,8 @@ def main() -> None:
     else:
         client, model, poll = PassClient(base_url=args.url), "(server-side)", 1.0
 
-    results = run_all(client, scenarios, faults, args.k, poll_every_s=poll)
+    results = run_all(client, scenarios, faults, args.k, poll_every_s=poll,
+                      fixed_key=bool(os.environ.get("THE_PASS_AGENT_KEY")))
     summary = summarize(results)
     print_summary(summary, args.k, model)
 

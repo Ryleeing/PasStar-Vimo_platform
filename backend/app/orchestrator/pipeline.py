@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
+from ..errors import ApiError
 from ..internal import (
     AuditApi, Audience, CardsApi, CatalogApi, DisclosureApi, EffectiveRules, ExplainApi, GateApi, ProductRecord,
     ProtocolsApi, UnitsApi, ValioApi,
@@ -40,12 +41,8 @@ OUTCOME_ORDER = ["AUTO", "BUYER_APPROVAL", "VALIO_REVIEW", "REJECT"]
 LLM = Audience(kind="LLM", buyer_id=None, agent_id=None)
 
 
-class PipelineError(Exception):
-    """Carries an error code from the shared error table; routes turn it into ErrorBody."""
-
-    def __init__(self, code: str, message: str, **details: Any) -> None:
-        super().__init__(message)
-        self.code, self.message, self.details = code, message, details
+# The shared error type (app/errors.py); main.py turns it into ErrorBody. Kept under this name for BE3 code.
+PipelineError = ApiError
 
 
 @dataclass

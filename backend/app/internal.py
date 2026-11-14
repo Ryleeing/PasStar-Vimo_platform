@@ -162,7 +162,11 @@ class OrdersApi(Iface):
 
 class AuditApi(Iface):
     def append(self, event: str, actor: str, payload: dict, request_id: Optional[str] = None,
-               visibility: Literal["BUYER", "VALIO", "BOTH"] = "BOTH", summary: str = "") -> int: ...
+               visibility: Literal["BUYER", "VALIO", "BOTH"] = "BOTH", summary: str = "",
+               buyer_id: Optional[str] = None, agent_id: Optional[str] = None,
+               reason_code: Optional[str] = None) -> int:
+        """When buyer_id / agent_id / reason_code are given, also copy them into the payload
+        (keys "buyer_id", "agent_id", "reason_code") so the hash covers them."""
 
 
 # ───────────── BE3 编排与 AI：提供给 BE1 ─────────────

@@ -31,6 +31,38 @@
         "local": 0.1
       }
     },
-    "updated_at": "2026-11-14T10:00:00+02:00"
+    "updated_at": "2026-11-14T14:20:19.324175+02:00"
+  },
+  {
+    "id": "prof_room_service",
+    "buyer_id": "buy_hotel",
+    "body": {
+      "name": "Room service",
+      "hard_exclusions": {
+        "brands": [],
+        "vendors": [],
+        "product_ids": [],
+        "requirements": []
+      },
+      "soft_preferences": {
+        "labels": [],
+        "countries": [
+          "fi"
+        ],
+        "prefer_large_packs": false
+      },
+      "defaults": {
+        "delivery_address": null,
+        "lead_days": 1,
+        "substitution": "SAME_CATEGORY"
+      },
+      "weights": {
+        "price": 0.2,
+        "fulfilment": 0.6,
+        "carbon": 0.1,
+        "local": 0.1
+      }
+    },
+    "updated_at": "2026-11-14T14:20:19.324175+02:00"
   }
 ]

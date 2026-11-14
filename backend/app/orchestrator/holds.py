@@ -28,8 +28,8 @@ MAX_ATTRIBUTE = 40
 
 
 @dataclass
-class Caller:
-    """Who is asking. Stand-in for BE1's resolve_caller() until it exists."""
+class HoldCaller:
+    """Who asked, as the hold events need it (built from channel.identity.caller())."""
     buyer_id: Optional[str]
     agent_id: Optional[str]
     actor: str                      # "agent:<id>" or "user:<role>"
@@ -39,7 +39,7 @@ def normalize_attribute(text: str) -> str:
     return " ".join(text.lower().split())[:MAX_ATTRIBUTE]
 
 
-def record_parse(audit: AuditApi, outcome: ParseOutcome, caller: Caller) -> int:
+def record_parse(audit: AuditApi, outcome: ParseOutcome, caller: HoldCaller) -> int:
     """Write the hold events for one parse. Returns how many were written. No request exists yet."""
     ids = dict(buyer_id=caller.buyer_id, agent_id=caller.agent_id)
     written = 0

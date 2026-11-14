@@ -1,4 +1,4 @@
-"""Agent scripts against the mock server, in-process (no network)."""
+"""Agent scripts end to end against the real routes, in-process (no network). BE2 parts are BE3 stubs."""
 import pathlib
 import sys
 
@@ -11,14 +11,25 @@ import buyer_agent  # noqa: E402
 import plain_client  # noqa: E402
 import rogue_agent  # noqa: E402
 from app.main import app  # noqa: E402
-from pass_client import PassClient  # noqa: E402
+from pass_client import PassClient, key_for  # noqa: E402
 
 FAST = {"poll_every_s": 0}
+OVER_LIMIT = {**plain_client.DEFAULT_REQUEST, "quantity": {"value": 1200, "unit": "L"}}   # every option > €1,000
 
 
 @pytest.fixture
-def client():
-    return PassClient(http=TestClient(app))
+def http():
+    return TestClient(app)
+
+
+@pytest.fixture
+def client(http):
+    return PassClient(http=http, agent_key=key_for("prot_hotel_v1"))
+
+
+@pytest.fixture
+def ext_client(http):
+    return PassClient(http=http, agent_key=key_for("prot_hotel_ext_v1"))
 
 
 def test_plain_client_hosted_protocol_places_order(client):
@@ -27,15 +38,25 @@ def test_plain_client_hosted_protocol_places_order(client):
     assert [s.what for s in out.steps][:3] == ["Sent structured request", "Chose the top-ranked candidate", "Got a signed quote"]
 
 
-def test_plain_client_external_protocol_gets_buyer_authorization(client):
-    out = plain_client.run(client, "prot_hotel_ext_v1", plain_client.DEFAULT_REQUEST, **FAST)
+def test_plain_client_external_protocol_gets_buyer_authorization(ext_client):
+    out = plain_client.run(ext_client, "prot_hotel_ext_v1", OVER_LIMIT, **FAST)
     whats = [s.what for s in out.steps]
     assert "Needs buyer authorization" in whats and "Buyer system signed an authorization" in whats
     assert out.status == "PLACED" and out.order["authorized_by"] == "usr_manager"
 
 
-def test_external_flow_with_a_bad_signature_stops_with_error(client):
-    out = plain_client.run(client, "prot_hotel_ext_v1", plain_client.DEFAULT_REQUEST,
+def test_external_protocol_within_the_limit_needs_no_authorization(ext_client):
+    out = plain_client.run(ext_client, "prot_hotel_ext_v1", plain_client.DEFAULT_REQUEST, **FAST)
+    assert out.status == "PLACED" and "Needs buyer authorization" not in [s.what for s in out.steps]
+
+
+def test_hosted_protocol_over_the_limit_waits_for_the_manager(client):
+    out = plain_client.run(client, "prot_hotel_v1", OVER_LIMIT, poll_every_s=0, max_polls=1)
+    assert out.status == "PENDING_BUYER_APPROVAL" and out.order["approval_id"]
+
+
+def test_external_flow_with_a_bad_signature_stops_with_error(ext_client):
+    out = plain_client.run(ext_client, "prot_hotel_ext_v1", OVER_LIMIT,
                            approve=lambda order: rogue_agent.FORGED_JWS, **FAST)
     assert out.status == "ERROR AUTHORIZATION_INVALID"
 
@@ -73,10 +94,10 @@ def test_requery_never_touches_hard_requirements():
     assert changed["delivery_date"] == "2026-11-17" and "delivery" in why
 
 
-def test_rogue_agent_report_runs_every_probe(client):
-    results = rogue_agent.run(client)
+def test_rogue_agent_report(http):
+    results = rogue_agent.run(PassClient(http=http))
     assert len(results) == len(rogue_agent.PROBES)
-    by_name = {r.probe.name: r for r in results}
-    # Already enforced by the mock server:
-    assert by_name["Forge a buyer authorization"].blocked
-    assert by_name["Approve its own order as the requester"].blocked
+    got = {r.probe.name: r for r in results}
+    not_blocked = sorted(name for name, r in got.items() if not r.blocked)
+    # Stock probing is BE2's check (availability_probes); everything else is enforced already.
+    assert not_blocked == ["Probe stock with many quantities"], {n: got[n].got for n in not_blocked}

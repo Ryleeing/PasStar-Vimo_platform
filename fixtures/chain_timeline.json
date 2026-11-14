@@ -1,26 +1,9 @@
 {
-  "request_id": "req_1",
+  "request_id": "req_3fc1091b",
   "attempt": 1,
   "events": [
     {
       "at": "2026-11-14T10:00:00+02:00",
-      "title": "Understood the request",
-      "logic": "Extracted category, attributes, quantity and date from your words",
-      "evidence": [
-        {
-          "source": "BUYER_INPUT",
-          "detail": "1000 litres of lactose-free milk by Monday",
-          "trust_grade": null
-        },
-        {
-          "source": "PROFILE",
-          "detail": "Hotel banquets: prefer large packs, exclude Arla",
-          "trust_grade": null
-        }
-      ]
-    },
-    {
-      "at": "2026-11-14T10:00:01+02:00",
       "title": "Filtered the catalogue",
       "logic": "Used manufacturer structured claims only, not product names",
       "evidence": [
@@ -32,30 +15,42 @@
       ]
     },
     {
-      "at": "2026-11-14T10:00:02+02:00",
-      "title": "Checked price and stock, then ranked",
-      "logic": "Queried only these 8 candidates, then ranked by profile weights",
+      "at": "2026-11-14T14:20:19.566593+02:00",
+      "title": "Understood the request",
+      "logic": "Used the confirmed structured request as is",
       "evidence": [
         {
-          "source": "VALIO_PRICE_API",
-          "detail": "Customer prices for 8 products",
-          "trust_grade": null
-        },
-        {
-          "source": "VALIO_STOCK_API",
-          "detail": "Deliverable on 16 Nov?",
+          "source": "BUYER_INPUT",
+          "detail": "{\"category\": \"Milk\", \"requirements\": [\"Lactose-free\"], \"quantity\": \"1000 L\", \"delivery_date\": \"2026-11-16\", \"profile\": \"Hotel banquets\", \"submitted_by_agent\": null}",
           "trust_grade": null
         }
       ]
     },
     {
-      "at": "2026-11-14T10:00:03+02:00",
+      "at": "2026-11-14T14:20:19.569498+02:00",
+      "title": "Checked price and stock, then ranked",
+      "logic": "Queried only these 4 products in one batch, then ranked by profile weights",
+      "evidence": [
+        {
+          "source": "VALIO_PRICE_API",
+          "detail": "Customer prices for 4 products",
+          "trust_grade": null
+        },
+        {
+          "source": "VALIO_STOCK_API",
+          "detail": "Deliverable on 2026-11-16?",
+          "trust_grade": null
+        }
+      ]
+    },
+    {
+      "at": "2026-11-14T14:20:19.569821+02:00",
       "title": "Checked against the protocol",
       "logic": "Compared rule by rule with the authorization protocol",
       "evidence": [
         {
           "source": "RULE",
-          "detail": "R-SPEND-AUTO: total ≤ auto-approve limit",
+          "detail": "Total €964.75 is within the auto-approve limit of €1,000.00",
           "trust_grade": null
         }
       ]
