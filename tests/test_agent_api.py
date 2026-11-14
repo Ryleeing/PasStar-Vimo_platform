@@ -144,3 +144,33 @@ def test_every_option_has_a_card_with_all_dimensions(hotel):
         assert "grade" in card and "If chosen:" in card and "Sources:" in card
         assert all(t["text"] in card for t in o["tips"])
     assert "card" in r["next_step"]
+
+
+class _ClosedOn:
+    """Valio stand-in: nothing can be delivered on one date (e.g. a Sunday), everything on later dates."""
+
+    def __init__(self, inner, closed):
+        self.inner, self.closed = inner, closed
+
+    def prices(self, *a, **k):
+        return self.inner.prices(*a, **k)
+
+    def availability(self, ids, day, units, agent_id):
+        from app.internal import AvailabilityInfo
+        return {p: AvailabilityInfo(status="NO" if day <= self.closed else "YES", deliverable_sales_units=None)
+                for p in ids}
+
+
+def test_undeliverable_date_suggests_the_first_date_that_works(hotel, monkeypatch):
+    from datetime import date, timedelta
+    from app import deps
+    sunday = date.fromisoformat(api.find_options(hotel, "200 litres of lactose-free milk tomorrow")["understood"]["delivery_date"])
+    monkeypatch.setattr(deps, "valio", _ClosedOn(deps.valio, sunday + timedelta(days=1)))
+    r = api.find_options(hotel, "200 litres of lactose-free milk tomorrow")
+    assert all(p["deliverable"] == "NO" for o in r["options"] for p in o["products"])
+    assert r["earliest_delivery"]["date"] == (sunday + timedelta(days=2)).isoformat()
+    assert r["earliest_delivery"]["weekday"] in r["next_step"]
+
+
+def test_deliverable_options_get_no_date_suggestion(hotel):
+    assert "earliest_delivery" not in api.find_options(hotel, "200 litres of lactose-free milk tomorrow")

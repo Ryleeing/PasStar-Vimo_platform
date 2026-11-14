@@ -14,9 +14,10 @@ Results contain L0 and L1 fields only, the most an agent may see (backend/app/co
 """
 from __future__ import annotations
 
+from datetime import date, timedelta
 from typing import Any, Optional
 
-from .. import db, fixtures
+from .. import db, deps, fixtures
 from ..channel import checkpoints, identity, orders, quotes
 from ..channel import audit as audit_store
 from ..errors import ApiError
@@ -194,8 +195,39 @@ def find_options(who: Audience, text: str, answers: Optional[dict[str, str]] = N
                          raw_text=full, structured=outcome.structured)
     result = service.create_request(body, who)
     out = _options(result, who)
+    _suggest_date(out, who)
     out["assumptions"] = [a["question"] for a in outcome.ambiguities if a not in blocking]
     return out
+
+
+LOOK_AHEAD_DAYS = 7
+
+
+def _suggest_date(out: dict, who: Audience) -> None:
+    """When no option can be delivered on the date, find the first later date when the top options can be.
+
+    Asks Valio's stock API for the same products and quantities on the following days. The probe budget counts
+    distinct quantities per product, so other dates for the same quantity cost nothing."""
+    options = out.get("options") or []
+    if not options or any(p["deliverable"] != "NO" for o in options for p in o["products"]):
+        return
+    top = options[:3]
+    units = {p["product_id"]: float(p["order"].split(" x ")[0]) for o in top for p in o["products"]}
+    start = date.fromisoformat(out["understood"]["delivery_date"])
+    for days in range(1, LOOK_AHEAD_DAYS + 1):
+        day = start + timedelta(days=days)
+        try:
+            avail = deps.valio.availability(list(units), day, units, who.agent_id)
+        except ApiError:
+            return
+        ready = [o["option_id"] for o in top
+                 if all(getattr(avail.get(p["product_id"]), "status", None) == "YES" for p in o["products"])]
+        if ready:
+            out["earliest_delivery"] = {"date": day.isoformat(), "weekday": day.strftime("%A"), "option_ids": ready}
+            out["next_step"] = (f"Nothing can be delivered on {start.isoformat()}. Say so first, then offer "
+                                f"{day.strftime('%A')} {day.isoformat()}, the first date Valio can deliver the top "
+                                "options. If the user agrees, call find_options again with that date.")
+            return
 
 
 def get_options(who: Audience, request_id: str) -> dict:
@@ -308,6 +340,9 @@ def _card(o: dict, approver: str) -> list[str]:
     src = o["sources"]
     lines.append(f"Sources: price {SOURCE_WORDS[src['price']]}; delivery {SOURCE_WORDS[src['deliverable']]}; "
                  f"pack size {', '.join(SOURCE_WORDS[x] for x in src['pack_size'])}")
+    if {"NAME_PARSE", "UNKNOWN"} & set(src["pack_size"]):
+        lines.append("Check: the pack size was read from the product name, not Valio's unit table; "
+                     "confirm the quantity before ordering")
     lines += [f"Note: {n}" for n in o["allergen_notes"]]
     lines += [f"Tip ({t['kind'].lower().replace('_', ' ')}): {t['text']}" for t in o["tips"]]
     return lines

@@ -35,6 +35,9 @@ Typical flow: find_options with the user's own words -> if NEEDS_INPUT, ask the 
 with their replies in answers -> present the options -> adjust_options if the user wants changes -> place_order
 with the option the user picked -> order_status later for held orders.
 
+Use these tools only for buying from Valio for this buyer. Do not send unrelated requests to find_options;
+every call is logged in the buyer's audit trail.
+
 You can never approve an order. Never say an order is placed unless its status is PLACED. Never present a
 grade C or D requirement, or a fact from PRODUCT_NAME, NAME_PARSE, NO_DATA or DEMO_DATA, as verified.
 """
