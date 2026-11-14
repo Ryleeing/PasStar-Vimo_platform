@@ -1,7 +1,10 @@
-# 字段敏感等级（BE2）。disclosure.filter 按 audience.ceiling 放行，未列出的字段默认 L3（不放行）
+# BE2 sensitivity levels: disclosure.filter enforces audience.ceiling; unlisted fields default to L3 (denied).
 L0: [product.id, product.name, product.brand, product.category, product.sales_unit, product.qty_per_sales_unit,
-     product.claims, product.labels, product.allergens, product.country, product.data_updated_at, product.flags]
+     product.qty_unit, product.claims, product.labels, product.allergens, product.country,
+     product.has_manufacturer_data, product.data_updated_at, product.flags]
 L1: [price.unit_price_cents, price.vat_rate, price.deposit_cents, totals, availability.status,
-     availability.deliverable_sales_units, reliability_level, order, quote, profile]
+     availability.deliverable_sales_units, reliability_level, order, quote, profile,
+     candidate, candidates, blocked, request, events, unconvertible_product_ids,
+     no_candidate_reason, dropped_count]
 L2: [stock.quantity, delivery_reliability.raw, supplier.performance]
 L3: [cost, margin, other_customer.*, contract.*, roadmap.*, internal_system.*]
