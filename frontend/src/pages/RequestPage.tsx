@@ -79,7 +79,7 @@ export function RequestPage() {
     setForm((f) => ({ ...f, substitution: d.substitution ?? f.substitution, date: f.date || (d.lead_days != null ? isoIn(d.lead_days) : '') }));
   }, [profile, flow.panel]);
 
-  // "Not right" on step ①: start from what the agent understood.
+  // "Adjust" on step ①: start from what the agent understood.
   useEffect(() => {
     if (flow.correcting && flow.request) setForm(formFrom(flow.request.structured));
   }, [flow.correcting, flow.request]);
@@ -173,11 +173,11 @@ export function RequestPage() {
 
   return (
     <div className="narrow">
-      {flow.correcting && <PageHead title="Correct your request" />}
+      {flow.correcting && <PageHead title="Adjust your request" />}
 
       {flow.correcting ? (
         <div style={{ marginBottom: 16 }}>
-          <Banner tone="info" title="Fix the details below"
+          <Banner tone="info" title="Change the details below"
             action={<Button size="sm" variant="ghost" onClick={() => { patch({ correcting: null }); navigate('/options'); }}>Cancel</Button>}>
             The options are found again from here on.
           </Banner>

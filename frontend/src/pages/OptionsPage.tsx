@@ -4,14 +4,14 @@ import { ChevronDown, ChevronUp, PencilLine } from 'lucide-react';
 import { selectCandidate } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Candidate } from '../api/types';
-import { dayLabel, eur, num, outcomeOf } from '../lib/format';
+import { dayLabel, num } from '../lib/format';
 import { useFlow } from '../state/flow';
 import { useSession } from '../state/session';
 import { ChainView } from '../components/ChainView';
-import { CandidateCard } from '../components/CandidateCard';
+import { OptionRow } from '../components/OptionRow';
 import { CheckoutBar } from '../components/CheckoutBar';
 import { Mascot } from '../components/Mascot';
-import { Banner, Button, Empty, PageHead, Pill, useToast } from '../components/ui';
+import { Banner, Button, Empty, PageHead, useToast } from '../components/ui';
 
 /** "Milk type: Semi-skimmed" → ["semi-skimmed"]: the answer to the AI's question, if any. */
 const clarifiedOf = (notes?: string | null) => (notes?.includes(': ') ? [notes.split(': ').pop()!.toLowerCase()] : []);
@@ -83,45 +83,23 @@ export function OptionsPage() {
       {r && !working && (<>
       {r.candidates.length === 0 ? (
         <Banner tone="warn" title="Nothing meets every requirement">
-          {r.no_candidate_reason ?? 'No product matched.'} Open the steps above and mark “Filter products” as not right, or edit the request.
+          {r.no_candidate_reason ?? 'No product matched.'} Open the steps above and adjust “Filter products”, or edit the request.
         </Banner>
       ) : (
         <>
-          <div className="grid three reveal" id="options-grid">
-            {top.map((c, i) => (
-              <CandidateCard key={c.id} c={c} all={all} featured={i === 0} mode={mode}
+          <ol className="opts reveal" id="options-grid" aria-label="Options, best match first">
+            {(showMore ? r.candidates : top).map((c, i) => (
+              <OptionRow key={c.id} c={c} position={i + 1} best={r.candidates[0]} all={all} mode={mode}
                 onChooseAlt={(id) => { const alt = all.find((x) => x.id === id); if (alt?.selectable) choose(alt); }}
                 selected={flow.selection?.candidate.id === c.id} loading={selecting === c.id} onSelect={() => choose(c)} />
             ))}
-          </div>
+          </ol>
 
           {more.length > 0 && (
-            <div style={{ marginTop: 14 }}>
-              <Button variant="ghost" onClick={() => setShowMore((v) => !v)} aria-expanded={showMore}>
-                {showMore ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                {showMore ? 'Fewer options' : `${more.length} more option${more.length > 1 ? 's' : ''}`}
-              </Button>
-              {showMore && (
-                <div className="card" style={{ marginTop: 8, padding: 8 }}>
-                  <div className="table-wrap">
-                    <table className="table">
-                      <tbody>
-                        {more.map((c) => (
-                          <tr key={c.id}>
-                            <td><div className="strong">{c.lines[0].name}</div><div className="small muted">{c.explanation}</div></td>
-                            <td className="nowrap strong">{eur(c.totals?.gross_cents)}</td>
-                            <td>{c.outcome_preview !== 'AUTO' && <Pill tone={outcomeOf(c.outcome_preview, mode).tone}>{outcomeOf(c.outcome_preview, mode).label}</Pill>}</td>
-                            <td style={{ textAlign: 'right' }}>
-                              <Button size="sm" loading={selecting === c.id} onClick={() => choose(c)}>{flow.selection?.candidate.id === c.id ? 'Selected' : 'Choose'}</Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
+            <button type="button" className="opts-more" onClick={() => setShowMore((v) => !v)} aria-expanded={showMore}>
+              {showMore ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              {showMore ? 'Show fewer options' : `Show ${more.length} more option${more.length > 1 ? 's' : ''}`}
+            </button>
           )}
         </>
       )}

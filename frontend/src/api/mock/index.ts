@@ -156,7 +156,7 @@ const routes: [string, RegExp, Handler][] = [
         summary: c.node === node ? `${c.summary.replace(/ \(regenerated.*\)$/, '')} (regenerated: ${b.reason.toLowerCase().replace(/_/g, ' ')})` : c.summary,
       })),
     };
-    await audit('user:buyer', 'NODE_REJECTED', `Step ${node} marked “not right” (${b.reason}); regenerated from step ${node}`);
+    await audit('user:buyer', 'NODE_REJECTED', `Step ${node} adjusted (${b.reason}); regenerated from step ${node}`);
     return db.request;
   }],
   ['GET', /^\/v1\/requests\/([^/]+)\/chain$/, () => ({ ...db.chain, attempt: db.request.attempt })],
