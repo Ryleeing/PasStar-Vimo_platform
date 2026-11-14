@@ -58,3 +58,14 @@ def test_buyers_list_only_their_own_protocols(client):
     mine = client.get("/v1/protocols", headers=OWNER).json()
     assert {p["body"]["buyer_id"] for p in mine} == {"buy_bistro"}
     assert client.get("/v1/protocols", headers={"X-Agent-Key": "demo-hotel"}).status_code == 403
+
+
+def test_the_draft_can_be_edited_before_signing_but_not_after(client):
+    d = client.post("/v1/protocols/draft", json={"buyer_id": "buy_bistro", "agent_id": "agt_bistro",
+                                                   "description": RULES}, headers=OWNER).json()
+    body = {**d["body"], "auto_approve_limit_cents": 50_000, "allowed_categories": ["10400"]}
+    edited = client.put(f"/v1/protocols/{d['id']}", json={"body": body}, headers=OWNER).json()
+    assert edited["body"]["auto_approve_limit_cents"] == 50_000 and edited["body"]["allowed_categories"] == ["10400"]
+    assert client.post(f"/v1/protocols/{d['id']}/sign", headers=OWNER).status_code == 200
+    late = client.put(f"/v1/protocols/{d['id']}", json={"body": {**body, "max_order_cents": 900_000}}, headers=OWNER)
+    assert late.json()["error"]["code"] == "PROTOCOL_INVALID"
