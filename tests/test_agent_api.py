@@ -45,7 +45,10 @@ def test_answers_complete_the_request(hotel):
     top = r["options"][0]
     assert top["rank"] == 1 and top["total_eur"] > 0
     assert top["if_chosen"]["outcome"] in {"AUTO", "BUYER_APPROVAL", "VALIO_REVIEW", "REJECT"}
-    assert set(top["reliability"]) == {"overall", "evidence", "match", "fulfilment", "compliance", "how_to_improve"}
+    assert set(top["reliability"]) == {"overall", "evidence", "match", "fulfilment", "compliance", "how_to_improve",
+                                       "verdict", "scores"}
+    assert top["reliability"]["verdict"] in {"Reliable", "Reliable?", "Risky"}
+    assert set(top["reliability"]["scores"]) == {"overall", "evidence", "match", "fulfilment", "compliance"}
     assert all({"need", "status", "grade"} <= set(q) for q in top["requirements"])
 
 
@@ -140,7 +143,8 @@ def test_every_option_has_a_card_with_all_dimensions(hotel):
     r = api.find_options(hotel, "200 litres of lactose-free milk tomorrow")
     for o in r["options"]:
         card = "\n".join(o["card"])
-        assert "Reliability" in card and all(p in card for p in ("evidence", "match", "fulfilment", "compliance"))
+        assert o["reliability"]["verdict"] in card
+        assert all(p in card for p in ("product data", "fit", "delivery", "purchasing rules"))
         assert "grade" in card and "If chosen:" in card and "Sources:" in card
         assert all(t["text"] in card for t in o["tips"])
     assert "card" in r["next_step"]

@@ -85,7 +85,8 @@ _PUBLIC_MODEL_FIELDS = {
     ),
     schemas.Tip: ("kind", "text"),
     schemas.Totals: ("net_cents", "vat_cents", "deposit_cents", "gross_cents"),
-    schemas.TrustScore: ("evidence", "match", "fulfilment", "compliance", "overall", "how_to_improve"),
+    schemas.TrustScore: ("evidence", "match", "fulfilment", "compliance", "overall", "how_to_improve", "points"),
+    schemas.TrustPoints: ("evidence", "match", "fulfilment", "compliance", "overall"),
     schemas.Violation: ("rule", "detail", "product_id"),
 }
 _CREATE_AUDIT_TABLE = """

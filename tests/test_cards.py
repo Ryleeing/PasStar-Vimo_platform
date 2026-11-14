@@ -114,10 +114,20 @@ def test_high_trust_requires_explicit_requirements_prices_stock_and_reliability_
     configured = builder(reliability_high=0.98, reliability_medium=0.9)
     score = configured.trust_score([line()], request(), rules([LACTOSE]), gate())
 
-    assert score.model_dump() == dict(
+    assert score.model_dump(exclude={"points"}) == dict(
         evidence="HIGH", match="HIGH", fulfilment="HIGH", compliance="HIGH",
         overall="HIGH", how_to_improve=None,
     )
+    assert score.points.overall == 100
+
+
+def test_trust_points_stay_inside_their_level_band():
+    from app.catalog.cards import trust_points
+    levels = {"evidence": "LOW", "match": "HIGH", "fulfilment": "MEDIUM", "compliance": "HIGH"}
+    p = trust_points({"evidence": ["HIGH", "HIGH", "HIGH", "LOW"], "match": ["HIGH", "MEDIUM"]}, levels)
+    assert p.evidence == 49                      # average 81, but one LOW check makes the level LOW: capped at 49
+    assert p.match == 82 and p.fulfilment == 65 and p.compliance == 100
+    assert p.overall == 49
 
 
 def test_percentage_vat_cannot_be_treated_as_a_normalised_price():

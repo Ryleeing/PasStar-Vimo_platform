@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 from ..internal import CatalogApi, EffectiveRules, ProductRecord
 from ..schemas import (
+    TrustPoints,
     AllergenCard,
     AllergenRow,
     CandidateLine,
@@ -35,6 +36,20 @@ _GRADE_LEVEL = {"A": "HIGH", "B": "MEDIUM", "C": "LOW", "D": "LOW"}
 
 def _minimum(levels: list[str]) -> str:
     return min(levels, key=_LEVEL_RANK.__getitem__) if levels else "LOW"
+
+
+_CHECK_POINTS = {"HIGH": 100, "MEDIUM": 65, "LOW": 25}
+_BAND = {"HIGH": (80, 100), "MEDIUM": (50, 79), "LOW": (0, 49)}
+
+
+def trust_points(checks: dict[str, list[str]], levels: dict[str, str]) -> TrustPoints:
+    """A score per dimension from the same checks as its level: their average, clamped into the level's band."""
+    def one(dim: str) -> int:
+        marks = checks.get(dim) or [levels[dim]]
+        low, high = _BAND[levels[dim]]
+        return max(low, min(high, round(sum(_CHECK_POINTS[m] for m in marks) / len(marks))))
+    dims = {d: one(d) for d in ("evidence", "match", "fulfilment", "compliance")}
+    return TrustPoints(**dims, overall=min(dims.values()))
 
 
 def _requirements(*groups: list[Requirement]) -> list[Requirement]:
@@ -260,7 +275,10 @@ class CardsBuilder:
             improvements.append("Resolve the supplied protocol gate decision.")
 
         overall = _minimum([evidence, match, fulfilment, compliance])
+        levels = {"evidence": evidence, "match": match, "fulfilment": fulfilment, "compliance": compliance}
+        points = trust_points({"evidence": evidence_levels, "match": match_levels}, levels)
         return TrustScore(
+            points=points,
             evidence=evidence,
             match=match,
             fulfilment=fulfilment,

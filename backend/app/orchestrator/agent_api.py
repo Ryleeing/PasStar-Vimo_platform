@@ -33,7 +33,9 @@ GUIDE = {
         "C": "Only the product name says so (e.g. 'laktoositon' in the name). Not verified.",
         "D": "No data, or the data contradicts itself.",
     },
-    "reliability": "HIGH / MEDIUM / LOW: the lowest of four checks - evidence, match, fulfilment, compliance.",
+    "reliability": "HIGH / MEDIUM / LOW: the lowest of four checks - evidence, match, fulfilment, compliance. "
+                   "Shown to people as Reliable / Reliable? / Risky. scores: 0-100 per check, the average of its "
+                   "sub-checks kept inside its level's band (HIGH 80-100, MEDIUM 50-79, LOW 0-49); overall = lowest.",
     "if_chosen": {
         "AUTO": "Choosing it places the order straight away.",
         "BUYER_APPROVAL": "Choosing it holds the order until the named approver approves it in PasStar.",
@@ -64,6 +66,8 @@ GUIDE = {
     "verification": "place_order returns the quote Valio signed (Ed25519). signature_valid true means the price, "
                     "products and date were not changed after Valio quoted them.",
 }
+
+VERDICT = {"HIGH": "Reliable", "MEDIUM": "Reliable?", "LOW": "Risky", "UNKNOWN": "Risky"}
 
 GRADE_SOURCE = {"A": "MANUFACTURER_DATA", "B": "MANUFACTURER_DATA", "C": "PRODUCT_NAME", "D": "NO_DATA"}
 
@@ -362,12 +366,15 @@ def _against_limits(total: Optional[float], rules) -> str:
 def _card(o: dict, approver: str, rules) -> list[str]:
     """The option as fixed lines the assistant shows as they are, so no dimension is left out."""
     rel = o["reliability"]
+    pts = rel.get("scores") or {}
+    score = lambda k: f" {pts[k]}" if k in pts else ""   # noqa: E731
     head = f"#{o['rank']}" + (f" {o['badge']}" if o["badge"] else "")
     lines = [f"{head}: " + "; ".join(f"{p['name']} - order {p['order']}, covers {p['covers']}" for p in o["products"]),
              f"Total EUR {o['total_eur']:,.2f} incl. VAT and deposits; delivery {o['delivery_date']}: "
              + ", ".join(p["deliverable"] for p in o["products"]),
-             f"Reliability {rel['overall']} (evidence {rel['evidence']}, match {rel['match']}, "
-             f"fulfilment {rel['fulfilment']}, compliance {rel['compliance']})"
+             f"{rel['verdict']}{score('overall')} (product data {rel['evidence']}{score('evidence')}, "
+             f"fit {rel['match']}{score('match')}, delivery {rel['fulfilment']}{score('fulfilment')}, "
+             f"purchasing rules {rel['compliance']}{score('compliance')})"
              + (f" - to improve: {rel['how_to_improve']}" if rel["how_to_improve"] else "")]
     lines += [f"{r['need']}: {r['status'].lower().replace('_', ' ')}, grade {r['grade']} ({GRADE_WORDS[r['grade']]})"
               for r in o["requirements"]]
@@ -397,6 +404,8 @@ def _option(c: dict) -> dict:
         "total_eur": _eur((c.get("totals") or {}).get("gross_cents")),
         "delivery_date": c["delivery_date"],
         "reliability": {**{k: trust[k] for k in ("overall", "evidence", "match", "fulfilment", "compliance")},
+                        "verdict": VERDICT[trust["overall"]],
+                        "scores": trust.get("points"),
                         "how_to_improve": trust.get("how_to_improve")},
         "requirements": [{"need": row["requirement"].get("label") or row["requirement"]["code"],
                           "status": row["status"], "grade": row["trust_grade"], "evidence": row["source"],

@@ -15,6 +15,7 @@ from ..internal import (
     AvailabilityInfo, Audience, Conversion, DisclosablePack, EffectiveRules, FilterResult, PriceInfo,
     ProductRecord,
 )
+from ..catalog.cards import trust_points
 from ..schemas import (
     AllergenCard, AllergenRow, CandidateLine, Cards, ChainEvent, EvidenceRef, GateDecision, Level,
     Profile, Protocol, Quantity, RuleHit, StructuredRequest, Tip, TrustScore, Violation,
@@ -127,8 +128,10 @@ class StubCards:
         fulfilment: Level = "MEDIUM" if None in rel else "HIGH" if min(rel) >= 0.98 else "MEDIUM" if min(rel) >= 0.9 else "LOW"
         compliance: Level = {"AUTO": "HIGH", "BUYER_APPROVAL": "MEDIUM"}.get(gate_preview.outcome, "LOW")
         dims = [evidence, "HIGH", fulfilment, compliance]
+        levels = {"evidence": evidence, "match": "HIGH", "fulfilment": fulfilment, "compliance": compliance}
+        evidence_checks = [("HIGH" if r.trust_grade == "A" else "LOW") for r in card.rows]
         return TrustScore(evidence=evidence, match="HIGH", fulfilment=fulfilment, compliance=compliance,
-                          overall=min(dims, key=_LEVELS.index))
+                          overall=min(dims, key=_LEVELS.index), points=trust_points({"evidence": evidence_checks}, levels))
 
     def build(self, lines, req, rules, gate_preview) -> Cards:
         return Cards(allergen=self.allergen_card(lines, rules), trust=self.trust_score(lines, req, rules, gate_preview),

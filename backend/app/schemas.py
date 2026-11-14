@@ -356,6 +356,16 @@ class Totals(BaseModel):
     gross_cents: int
 
 
+class TrustPoints(BaseModel):
+    """0-100 per dimension: the average of that dimension's checks, kept inside its level's band
+    (HIGH 80-100, MEDIUM 50-79, LOW 0-49), so a score never contradicts its level. overall = the lowest."""
+    evidence: int
+    match: int
+    fulfilment: int
+    compliance: int
+    overall: int
+
+
 class TrustScore(BaseModel):
     evidence: Level
     match: Level
@@ -363,6 +373,7 @@ class TrustScore(BaseModel):
     compliance: Level
     overall: Level                    # 四项中最低的一项
     how_to_improve: Optional[str] = None
+    points: Optional[TrustPoints] = None
 
 
 class AllergenRow(BaseModel):

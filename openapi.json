@@ -6,6 +6,163 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/v1/protocols": {
+      "get": {
+        "tags": [
+          "BE1 · protocols"
+        ],
+        "summary": "List Protocols",
+        "description": "Valio sees every buyer's protocols, a buyer its own. status=PENDING_VALIO_CONFIRMATION is Valio's to-do list.",
+        "operationId": "list_protocols_v1_protocols_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "DRAFT",
+                    "PENDING_BUYER_SIGNATURE",
+                    "PENDING_VALIO_CONFIRMATION",
+                    "ACTIVE",
+                    "REVOKED",
+                    "EXPIRED",
+                    "SUPERSEDED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Protocol"
+                  },
+                  "title": "Response List Protocols V1 Protocols Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/agents/{agent_id}/protocol": {
       "get": {
         "tags": [
@@ -7987,6 +8144,40 @@
         ],
         "title": "Totals"
       },
+      "TrustPoints": {
+        "properties": {
+          "evidence": {
+            "type": "integer",
+            "title": "Evidence"
+          },
+          "match": {
+            "type": "integer",
+            "title": "Match"
+          },
+          "fulfilment": {
+            "type": "integer",
+            "title": "Fulfilment"
+          },
+          "compliance": {
+            "type": "integer",
+            "title": "Compliance"
+          },
+          "overall": {
+            "type": "integer",
+            "title": "Overall"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evidence",
+          "match",
+          "fulfilment",
+          "compliance",
+          "overall"
+        ],
+        "title": "TrustPoints",
+        "description": "0-100 per dimension: the average of that dimension's checks, kept inside its level's band\n(HIGH 80-100, MEDIUM 50-79, LOW 0-49), so a score never contradicts its level. overall = the lowest."
+      },
       "TrustScore": {
         "properties": {
           "evidence": {
@@ -8044,6 +8235,16 @@
               }
             ],
             "title": "How To Improve"
+          },
+          "points": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TrustPoints"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

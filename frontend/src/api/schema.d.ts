@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/v1/protocols": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Protocols
+         * @description Valio sees every buyer's protocols, a buyer its own. status=PENDING_VALIO_CONFIRMATION is Valio's to-do list.
+         */
+        get: operations["list_protocols_v1_protocols_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/agents/{agent_id}/protocol": {
         parameters: {
             query?: never;
@@ -1977,6 +1997,23 @@ export interface components {
             /** Gross Cents */
             gross_cents: number;
         };
+        /**
+         * TrustPoints
+         * @description 0-100 per dimension: the average of that dimension's checks, kept inside its level's band
+         *     (HIGH 80-100, MEDIUM 50-79, LOW 0-49), so a score never contradicts its level. overall = the lowest.
+         */
+        TrustPoints: {
+            /** Evidence */
+            evidence: number;
+            /** Match */
+            match: number;
+            /** Fulfilment */
+            fulfilment: number;
+            /** Compliance */
+            compliance: number;
+            /** Overall */
+            overall: number;
+        };
         /** TrustScore */
         TrustScore: {
             /**
@@ -2006,6 +2043,7 @@ export interface components {
             overall: "HIGH" | "MEDIUM" | "LOW";
             /** How To Improve */
             how_to_improve?: string | null;
+            points?: components["schemas"]["TrustPoints"] | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -2069,6 +2107,95 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_protocols_v1_protocols_get: {
+        parameters: {
+            query?: {
+                status?: ("DRAFT" | "PENDING_BUYER_SIGNATURE" | "PENDING_VALIO_CONFIRMATION" | "ACTIVE" | "REVOKED" | "EXPIRED" | "SUPERSEDED") | null;
+            };
+            header?: {
+                "X-Agent-Key"?: string | null;
+                /** @description usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio */
+                "X-Demo-User"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Protocol"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     active_protocol_v1_agents__agent_id__protocol_get: {
         parameters: {
             query?: never;
