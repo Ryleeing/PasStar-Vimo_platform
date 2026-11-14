@@ -1,10 +1,10 @@
 // "How these options were found": the agent's four steps.
 // While a request runs, the steps appear one by one (with the evidence each used); once the options are
-// ready the panel folds into a one-line summary above them. Any step can be adjusted ("Adjust") to redo
+// ready the panel folds into a one-line summary above them. Any step can be retried ("Retry") to redo
 // it and everything after it, which replays the run from that step.
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronDown, ChevronRight, Loader2, SlidersHorizontal, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Loader2, RotateCcw, X } from 'lucide-react';
 import { getChain, rejectNode } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { ChainEvent, ChainNode, ChainTimeline, RejectReason, RequestResult } from '../api/types';
@@ -249,7 +249,7 @@ export function ChainView({ request }: { request: RequestResult | null }) {
               <Button variant="primary" onClick={() => { patch({ run: null }); navigate('/request'); }}>Back to request</Button>
             </div>
           ) : !run && (
-            <p className="run-foot small muted">Want something different? Adjust any step and only that step onward is redone.</p>
+            <p className="run-foot small muted">Want something different? Retry any step and only that step onward is redone.</p>
           )}
         </div>
       </div>
@@ -275,11 +275,11 @@ function NotRight({ n, open, busy, onToggle, onClose, followUps, onReject }: {
       {!isGate && n.retries_left <= 1 && <span className="xs muted">{n.retries_left} retr{n.retries_left === 1 ? 'y' : 'ies'} left</span>}
       <Button size="sm" variant="ghost" className="adjust" onClick={() => { setSub(null); onToggle(); }} loading={busy}
         disabled={!n.can_reject || outOfRetries} aria-haspopup="menu" aria-expanded={open}
-        title={outOfRetries ? 'Adjusted 3 times already. Ask for human approval instead.' : undefined}>
-        <SlidersHorizontal size={14} aria-hidden /> Adjust
+        title={outOfRetries ? 'Retried 3 times already. Ask for human approval instead.' : undefined}>
+        <RotateCcw size={14} aria-hidden /> Retry
       </Button>
       {open && (
-        <div className="popover" role="menu" aria-label={`Adjust step ${n.node}`}>
+        <div className="popover" role="menu" aria-label={`Retry step ${n.node}`}>
           {!sub ? (
             <>
               <div className="menu-note">{isGate ? 'Rules can’t be overridden. You can:' : 'What should change?'}</div>

@@ -76,5 +76,5 @@ def record_blocked(audit: AuditApi, request_id: str, attempt: int,
                      {**ids, "reason_code": rule, "attempt": attempt, "product_ids": product_ids,
                       "count": len(product_ids)},
                      request_id=request_id, visibility="BUYER",
-                     summary=f"{len(product_ids)} product(s) flagged red: {rule}", reason_code=rule, **ids)
+                     summary=f"{len(product_ids)} product(s) left out: {rule}", reason_code=rule, **ids)
     return len(by_rule)

@@ -3,8 +3,9 @@ import {
   AlertTriangle, BadgeCheck, Box, Check, ChevronDown, CircleAlert, Coins, Info, Leaf, Ruler, ShieldAlert, ShieldCheck, Thermometer, Truck,
 } from 'lucide-react';
 import type { Candidate } from '../api/types';
-import { ALLERGEN_STATUS, AVAILABILITY, BADGE, dayLabel, eur, levelOf, num, outcomeOf } from '../lib/format';
+import { ALLERGEN_STATUS, AVAILABILITY, BADGE, dayLabel, eur, num, outcomeOf } from '../lib/format';
 import { Button } from './ui';
+import { ScoreBar, TrustMark } from './TrustMark';
 
 // Information architecture
 //  · Collapsed row = the signals people compare in a few seconds: can it be ordered without approval (and why),
@@ -82,7 +83,6 @@ export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, 
   const t = c.cards.trust;
   const out = outcomeOf(c.outcome_preview, mode);
   const av = AVAILABILITY[line.available_on_date];
-  const trust = levelOf(t.overall);
   const featured = c.id === best.id;
   const byId = (id: string) => all.find((x) => x.id === id);
   // Backend text may mention candidates by id ("cand_3"); people read product names.
@@ -169,7 +169,7 @@ export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, 
             <Truck size={15} aria-hidden />Arrives {dayLabel(c.delivery_date)}
             {line.available_on_date !== 'YES' ? ` · ${av.label.toLowerCase()}` : delayRisk ? ' · delays possible' : ''}
           </span>
-          <span><span className={`dot tone-dot-${trust.tone}`} aria-hidden />Trust {trust.label.toLowerCase()}</span>
+          <TrustMark level={t.overall} score={t.points?.overall} size={16} />
           <button type="button" className="opt-more" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen((o) => !o)}>
             {open ? 'Hide evidence' : 'Show evidence'}<ChevronDown size={15} className="chev" aria-hidden />
           </button>
@@ -184,7 +184,7 @@ export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, 
       </div>
 
       <div className="opt-act">
-        <Button variant={featured && !selected ? 'primary' : 'default'} loading={loading} onClick={onSelect} aria-pressed={selected}>
+        <Button variant={selected ? 'default' : 'primary'} loading={loading} onClick={onSelect} aria-pressed={selected}>
           {selected ? <><Check size={16} /> Selected</> : 'Choose'}
         </Button>
       </div>
@@ -217,23 +217,22 @@ export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, 
             </Section>
           )}
 
-          <Section title={`Trust: ${trust.label.toLowerCase()}`}>
+          <Section title="Reliability">
+            <div className="trust-total">
+              <TrustMark level={t.overall} score={t.points?.overall} size={20} />
+              <span className="small muted">Overall = the weakest of the four checks below</span>
+            </div>
             <div className="trust-rows">
-              {dims.map((d) => {
-                const lv = levelOf(t[d.key]);
-                return (
-                  <div key={d.key} className="ev-trust" title={d.asks}>
-                    <div className="trust-row">
-                      <span>{d.label}</span>
-                      <span className="segs" aria-hidden>
-                        {[1, 2, 3].map((i) => <i key={i} className={i <= (STEPS[t[d.key]] ?? 0) ? `on tone-dot-${lv.tone}` : ''} />)}
-                      </span>
-                      <span className={`lvl lvl-${lv.tone}`}>{lv.label}</span>
-                    </div>
-                    <p className="ev-why">{reasonFor(d.key)}</p>
+              {dims.map((d) => (
+                <div key={d.key} className="ev-trust" title={d.asks}>
+                  <div className="trust-row scored">
+                    <span>{d.label}</span>
+                    <ScoreBar level={t[d.key]} score={t.points?.[d.key]} />
+                    <TrustMark level={t[d.key]} score={t.points?.[d.key]} size={16} />
                   </div>
-                );
-              })}
+                  <p className="ev-why">{reasonFor(d.key)}</p>
+                </div>
+              ))}
               {t.how_to_improve && <p className="trust-note"><Info size={14} aria-hidden />{nameFor(t.how_to_improve)}</p>}
             </div>
           </Section>

@@ -5,6 +5,9 @@
    ═════════════════════════════════════════════════════════════════════ */
 
 :root {
+  /* traffic light for trust: green tick, yellow question mark, red cross (same hues in both themes) */
+  --tl-go: #1fa45a; --tl-caution: #f5c518; --tl-stop: #d92d20;
+  --tl-go-ink: #ffffff; --tl-caution-ink: #2b2100; --tl-stop-ink: #ffffff;
   /* type */
   --font: 'Hanken Grotesk Variable', 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
@@ -94,7 +97,7 @@
   --accent-soft: rgba(217, 90, 30, 0.10);
   --accent-shadow: 0 10px 22px -10px rgba(201, 78, 22, 0.55);
   --ok: #0c8a5e;   --ok-soft: rgba(12, 138, 94, 0.10);
-  --warn: #9a6200; --warn-soft: rgba(214, 150, 20, 0.14);
+  --warn: #a87c00; --warn-soft: rgba(245, 197, 24, 0.18);
   --bad: #c62a1f;  --bad-soft: rgba(198, 42, 31, 0.08);
   --info: #1f5fc4; --info-soft: rgba(31, 95, 196, 0.09);
   --neutral: #6b645c; --neutral-soft: rgba(107, 100, 92, 0.10);
@@ -629,7 +632,7 @@ details.more[open] > :not(summary) { animation: arrive var(--t) var(--ease); }
 .run-toggle .chev { transition: transform var(--t) var(--ease); }
 .run-head[aria-expanded='true'] .run-toggle .chev { transform: rotate(180deg); }
 
-/* Fold: the body animates between 0fr and 1fr; once fully open it may overflow (for the "Not right?" menu). */
+/* Fold: the body animates between 0fr and 1fr; once fully open it may overflow (for the "Retry" menu). */
 .run-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--t-slow) var(--ease); }
 .run-body.open { grid-template-rows: 1fr; }
 .run-inner { min-height: 0; overflow: hidden; }
@@ -706,7 +709,6 @@ details.more[open] > :not(summary) { animation: arrive var(--t) var(--ease); }
   transition: border-color var(--t) var(--ease), box-shadow var(--t) var(--ease);
 }
 .opt:hover { border-color: var(--border-strong); }
-.opt.featured { padding-top: var(--s6); padding-bottom: var(--s6); }
 .opt.featured::before {
   content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
   background: linear-gradient(100deg, color-mix(in srgb, var(--accent) 70%, transparent), transparent 40%);
@@ -724,7 +726,6 @@ details.more[open] > :not(summary) { animation: arrive var(--t) var(--ease); }
 .opt-main { grid-area: main; min-width: 0; display: flex; flex-direction: column; }
 .opt-title { display: flex; align-items: center; gap: var(--s2) var(--s3); flex-wrap: wrap; }
 .opt-name { margin: 0; font-size: var(--fs-h3); font-weight: 650; line-height: 1.35; letter-spacing: -0.008em; text-wrap: balance; }
-.opt.featured .opt-name { font-size: 1.25rem; }
 .opt-badge { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: var(--fs-meta); font-weight: 650; white-space: nowrap; }
 .opt-pack { margin-top: 2px; font-size: var(--fs-label); color: var(--muted); }
 /* Signals: the two things that decide an order. Tinted so they read before anything else. */
@@ -1323,3 +1324,34 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
 .mandate-strip .mandate-step svg { color: var(--ok); }
 .mandate-strip .mandate-terms { color: var(--text-2); font-variant-numeric: tabular-nums; }
 .mandate-strip a { margin-left: auto; font-weight: 600; color: var(--accent-ink); }
+
+/* ── Trust in traffic-light language (TrustMark.tsx) ── */
+.tl { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tl b { font-weight: 700; color: var(--text); }
+.tl-label { color: var(--text-2); }
+.tl-score { min-width: 2ch; padding: 0 7px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border);
+  font-size: var(--fs-meta); font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.tl-dot { display: inline-grid; place-items: center; flex: none; border-radius: 50%; line-height: 1; }
+.tl-dot b { font-weight: 800; color: inherit; }
+.tl-go { background: var(--tl-go); color: var(--tl-go-ink); }
+.tl-caution { background: var(--tl-caution); color: var(--tl-caution-ink); }
+.tl-stop { background: var(--tl-stop); color: var(--tl-stop-ink); }
+.tl-bar { display: block; height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; }
+.tl-fill { display: block; height: 100%; border-radius: 4px; transition: width var(--t-slow) var(--ease); }
+.opt-panel .trust-row.scored { grid-template-columns: 124px minmax(60px, 1fr) auto; align-items: center; gap: var(--s3); }
+.trust-total { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin-bottom: var(--s3); }
+.opts-tail { list-style: none; margin: var(--s3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--s3); }
+
+/* ── The agent's steps run left to right on wide screens; on phones they stack top to bottom ── */
+@media (min-width: 820px) {
+  .run-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s5); padding: var(--s5) var(--s6) var(--s3); }
+  .run-step { grid-template-columns: 1fr; grid-template-rows: auto 1fr; gap: var(--s3); padding: 0; align-content: start; }
+  .run-step:not(:last-child)::before { left: 40px; right: calc(var(--s5) * -1 + 8px); top: 13.5px; bottom: auto; width: auto; height: 1px; }
+  .run-step:not(:last-child)::after {
+    left: 40px; right: calc(var(--s5) * -1 + 8px); top: 13px; bottom: auto; width: auto; height: 2px;
+    transform: scaleX(0); transform-origin: left;
+  }
+  .run-step.done:not(:last-child)::after { transform: scaleX(1); }
+  .run-content { padding-top: 0; }
+  .run-summary { max-width: none; }
+}

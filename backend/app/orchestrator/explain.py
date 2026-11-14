@@ -38,7 +38,7 @@ class TemplateExplain:
             return f"You need: {what}."
         if node == 2:
             return (f"Kept {d['kept']} products that meet every hard requirement; "
-                    f"{d['blocked']} flagged red, {d['dropped']} not relevant.")
+                    f"{d['blocked']} left out because they break one of your rules, {d['dropped']} not relevant.")
         if node == 3:
             if not d["count"]:
                 if not d.get("converted", 1):

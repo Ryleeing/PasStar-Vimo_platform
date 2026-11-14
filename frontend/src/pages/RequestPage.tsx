@@ -88,7 +88,7 @@ export function RequestPage() {
     setFormState((f) => ({ ...f, substitution: d.substitution ?? f.substitution, date: f.date || (d.lead_days != null ? isoIn(d.lead_days) : '') }));
   }, [profile, flow.panel]);
 
-  // "Not right" on step ①: start from what the agent understood.
+  // "Retry" on step ①: start from what the agent understood.
   useEffect(() => {
     if (flow.correcting && flow.request) setFormState(formFrom(flow.request.structured));
   }, [flow.correcting, flow.request]);

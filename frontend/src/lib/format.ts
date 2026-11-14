@@ -29,7 +29,7 @@ export const outcomeOf = (o: Outcome, mode: 'SEPARATE' | 'SELF' = 'SEPARATE'): {
     AUTO: { label: 'Orders automatically', tone: 'ok' as Tone },
     BUYER_APPROVAL: { label: mode === 'SELF' ? 'Needs your approval' : 'Needs manager approval', tone: 'warn' as Tone },
     VALIO_REVIEW: { label: 'Needs Valio review', tone: 'info' as Tone },
-    REJECT: { label: 'Not allowed', tone: 'bad' as Tone },
+    REJECT: { label: 'Good to check', tone: 'bad' as Tone },
   })[o];
 
 export const AVAILABILITY: Record<string, { label: string; tone: Tone }> = {

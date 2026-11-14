@@ -80,6 +80,12 @@ export function OptionsPage() {
     }
   };
 
+  const row = (c: Candidate, position: number) => (
+    <OptionRow key={c.id} c={c} position={position} best={r!.candidates[0]} all={all} mode={mode}
+      onChooseAlt={(id) => { const alt = all.find((x) => x.id === id); if (alt?.selectable) choose(alt); }}
+      selected={flow.selection?.candidate.id === c.id} loading={selecting === c.id} onSelect={() => choose(c)} />
+  );
+
   return (
     <>
       <PageHead title={working && !run?.error ? 'Finding options' : 'Choose an option'} desc={summary}
@@ -92,24 +98,27 @@ export function OptionsPage() {
       {r && !working && (<>
       {r.candidates.length === 0 ? (
         <Banner tone="warn" title="Nothing meets every requirement">
-          {r.no_candidate_reason ?? 'No product matched.'} Open the steps above and adjust “Filter products”, or edit the request.
+          {r.no_candidate_reason ?? 'No product matched.'} Open the steps above and retry “Filter products”, or edit the request.
         </Banner>
       ) : (
         <>
+          {/* Every option is the same row with the same Choose button; the toggle stays right after the top three,
+              so it does not jump to the bottom of a long list when opened. */}
           <ol className="opts reveal" id="options-grid" aria-label="Options, best match first">
-            {(showMore ? r.candidates : top).map((c, i) => (
-              <OptionRow key={c.id} c={c} position={i + 1} best={r.candidates[0]} all={all} mode={mode}
-                onChooseAlt={(id) => { const alt = all.find((x) => x.id === id); if (alt?.selectable) choose(alt); }}
-                selected={flow.selection?.candidate.id === c.id} loading={selecting === c.id} onSelect={() => choose(c)} />
-            ))}
+            {top.map((c, i) => row(c, i + 1))}
           </ol>
 
           {more.length > 0 && (
-            <button type="button" className="opts-more" onClick={() => setShowMore((v) => !v)} aria-expanded={showMore} aria-controls="options-grid">
+            <button type="button" className="opts-more" onClick={() => setShowMore((v) => !v)} aria-expanded={showMore} aria-controls="options-more">
               {showMore ? <ChevronUp size={17} aria-hidden /> : <ChevronDown size={17} aria-hidden />}
-              {showMore ? 'Show fewer options' : `Show ${more.length} more option${more.length > 1 ? 's' : ''}`}
+              {showMore ? `Hide the other ${more.length} option${more.length > 1 ? 's' : ''}` : `Show ${more.length} more option${more.length > 1 ? 's' : ''}`}
               {!showMore && <span className="opts-more-hint">{priceRange(more)}</span>}
             </button>
+          )}
+          {showMore && (
+            <ol className="opts-tail" id="options-more" start={top.length + 1} aria-label="More options">
+              {more.map((c, i) => row(c, top.length + i + 1))}
+            </ol>
           )}
         </>
       )}

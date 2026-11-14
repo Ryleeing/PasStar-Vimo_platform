@@ -33,6 +33,25 @@ const dayOf = (iso: string) => {
   const same = d.toDateString() === today.toDateString();
   return `${same ? 'Today · ' : ''}${dayLabel(d.toISOString().slice(0, 10))}`;
 };
+/** Rule and reason codes from the backend, in words a kitchen understands. */
+const RULE_WORDS: Record<string, string> = {
+  PROFILE_EXCLUDED_BRAND: 'a brand your buying profile excludes',
+  PROFILE_EXCLUDED_VENDOR: 'a supplier your buying profile excludes',
+  PROFILE_EXCLUDED_PRODUCT: 'a product your buying profile excludes',
+  PROTOCOL_CATEGORY_FORBIDDEN: 'a product type your purchasing rules don’t allow',
+  ALLERGEN_CONTAINS: 'it contains an allergen you must avoid',
+  ALLERGEN_MAY_CONTAIN: 'it may contain an allergen you must avoid',
+  ALLERGEN_UNDECLARED: 'the allergen information is missing',
+  NEEDS_QUANTITY: 'how much you need', NEEDS_CATEGORY: 'which product', NEEDS_DELIVERY_DATE: 'the delivery date',
+  NEEDS_REQUIREMENTS: 'an unclear requirement',
+  AUTO_LIMIT: 'it is above the amount the agent may order on its own', MAX_ORDER: 'it is above your maximum order',
+  OUT_OF_SCOPE: 'it was outside the agent’s permissions', PROTOCOL_INVALID: 'the agent had no valid purchasing rules',
+  RATE_LIMITED: 'the agent asked too often', PROBE_LIMIT: 'the agent kept checking stock for different amounts',
+  AUTHORIZATION_INVALID: 'the approval it brought was not valid',
+};
+const words = (code?: unknown) => (typeof code === 'string' ? RULE_WORDS[code] ?? code.toLowerCase().replace(/_/g, ' ') : null);
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
 const after = (s: string, sep = ': ') => (s.includes(sep) ? s.slice(s.indexOf(sep) + sep.length) : null);
 const orderIdOf = (e: AuditEntry) => (typeof e.payload?.order_id === 'string' ? e.payload.order_id : e.summary.match(/\bord_\w+/)?.[0]) ?? null;
 
@@ -84,7 +103,7 @@ export function AuditPage() {
       case 'NODE_REJECTED': {
         const step = e.summary.match(/Step (\d)/)?.[1];
         const code = e.summary.match(/\(([A-Z_]+)\)/)?.[1];
-        return { kind: 'person', title: step ? `Adjusted step ${step} and found options again` : 'Adjusted the search', detail: code ? REASON[code] ?? undefined : undefined };
+        return { kind: 'person', title: step ? `Retried step ${step} and found options again` : 'Retried the search', detail: code ? REASON[code] ?? undefined : undefined };
       }
       case 'QUOTE_SIGNED':
         return { kind: 'system', title: 'Price locked for 15 minutes', detail: 'Valio signed the price for the option you chose' };
@@ -107,6 +126,56 @@ export function AuditPage() {
         return { kind: 'person', title: 'Purchasing rules updated', detail: e.summary };
       case 'PROFILE_UPDATED':
         return { kind: 'person', title: 'Buying profile updated', detail: after(e.summary, '“') ? `“${after(e.summary, '“')}` : undefined };
+      case 'REQUEST_NEEDS_INPUT': {
+        const fields = Array.isArray(e.payload?.fields) ? (e.payload.fields as string[]) : [];
+        const asked = fields.map((f) => words(`NEEDS_${f.toUpperCase()}`)).filter(Boolean).join(' and ');
+        return { kind: 'warn', title: 'Asked a question before searching', detail: asked ? `Needed to know ${asked}` : undefined };
+      }
+      case 'ATTRIBUTE_NOT_IN_CATALOG':
+        return { kind: 'warn', title: 'Asked about a requirement the catalogue can’t check',
+                 detail: typeof e.payload?.attribute === 'string' ? `“${e.payload.attribute}” is not something Valio’s product data records` : undefined };
+      case 'CANDIDATES_BLOCKED': {
+        const n = Array.isArray(e.payload?.product_ids) ? e.payload.product_ids.length : 0;
+        return { kind: 'system', title: n ? `Left out ${plural(n, 'product')}` : 'Left out some products', detail: `Because of ${words(e.payload?.reason_code) ?? 'your rules'}` };
+      }
+      case 'GATE_DECIDED':
+        return { kind: 'system', title: 'Checked the chosen option against your purchasing rules', detail: after(e.summary) ?? undefined };
+      case 'QUOTE_CREATED':
+        return { kind: 'system', title: 'Price locked for 15 minutes', detail: 'Valio signed the price for the option you chose' };
+      case 'QUOTE_CHANGED':
+        return { kind: 'warn', title: 'Price or stock changed before ordering', detail: 'Valio issued a new price' };
+      case 'ORDER_HELD': {
+        const reason = words(e.payload?.reason_code ?? (Array.isArray(e.payload?.all_reason_codes) ? e.payload.all_reason_codes[0] : null));
+        return { kind: 'warn', title: 'Order waiting for approval', detail: reason ? `Because ${reason}` : undefined, link: canSee('approvals') ? { to: '/approvals', label: 'Open approvals' } : undefined };
+      }
+      case 'ORDER_REJECTED':
+        return { kind: 'bad', title: 'Order not placed', detail: 'It breaks your purchasing rules' };
+      case 'APPROVAL_CREATED':
+        return { kind: 'warn', title: 'Approval requested', link: canSee('approvals') ? { to: '/approvals', label: 'Open approvals' } : undefined };
+      case 'APPROVAL_ESCALATED':
+        return { kind: 'warn', title: 'Passed on to Valio for review' };
+      case 'PROPOSAL_MODIFIED':
+        return { kind: 'person', title: 'Approved with changes', detail: after(e.summary) ?? undefined };
+      case 'AUTHORIZATION_ACCEPTED':
+        return { kind: 'done', title: 'Approval from your own system accepted' };
+      case 'AUTHORIZATION_REJECTED':
+        return { kind: 'bad', title: 'Approval from your own system refused', detail: 'It was not valid for this order' };
+      case 'AGENT_BLOCKED':
+        return { kind: 'bad', title: 'Stopped an AI agent', detail: `Because ${words(e.payload?.reason_code) ?? 'it broke the rules'}` };
+      case 'PROTOCOL_DRAFTED':
+        return { kind: 'person', title: 'Purchasing rules drafted', detail: 'Not in force until signed and confirmed by Valio' };
+      case 'PROTOCOL_UPDATED':
+        return { kind: 'person', title: 'Draft purchasing rules edited' };
+      case 'PROTOCOL_TIGHTENED':
+        return { kind: 'person', title: 'Purchasing rules made stricter', detail: 'In force straight away' };
+      case 'PROTOCOL_EXPANSION_REQUESTED':
+        return { kind: 'warn', title: 'Asked to loosen the purchasing rules', detail: 'Needs a signature and Valio’s confirmation' };
+      case 'PROTOCOL_CHANGE_REFUSED':
+        return { kind: 'bad', title: 'A change to the purchasing rules was refused', detail: 'It asked for more than the buyer may grant' };
+      case 'PROTOCOL_REVOKED':
+        return { kind: 'bad', title: 'Purchasing rules withdrawn', detail: 'The agent can no longer order' };
+      case 'SEED_LOADED':
+        return { kind: 'system', title: 'Demo data loaded' };
       case 'REQUEST_BLOCKED':
         return { kind: 'bad', title: 'Request blocked', detail: e.summary.replace(/^Blocked:\s*/, '') };
       default:
@@ -139,13 +208,8 @@ export function AuditPage() {
   };
   const sealed = (seq: number) => (verify ? (verify.ok || (verify.first_bad_seq != null && seq < verify.first_bad_seq) ? 'ok' : 'bad') : null);
 
-  const groupTitle = (id: string, entries: AuditEntry[]) => {
-    if (id === '__account') return 'Account and purchasing rules';
-    const placed = entries.some((e) => ['ORDER_PLACED', 'ORDER_APPROVED', 'ORDER_SELF_APPROVED'].includes(e.event));
-    const order = entries.map(orderIdOf).find(Boolean);
-    if (id === currentId) return placed ? 'Current request · ordered' : 'Current request';
-    return placed ? `Earlier request · order ${order}` : 'Earlier request';
-  };
+  const groupTitle = (id: string) => (id === '__account' ? 'Account and purchasing rules' : id === currentId ? 'Current request' : 'Earlier request');
+  const ordered = (entries: AuditEntry[]) => entries.some((e) => ['ORDER_PLACED', 'ORDER_APPROVED', 'ORDER_SELF_APPROVED'].includes(e.event));
 
   return (
     <>
@@ -174,8 +238,11 @@ export function AuditPage() {
           {groups.map((g) => (
             <section key={g.id} className={`card act-group ${g.id === currentId ? 'current' : ''}`}>
               <header className="act-head">
-                <h2>{groupTitle(g.id, g.entries)}</h2>
-                <span className="act-day">{dayOf(g.entries[0].at)}</span>
+                <h2>{groupTitle(g.id)}</h2>
+                <span className="row" style={{ gap: 8 }}>
+                  {g.id !== '__account' && ordered(g.entries) && <Pill tone="ok">Ordered</Pill>}
+                  <span className="act-day">{dayOf(g.entries[0].at)}</span>
+                </span>
               </header>
               <ol className="act-list">
                 {g.entries.map((e) => (
