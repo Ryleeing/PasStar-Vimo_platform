@@ -143,7 +143,10 @@ def place(quote_id: str, protocol_id: str, idempotency_key: str, audience: Audie
 
 def submit(quote_id: str, protocol_id: str, idempotency_key: str, audience: Audience,
            buyer_authorization: Optional[str]) -> Order:
-    """place() plus the optional external authorization token that POST /v1/orders may carry."""
+    """place() plus the optional external authorization token that POST /v1/orders may carry.
+    Idempotency keys are per buyer: the column is unique across all buyers, so the key is stored with the buyer as
+    prefix, and another buyer's key neither returns that buyer's order nor blocks the caller."""
+    idempotency_key = f"{audience.buyer_id}:{idempotency_key}"
     existing = db.one("SELECT id FROM orders WHERE idempotency_key = ?", (idempotency_key,))
     if existing:
         return get(existing["id"])                       # same key submitted again returns the same order

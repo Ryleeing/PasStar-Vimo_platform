@@ -5,6 +5,7 @@ fixtures until their implementations land.
 Run: uvicorn app.main:app --reload    Docs: http://localhost:8000/docs
 Tags name the owner: BE1 channel & transactions, BE2 catalogue & data, BE3 orchestration & AI.
 """
+import functools
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Literal, Optional
@@ -65,6 +66,16 @@ def _caller(x_agent_key: Optional[str] = AgentKey, x_demo_user: Optional[str] = 
 Caller = Depends(_caller)
 
 
+def _atomic(fn):
+    """A BE1 write route runs as one transaction: when it fails half-way, nothing it wrote is kept. The refusal
+    itself is logged afterwards by the error handler (record_block), outside the rolled-back transaction."""
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        with db.transaction():
+            return fn(*args, **kwargs)
+    return wrapper
+
+
 def _out(who: Audience, model) -> dict:
     """Every response passes the outbound check (disclosure.filter from BE2) before it is returned. No exceptions."""
     return checkpoints.check_response(who, model.model_dump(mode="json"))
@@ -81,26 +92,31 @@ def get_protocol(protocol_id: str, who: Audience = Caller):
     return _out(who, protocols.get_for(protocol_id, who))
 
 @app.put("/v1/protocols/{protocol_id}", response_model=Protocol, tags=["BE1 · protocols"])
+@_atomic
 def update_protocol(protocol_id: str, body: ProtocolUpdateRequest, who: Audience = Caller):
     """Only a DRAFT protocol can be edited."""
     return _out(who, protocols.update(protocol_id, body.body, who))
 
 @app.post("/v1/protocols/{protocol_id}/sign", response_model=Protocol, tags=["BE1 · protocols"])
+@_atomic
 def sign_protocol(protocol_id: str, who: Audience = Caller):
     """The approver named in the protocol signs: DRAFT / PENDING_BUYER_SIGNATURE → PENDING_VALIO_CONFIRMATION. Agents cannot sign."""
     return _out(who, protocols.buyer_sign(protocol_id, who))
 
 @app.post("/v1/protocols/{protocol_id}/confirm", response_model=Protocol, tags=["BE1 · protocols"])
+@_atomic
 def confirm_protocol(protocol_id: str, who: Audience = Caller):
     """Valio confirms: → ACTIVE with a jws; the previous version → SUPERSEDED."""
     return _out(who, protocols.confirm(protocol_id, who))
 
 @app.post("/v1/protocols/{protocol_id}/amend", response_model=ProtocolDiff, tags=["BE1 · protocols"])
+@_atomic
 def amend_protocol(protocol_id: str, body: ProtocolAmendRequest, who: Audience = Caller):
     """Tightening takes effect at once; expansion creates a new version that must be signed again; changes the caller may not make are listed in forbidden and refused."""
     return _out(who, protocols.amend(protocol_id, body.changes, who))
 
 @app.post("/v1/protocols/{protocol_id}/revoke", response_model=Protocol, tags=["BE1 · protocols"])
+@_atomic
 def revoke_protocol(protocol_id: str, who: Audience = Caller):
     """The approver named in the protocol or Valio can revoke it at any time."""
     return _out(who, protocols.revoke(protocol_id, who))
@@ -189,6 +205,7 @@ def verify_quote(quote_id: str):
     return quotes.verify(quote_id)
 
 @app.post("/v1/orders", response_model=Order, tags=["BE1 · orders"], responses={403: {"model": ErrorBody}})
+@_atomic
 def create_order(body: CreateOrderRequest, idempotency_key: str = Header(alias="Idempotency-Key"), who: Audience = Caller):
     """Recheck the quote (signature, expiry, price and stock) → gate → PLACED / PENDING_* /
     BUYER_AUTHORIZATION_REQUIRED / REQUOTE_REQUIRED / REJECTED. The same Idempotency-Key returns the same order.
@@ -198,6 +215,7 @@ def create_order(body: CreateOrderRequest, idempotency_key: str = Header(alias="
 
 @app.post("/v1/orders/{order_id}/authorization", response_model=Order, tags=["BE1 · orders"],
           responses={403: {"model": ErrorBody}})
+@_atomic
 def authorize_order(order_id: str, body: AuthorizeOrderRequest, who: Audience = Caller):
     """External approval: the agent returns with the token signed by the buyer system and the same order continues.
     The token is verified first (signature, quote, amount, approver, expiry), then the quote is rechecked;
@@ -223,6 +241,7 @@ def get_approval(approval_id: str, who: Audience = Caller):
 
 @app.post("/v1/approvals/{approval_id}/decision", response_model=ApprovalDecisionResult, tags=["BE1 · approvals"],
           responses={403: {"model": ErrorBody}})
+@_atomic
 def decide(approval_id: str, body: ApprovalDecision, who: Audience = Caller):
     """Checks the approver, then rechecks the quote: unchanged → order placed; changed → REQUOTE_REQUIRED (with a new
     quote, which goes through the gate as usual when it is ordered).
@@ -278,6 +297,7 @@ def set_fault(name: Literal["PRICE_CHANGE", "PARTIAL_STOCK", "TIMEOUT", "RATE_LI
     return Fault(name=name, enabled=body.enabled, params=body.params)
 
 @app.post("/v1/admin/reset", tags=["BE1 · admin"])
+@_atomic
 def reset():
     """Clears the BE1 tables (buyers, users, agents, protocols, quotes, orders, approvals, audit) and writes the demo seed data."""
     seed.reset()

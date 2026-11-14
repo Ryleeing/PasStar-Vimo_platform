@@ -89,6 +89,15 @@ def test_auto_order_is_idempotent(c):
     assert order(c, q.id, "k2").json()["error"]["code"] == "QUOTE_EXPIRED"       # one quote, one order
 
 
+def test_idempotency_key_is_scoped_to_the_buyer(c):
+    hotel = order(c, quote(fx.CAND_1).id, "same").json()
+    db.run("UPDATE requests SET created_by = 'usr_owner', buyer_id = 'buy_bistro'")
+    bistro_quote = quote(fx.CAND_1, "prot_bistro_v1").id
+    bistro = order(c, bistro_quote, "same", headers=OWNER, protocol_id="prot_bistro_v1").json()
+    assert bistro["id"] != hotel["id"] and bistro["quote_id"] == bistro_quote and bistro["status"] == "PLACED"
+    assert order(c, bistro_quote, "same", headers=OWNER, protocol_id="prot_bistro_v1").json() == bistro
+
+
 def test_tampered_quote_fails_verification(c):
     q = quote(fx.CAND_1)
     db.run("UPDATE quotes SET body_json = replace(body_json, '99880', '1') WHERE id = ?", (q.id,))
@@ -170,6 +179,19 @@ def test_rejected_approval_rejects_the_order(c):
     o = order(c, quote(fx.CAND_3).id, "k1").json()
     r = decide(c, o["approval_id"], MANAGER, "REJECT", note="Too expensive").json()
     assert r["approval"]["status"] == "REJECTED" and r["order"]["status"] == "REJECTED"
+
+
+def test_failed_decision_leaves_nothing_behind(c):
+    o = order(c, quote(fx.CAND_3).id, "k1").json()
+    c.post("/v1/protocols/prot_hotel_v1/revoke", headers=MANAGER)
+    audit_before = len(audit.entries())
+    assert decide(c, o["approval_id"], MANAGER).json()["error"]["code"] == "PROTOCOL_INVALID"
+    assert c.get(f"/v1/approvals/{o['approval_id']}", headers=MANAGER).json()["status"] == "PENDING"
+    assert c.get(f"/v1/orders/{o['id']}", headers=CHEF).json()["status"] == "PENDING_BUYER_APPROVAL"
+    assert len(audit.entries()) == audit_before
+    r = decide(c, o["approval_id"], MANAGER, "REJECT", note="Protocol revoked").json()      # still decidable
+    assert r["approval"]["status"] == "REJECTED" and r["order"]["status"] == "REJECTED"
+    assert c.get("/v1/audit/verify").json()["ok"] is True
 
 
 def test_self_mode_owner_approves_own_order(c):

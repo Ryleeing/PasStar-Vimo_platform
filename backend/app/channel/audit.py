@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from contextlib import closing
 from typing import Literal, Optional
 
 from .. import db
@@ -31,17 +30,14 @@ def append(event: str, actor: str, payload: dict, request_id: Optional[str] = No
     payload = {**payload, **{k: v for k, v in given.items() if v is not None}}
     at = db.now().isoformat()
     payload_json = json.dumps({"summary": summary, "payload": payload}, sort_keys=True, separators=(",", ":"), default=str)
-    with closing(db.connect()) as c:
-        c.execute("BEGIN IMMEDIATE")          # reading the last hash and inserting must share one transaction
-        last = c.execute("SELECT hash FROM audit_log ORDER BY seq DESC LIMIT 1").fetchone()
+    with db.transaction():                    # reading the last hash and inserting must share one transaction
+        last = db.one("SELECT hash FROM audit_log ORDER BY seq DESC LIMIT 1")
         prev = last["hash"] if last else GENESIS
-        seq = c.execute(
+        return db.run(
             "INSERT INTO audit_log (at, request_id, actor, event, visibility, payload_json, prev_hash, hash,"
             " buyer_id, agent_id, reason_code) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (at, request_id, actor, event, visibility, payload_json, prev, _hash(prev, at, actor, event, payload_json),
-             *(payload.get(k) for k in COLUMNS))).lastrowid
-        c.execute("COMMIT")
-    return seq
+             *(payload.get(k) for k in COLUMNS)))
 
 
 def entries(request_id: Optional[str] = None) -> list[dict]:
