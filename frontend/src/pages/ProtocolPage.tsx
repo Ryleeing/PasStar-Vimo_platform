@@ -42,7 +42,7 @@ export function ProtocolBodyView({ b }: { b: ProtocolBody }) {
       <Section title="Approvals">
         <div className="k">Mode</div><div>{b.approval_mode === 'SELF' ? <><b>SELF</b> · owner may approve own orders, logged as self-approved</> : <><b>SEPARATE</b> · requester cannot approve own orders</>}</div>
         <div className="k">Approver</div><div>{displayUser(b.approver)}</div>
-        <div className="k">Where</div><div>{b.approval_channel === 'EXTERNAL' ? 'Buyer’s own system (signed credential)' : 'The Pass approval page'}</div>
+        <div className="k">Where</div><div>{b.approval_channel === 'EXTERNAL' ? 'Buyer’s own system (signed credential)' : 'PasStar approval page'}</div>
         <div className="k">Valid until</div><div>{b.valid_until}</div>
       </Section>
       <Section title="What the agent may see (set by Valio)">

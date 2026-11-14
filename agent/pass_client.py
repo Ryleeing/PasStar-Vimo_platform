@@ -1,4 +1,4 @@
-"""Thin client for The Pass public API, shared by the agent scripts.
+"""Thin client for PasStar public API, shared by the agent scripts.
 
 Only the public HTTP API is used: these scripts stand in for an external buyer agent,
 so they must never import backend code. The one exception is the buyer's own approval

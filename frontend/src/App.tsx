@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
-import { MascotFace } from './components/Mascot';
 import { SessionProvider, useSession } from './state/session';
 import { FlowProvider } from './state/flow';
 import { ProtocolProvider, useActiveProtocol } from './state/protocol';
@@ -68,8 +67,8 @@ function Shell() {
     <div className={`shell ${collapsed ? 'collapsed' : ''}`}>
       <div className="mobile-bar">
         <button className="btn ghost icon-btn" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={18} /></button>
-        <span className="brand-mark" style={{ width: 32, height: 32, borderRadius: 10 }}><MascotFace size={24} /></span>
-        <b>The Pass</b>
+        <img className="brand-logo sm" src="/passtar-logo.png" alt="" width={36} height={36} />
+        <b>PasStar</b>
       </div>
       {menuOpen && <div className="scrim" onClick={() => setMenuOpen(false)} aria-hidden />}
       <Sidebar open={menuOpen} collapsed={collapsed} onToggle={toggleCollapsed} onNavigate={() => setMenuOpen(false)} />

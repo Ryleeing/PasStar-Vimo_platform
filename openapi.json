@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "The Pass · Valio Aimo open procurement channel",
+    "title": "PasStar · Valio Aimo open procurement channel",
     "description": "Open, verifiable gateway for AI purchasing agents.",
     "version": "0.1.0"
   },

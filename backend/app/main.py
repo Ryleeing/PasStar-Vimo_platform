@@ -1,4 +1,4 @@
-"""The Pass · Valio Aimo open procurement channel
+"""PasStar · Valio Aimo open procurement channel
 
 BE1 routes (protocols, quotes, orders, approvals, audit) and BE3 routes (profiles, requests, select) are real.
 BE2 routes still return fixtures; until BE2 lands, BE3 runs on its own stubs for the catalogue, price and stock.
@@ -42,7 +42,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="The Pass · Valio Aimo open procurement channel",
+    title="PasStar · Valio Aimo open procurement channel",
     version="0.1.0",
     description="Open, verifiable gateway for AI purchasing agents.",
     responses={400: {"model": ErrorBody}, 403: {"model": ErrorBody}, 404: {"model": ErrorBody},

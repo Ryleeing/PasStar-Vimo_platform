@@ -106,7 +106,7 @@ class LlmClient:
             "provider": {"require_parameters": True},   # only route to providers that honour the schema
             **self.preset.params,
         }
-        headers = {"Authorization": f"Bearer {self.api_key}", "X-Title": "The Pass"}
+        headers = {"Authorization": f"Bearer {self.api_key}", "X-Title": "PasStar"}
         try:
             r = self.http.post(URL, json=body, headers=headers)
             r.raise_for_status()

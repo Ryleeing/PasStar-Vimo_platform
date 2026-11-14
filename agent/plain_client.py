@@ -1,4 +1,4 @@
-"""A plain script that buys through The Pass without any AI.
+"""A plain script that buys through PasStar without any AI.
 
 It proves the channel is usable by ordinary software: send a structured request,
 take the top-ranked selectable candidate, order it, and follow the order to the end.

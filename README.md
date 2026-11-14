@@ -1,4 +1,4 @@
-# The Pass · Yes We Cooked
+# PasStar · Yes We Cooked
 
 Valio Aimo open procurement channel for AI purchasing agents.
 
@@ -32,7 +32,7 @@ uvicorn app.main:app --reload
 外部采购 agent 直接调接口：`POST /v1/requests`（结构化需求）→ `POST /v1/requests/{id}/select`（签名报价）→ `POST /v1/orders`。
 
 协议的 `approval_channel` 决定超额时怎么批：
-- `HOSTED`：在 The Pass 的审批页上批，订单进 `PENDING_BUYER_APPROVAL`，agent 轮询结果；
+- `HOSTED`：在 PasStar 的审批页上批，订单进 `PENDING_BUYER_APPROVAL`，agent 轮询结果；
 - `EXTERNAL`：在买方自己的系统里批。订单返回 `BUYER_AUTHORIZATION_REQUIRED` 和 `authorization_request`；买方系统用审批人的私钥签一张只对这张报价有效的凭证；agent 调 `POST /v1/orders/{id}/authorization` 带回凭证，验过就下单。
 
 本地演示（假服务器里 `prot_hotel_ext_v1` 走外部审批）：

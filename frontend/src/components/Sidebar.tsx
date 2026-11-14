@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Check, ChevronsUpDown, Moon, PanelLeftClose, PanelLeftOpen, RotateCcw, Sun } from 'lucide-react';
-import { MascotFace } from './Mascot';
 import { ACCOUNTS, PAGES_BY_ROLE, WORKSPACES, type RoleKey } from '../config/accounts';
 import { useSession } from '../state/session';
 import { progressSteps, useFlow } from '../state/flow';
@@ -26,10 +25,9 @@ export function Sidebar({ open, collapsed, onToggle, onNavigate }: { open: boole
   return (
     <aside className={`sidebar ${open ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`} aria-label="Workspace navigation">
       <div className="brand">
-        <div className="brand-mark"><MascotFace /></div>
+        <img className="brand-logo" src="/passtar-logo.png" alt="PasStar" width={56} height={56} />
         <div className="brand-text">
-          <b>The Pass</b>
-          <span>Valio Aimo channel</span>
+          <span>Valio Aimo ordering channel</span>
         </div>
         <button type="button" className="collapse-btn" onClick={onToggle} aria-expanded={!collapsed}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>

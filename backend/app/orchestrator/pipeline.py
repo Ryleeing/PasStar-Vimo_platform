@@ -199,7 +199,7 @@ class Pipeline:
                  "quantity": f"{structured.quantity.value:g} {structured.quantity.unit}",
                  "delivery_date": structured.delivery_date.isoformat(), "profile": profile_name,
                  "submitted_by_agent": agent_id, "parsed_from_text": from_text}
-        if agent_id and from_text:      # an assistant passed on the user's words (MCP): The Pass parsed them itself
+        if agent_id and from_text:      # an assistant passed on the user's words (MCP): PasStar parsed them itself
             event = self._event(f"Understood the message agent {agent_id} passed on",
                                 "Parsed the user's words with the cross-checked parser; the agent answers "
                                 "open questions by sending the request again",

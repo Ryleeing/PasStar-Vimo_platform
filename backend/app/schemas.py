@@ -1,4 +1,4 @@
-"""The Pass · 接口契约（Pydantic v2）
+"""PasStar · 接口契约（Pydantic v2）
 
 所有 HTTP 请求和响应都用这里的模型。改动前先在群里说，BE1 负责合并。
 金额一律用整数分（_cents），时间用 ISO 8601，交货日只用日期。
@@ -87,7 +87,7 @@ class ProtocolBody(BaseModel):
     # SELF：老板兼采购，可以审批自己的单，但审批仍是单独的一步并记入日志（小餐厅）
     approver: str                      # 审批人用户 ID；SELF 模式下通常就是下单人
     approval_channel: Literal["HOSTED", "EXTERNAL"] = "HOSTED"
-    # HOSTED：在 The Pass 的审批页上批（单子进 PENDING_BUYER_APPROVAL）
+    # HOSTED：在 PasStar 的审批页上批（单子进 PENDING_BUYER_APPROVAL）
     # EXTERNAL：在买方自己的系统里批，agent 带着签名的授权凭证回来下单（BUYER_AUTHORIZATION_REQUIRED）
     approver_public_key: Optional[ApproverKey] = None   # EXTERNAL 时必填
     valid_until: date

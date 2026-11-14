@@ -1,4 +1,4 @@
-# 前端（FE）· The Pass
+# 前端（FE）· PasStar
 
 React 18 + Vite + TypeScript。对应技术设计文档第 7 节的 8 个页面。
 

@@ -70,7 +70,7 @@ export function AuditPage() {
   const canSee = (k: string) => PAGES_BY_ROLE[account.key].some((p) => p.key === k);
 
   const who = (actor: string): string => {
-    if (actor === 'system') return 'The Pass';
+    if (actor === 'system') return 'PasStar';
     if (actor.startsWith('agent:')) return 'Ordering assistant (AI agent)';
     const id = actor.replace(/^user:/, '');
     if (id === account.userId) return 'You';

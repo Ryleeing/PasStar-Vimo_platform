@@ -52,7 +52,7 @@ def build_request(quote: Quote, protocol_id: str, body: ProtocolBody,
 
 
 def sign(claims: BuyerAuthorizationClaims, private_jwk: dict) -> str:
-    """买方系统一侧用的（演示脚本和测试）。The Pass 自己从不调用。"""
+    """买方系统一侧用的（演示脚本和测试）。PasStar 自己从不调用。"""
     key = OKPKey.import_key(private_jwk)
     payload = json.dumps(claims.model_dump(), separators=(",", ":")).encode()
     return jws.serialize_compact({"alg": ALG, "kid": private_jwk.get("kid"), "typ": claims.typ}, payload,
@@ -64,7 +64,7 @@ def verify(token: str, quote: Quote, protocol_id: str, body: ProtocolBody,
     """通过则返回凭证内容，否则抛 AuthorizationError。"""
     now = time.time() if now is None else now
     if body.approval_channel != "EXTERNAL":
-        raise AuthorizationError("NOT_EXTERNAL_CHANNEL", "This protocol uses hosted approval in The Pass")
+        raise AuthorizationError("NOT_EXTERNAL_CHANNEL", "This protocol uses hosted approval in PasStar")
     if body.approver_public_key is None:
         raise AuthorizationError("NO_APPROVER_KEY", "Protocol has no approver public key")
     approver_jwk = body.approver_public_key.model_dump()

@@ -5,7 +5,7 @@
   python scripts/buyer_erp.py approve request.json       # 读 AuthorizationRequest，审批人确认后打印凭证
   python scripts/buyer_erp.py approve - --yes < req.json # 从标准输入读，跳过确认（给脚本和演示台用）
 
-正式环境里这一步发生在买方的 ERP 或审批流里，The Pass 永远拿不到这把私钥。
+正式环境里这一步发生在买方的 ERP 或审批流里，PasStar 永远拿不到这把私钥。
 """
 import argparse
 import json

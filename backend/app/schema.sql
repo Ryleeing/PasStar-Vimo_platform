@@ -1,4 +1,4 @@
--- The Pass · SQLite schema
+-- PasStar · SQLite schema
 -- 静态表（BE2，由 scripts/preprocess.py 生成，运行时只读）
 
 CREATE TABLE products (
