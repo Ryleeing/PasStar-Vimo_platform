@@ -27,6 +27,30 @@ uvicorn app.main:app --reload
 
 审批人校验在 `backend/app/channel/approvals.py`。
 
+## Agent 客户与外部审批
+
+外部采购 agent 直接调接口：`POST /v1/requests`（结构化需求）→ `POST /v1/requests/{id}/select`（签名报价）→ `POST /v1/orders`。
+
+协议的 `approval_channel` 决定超额时怎么批：
+- `HOSTED`：在 The Pass 的审批页上批，订单进 `PENDING_BUYER_APPROVAL`，agent 轮询结果；
+- `EXTERNAL`：在买方自己的系统里批。订单返回 `BUYER_AUTHORIZATION_REQUIRED` 和 `authorization_request`；买方系统用审批人的私钥签一张只对这张报价有效的凭证；agent 调 `POST /v1/orders/{id}/authorization` 带回凭证，验过就下单。
+
+本地演示（假服务器里 `prot_hotel_ext_v1` 走外部审批）：
+
+```bash
+cd backend
+# 1. agent 下单，拿到 BUYER_AUTHORIZATION_REQUIRED
+curl -s -X POST localhost:8000/v1/orders -H 'Content-Type: application/json' -H 'X-Agent-Key: demo' \
+  -H 'Idempotency-Key: demo-1' -d '{"quote_id":"quo_7","protocol_id":"prot_hotel_ext_v1"}' > order.json
+# 2. “酒店系统”里经理批准，签出凭证
+TOKEN=$(python scripts/buyer_erp.py approve order.json --yes)
+# 3. agent 带凭证回来
+curl -s -X POST localhost:8000/v1/orders/ord_7/authorization -H 'Content-Type: application/json' \
+  -H 'X-Agent-Key: demo' -d "{\"buyer_authorization\":\"$TOKEN\"}"
+```
+
+演示用的酒店系统密钥第一次用到时生成在 `data/demo/`（不进仓库）。凭证校验在 `backend/app/channel/authorization.py`。
+
 ## 目录
 
 - `backend/app/schemas.py`  接口契约（所有 HTTP 请求和响应）

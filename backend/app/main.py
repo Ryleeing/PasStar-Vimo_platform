@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import fixtures as fx
 from .channel.approvals import check_approver
+from .channel.authorization import AuthorizationError, verify as verify_authorization
 from .schemas import *  # noqa: F401,F403
 
 app = FastAPI(
@@ -43,7 +44,7 @@ def draft_protocol(body: ProtocolDraftRequest, x_demo_user: Optional[str] = Demo
 
 @app.get("/v1/protocols/{protocol_id}", response_model=Protocol, tags=["BE1 · protocols"])
 def get_protocol(protocol_id: str):
-    return fx.PROTOCOL
+    return fx.PROTOCOL_EXTERNAL if protocol_id == fx.PROTOCOL_EXTERNAL.id else fx.PROTOCOL
 
 @app.put("/v1/protocols/{protocol_id}", response_model=Protocol, tags=["BE1 · protocols"])
 def update_protocol(protocol_id: str, body: ProtocolUpdateRequest):
@@ -151,12 +152,44 @@ def verify_quote(quote_id: str):
 
 _IDEMPOTENCY: dict[str, Order] = {}
 
-@app.post("/v1/orders", response_model=Order, tags=["BE1 · orders"])
+@app.post("/v1/orders", response_model=Order, tags=["BE1 · orders"], responses={403: {"model": ErrorBody}})
 def create_order(body: CreateOrderRequest, idempotency_key: str = Header(alias="Idempotency-Key"),
                  x_agent_key: Optional[str] = AgentKey):
-    """复核报价（签名、有效期、价格库存是否变化）→ 闸门 → PLACED / PENDING_* / REQUOTE_REQUIRED / REJECTED。
-    同一个 Idempotency-Key 返回同一张订单。"""
-    return _IDEMPOTENCY.setdefault(idempotency_key, fx.ORDER)
+    """复核报价（签名、有效期、价格库存是否变化）→ 闸门 → PLACED / PENDING_* / BUYER_AUTHORIZATION_REQUIRED /
+    REQUOTE_REQUIRED / REJECTED。同一个 Idempotency-Key 返回同一张订单。
+    协议是外部审批（EXTERNAL）且超额时：没带凭证 → BUYER_AUTHORIZATION_REQUIRED（附 authorization_request）；
+    带了有效凭证 → PLACED；凭证无效 → 403 AUTHORIZATION_INVALID。
+    假服务器里 prot_hotel_ext_v1 走外部审批，其余协议返回 fx.ORDER。"""
+    if idempotency_key in _IDEMPOTENCY:
+        return _IDEMPOTENCY[idempotency_key]
+    if body.protocol_id == fx.PROTOCOL_EXTERNAL.id:
+        if not body.buyer_authorization:
+            order = fx.ORDER_AUTH_REQUIRED
+        else:
+            res = _authorize(fx.ORDER_AUTH_REQUIRED, body.buyer_authorization)
+            if isinstance(res, JSONResponse):
+                return res
+            order = res
+    else:
+        order = fx.ORDER
+    return _IDEMPOTENCY.setdefault(idempotency_key, order)
+
+
+def _authorize(order: Order, token: str):
+    try:
+        c = verify_authorization(token, fx.QUOTE_EXT, fx.PROTOCOL_EXTERNAL.id, fx.PROTOCOL_EXTERNAL.body)
+    except AuthorizationError as e:
+        return _err(403, "AUTHORIZATION_INVALID", e.message, reason=e.reason, quote_id=order.quote_id)
+    return order.model_copy(update={"status": "PLACED", "authorization_request": None, "authorized_by": c.approver,
+                                    "placed_at": fx.NOW})
+
+
+@app.post("/v1/orders/{order_id}/authorization", response_model=Order, tags=["BE1 · orders"],
+          responses={403: {"model": ErrorBody}})
+def authorize_order(order_id: str, body: AuthorizeOrderRequest, x_agent_key: Optional[str] = AgentKey):
+    """外部审批：agent 带着买方系统签的凭证回来，同一张订单继续走。
+    先验凭证（签名、报价、金额、审批人、有效期），再复核报价；价格变了 → REQUOTE_REQUIRED，新报价要新凭证。"""
+    return _authorize(fx.ORDER_AUTH_REQUIRED, body.buyer_authorization)
 
 @app.get("/v1/orders/{order_id}", response_model=Order, tags=["BE1 · orders"])
 def get_order(order_id: str):

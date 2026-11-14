@@ -1,0 +1,53 @@
+{
+  "id": "prot_hotel_ext_v1",
+  "version": 1,
+  "status": "ACTIVE",
+  "body": {
+    "buyer_id": "buy_hotel",
+    "agent_id": "agt_hotel_ext",
+    "auto_approve_limit_cents": 100000,
+    "max_order_cents": 300000,
+    "allowed_categories": [
+      "10400",
+      "10401",
+      "10405"
+    ],
+    "hard_requirements": [
+      {
+        "kind": "CLAIM",
+        "code": "FREE_FROM_LACTOSE",
+        "label": "Lactose-free"
+      }
+    ],
+    "unknown_data_policy": "REQUIRE_APPROVAL",
+    "may_contain_policy": "EXCLUDE",
+    "substitution": {
+      "official": "AUTO",
+      "same_category": "APPROVAL",
+      "cross_category": "APPROVAL"
+    },
+    "approval_mode": "SEPARATE",
+    "approver": "usr_manager",
+    "approval_channel": "EXTERNAL",
+    "approver_public_key": {
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "kid": "hotel-erp-1",
+      "x": "Ri4akPpy1DzeUXBayEyh-vcUpnYfrpM-59qu31k6jtU"
+    },
+    "valid_until": "2027-02-13",
+    "valio_scope": {
+      "prices": "OWN_ONLY",
+      "stock": "DELIVERABLE_YES_NO",
+      "rate_limit_per_min": 30,
+      "max_probes_per_product_per_day": 3,
+      "sensitivity_ceiling": "L1"
+    }
+  },
+  "open_questions": [],
+  "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6InZhbGlvLTEifQ.mock.mock",
+  "supersedes": null,
+  "created_at": "2026-11-13T10:00:00+02:00",
+  "buyer_signed_at": "2026-11-13T10:00:00+02:00",
+  "valio_confirmed_at": "2026-11-13T10:00:00+02:00"
+}

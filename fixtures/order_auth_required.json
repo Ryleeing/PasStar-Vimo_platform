@@ -1,0 +1,41 @@
+{
+  "id": "ord_7",
+  "request_id": "req_1",
+  "quote_id": "quo_7",
+  "status": "BUYER_AUTHORIZATION_REQUIRED",
+  "gate": {
+    "outcome": "BUYER_APPROVAL",
+    "rules_hit": [
+      {
+        "rule_id": "R-SPEND-APPROVAL",
+        "description": "Auto-approve limit < total ≤ order maximum",
+        "outcome": "BUYER_APPROVAL"
+      }
+    ],
+    "summary": "Above the auto-approve limit; needs procurement manager approval"
+  },
+  "approval_id": null,
+  "requote_reason": null,
+  "new_quote_id": null,
+  "authorization_request": {
+    "protocol_id": "prot_hotel_ext_v1",
+    "buyer_id": "buy_hotel",
+    "request_id": "req_1",
+    "quote_id": "quo_7",
+    "amount_gross_cents": 107825,
+    "currency": "EUR",
+    "delivery_date": "2026-11-16",
+    "quote_valid_until": "2026-11-14T10:15:00+02:00",
+    "reason_codes": [
+      "R-SPEND-APPROVAL"
+    ],
+    "reasons": [
+      "Total €1,078.25 is above the auto-approve limit of €1,000"
+    ],
+    "approver": "usr_manager",
+    "sign_with_kid": "hotel-erp-1"
+  },
+  "authorized_by": null,
+  "created_at": "2026-11-14T10:00:00+02:00",
+  "placed_at": null
+}
