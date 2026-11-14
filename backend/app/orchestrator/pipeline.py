@@ -243,6 +243,7 @@ class Pipeline:
                 break
 
         drafts: list[Draft] = []
+        prices: dict = {}
         if convs:
             ids = list(convs)
             prices = self.d.valio.prices(ids, buyer_id, delivery_date=structured.delivery_date)
@@ -254,7 +255,7 @@ class Pipeline:
         drafts = rank(drafts, weights, MAX_CANDIDATES)
 
         top = drafts[0].lines[0].name if drafts else None
-        out.node(3, {"count": len(drafts), "top": top,
+        out.node(3, {"count": len(drafts), "top": top, "converted": len(convs), "priced": len(prices),
                      "weights": ", ".join(f"{k} {v:g}" for k, v in sorted(weights.items(), key=lambda kv: -kv[1]))},
                  [self._event("Checked price and stock, then ranked",
                               f"Queried only these {len(convs)} products in one batch, then ranked by profile weights",

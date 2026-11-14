@@ -41,6 +41,11 @@ class TemplateExplain:
                     f"{d['blocked']} flagged red, {d['dropped']} not relevant.")
         if node == 3:
             if not d["count"]:
+                if not d.get("converted", 1):
+                    return "No product could be converted to your quantity."
+                if not d.get("priced", 1):
+                    return (f"Valio returned no prices for the {d['converted']} matching products for this buyer, "
+                            "so none could be offered.")
                 return "No product could be priced and converted to your quantity."
             return f"Built {d['count']} options ranked by your weights ({d['weights']}). #1 is {d['top']}."
         if node == 4:

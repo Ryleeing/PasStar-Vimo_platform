@@ -35,11 +35,21 @@ class Be2:
     unverified: Unverified
 
 
+# The competition gives one Valio customer account. The demo buyers listed here all price as that account, so the
+# bistro and the hospital get real prices too; each buyer still sees only the prices of that account, never another
+# customer's. Set VALIO_SHARED_BUYERS (comma-separated) to change the list, or to an empty value to switch it off.
+SHARED_BUYERS_DEFAULT = "buy_hotel,buy_bistro,buy_hospital"
+
+
+def shared_buyers() -> set[str]:
+    return {b.strip() for b in os.environ.get("VALIO_SHARED_BUYERS", SHARED_BUYERS_DEFAULT).split(",") if b.strip()}
+
+
 class ScopedValio:
     """BE2's Valio client as the pipeline and BE1 need it.
 
-    - The client is bound to one buyer (VALIO_BUYER_ID). Other buyers get no prices, so their options come
-      back without a price instead of failing the whole request.
+    - The client is bound to one buyer (VALIO_BUYER_ID). The demo buyers in VALIO_SHARED_BUYERS price as that
+      account; any other buyer gets no prices, so its options come back without a price instead of failing.
     - Client errors become the shared ApiError (RATE_LIMITED, PROBE_LIMIT, UPSTREAM_ERROR, ...)."""
 
     def __init__(self, upstream) -> None:
@@ -50,10 +60,10 @@ class ScopedValio:
         return getattr(self.upstream, "buyer_id", None)
 
     def prices(self, product_ids: list[str], buyer_id: str, *, delivery_date: Optional[date] = None) -> dict[str, PriceInfo]:
-        if buyer_id != self.buyer_id:
+        if buyer_id != self.buyer_id and buyer_id not in shared_buyers():
             log.info("No Valio price scope for buyer %s (configured: %s)", buyer_id, self.buyer_id)
             return {}
-        return self._call(lambda: self.upstream.prices(product_ids, buyer_id, delivery_date=delivery_date))
+        return self._call(lambda: self.upstream.prices(product_ids, self.buyer_id, delivery_date=delivery_date))
 
     def availability(self, product_ids: list[str], delivery_date: date, sales_units: dict[str, float],
                      agent_id: str) -> dict[str, AvailabilityInfo]:
