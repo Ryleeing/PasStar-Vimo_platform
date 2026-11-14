@@ -9,8 +9,9 @@ venv/
 *.db
 *.db-journal
 
-# Secrets
+# Secrets (data/ holds generated demo keys, see app/demo_keys.py)
 .env
+data/
 
 # Per-user Claude Code settings
 .claude/settings.local.json
