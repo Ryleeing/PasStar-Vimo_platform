@@ -67,3 +67,61 @@ curl -s -X POST localhost:8000/v1/orders/ord_7/authorization -H 'Content-Type: a
 - `openapi.json`、`fixtures/` 由 scripts/export_contract.py 生成
 
 商品数据文件不在仓库里：从 Valio 资源门户下载后放到 `data/`，再运行 BE2 的 `scripts/preprocess.py`。
+
+## BE2 静态目录链路
+
+`catalog/repository.py` 只读查询预处理 SQLite，按类别和结构化证据过滤；
+`units.py` 按订购步长向上取整；`cards.py` 生成证据、可信度与提示；
+`service.py` 把这些模块组合成最多 8 个单 SKU 候选。运行示例（仓库根目录）：
+
+```bash
+PYTHONPATH=backend .venv/bin/python - <<'PY'
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+from app.catalog.service import CatalogService, effective_rules
+from app.schemas import ProtocolBody, Quantity, Requirement, StructuredRequest
+
+today = datetime.now(ZoneInfo("Europe/Helsinki")).date()
+lactose_free = Requirement(kind="CLAIM", code="FREE_FROM_LACTOSE")
+protocol = ProtocolBody(
+    buyer_id="buyer", agent_id="agent", approver="manager",
+    auto_approve_limit_cents=100_000, max_order_cents=300_000,
+    allowed_categories=["10400"], hard_requirements=[lactose_free],
+    valid_until=today + timedelta(days=30),
+)
+request = StructuredRequest(
+    category="10400", requirements=[lactose_free],
+    quantity=Quantity(value=1000, unit="L"), delivery_date=today + timedelta(days=2),
+)
+result = CatalogService(today=today).generate(request, effective_rules(protocol))
+print([(c.lines[0].product_id, c.outcome_preview) for c in result.candidates])
+print("unconvertible:", result.unconvertible_product_ids)
+PY
+```
+
+`effective_rules(protocol, profile)` 是不写库的合并函数：保留协议要求并加入
+profile 硬排除；profile 不能扩展协议类别或额度。传入的协议应由 BE1 验证过。
+商品的更新时间在读取时重新计算可信等级，空声明与缺失过敏原保持未验证。
+名称数量换算保留 `NAME_PARSE`，因此即使数量刚好覆盖也需要复核；无法换算时
+`Conversion.qty_covered=None`，服务通过 `unconvertible_product_ids` 报告原因。
+如果该商品同时违反硬约束，`blocked` 保留违规详情，其 `lines` 为空。
+
+真实价格/库存通过 `CatalogService(valio=...)` 注入 `ValioApi` 实现，BE1 闸门通过
+`gate=...` 注入 `GateApi`。动态查询仅覆盖缩小后的最多 8 个 SKU；未注入时
+返回未知库存、空总价和复核预览。缺价格、缺押金报价、缺库存或名称推算不能
+被一个 `AUTO` 闸门预览绕过。金额按整数分、逐行 half-up 计算，押金视为已计税的
+独立收费；正式报价仍由 BE1 复核并签名。
+
+排序默认使用保守的稳定顺序（可信度、履约状态、总价、软偏好、商品 ID）。
+`RankingPolicy(mode="weighted")` 可显式启用 profile 权重：价格/碳因子在候选内
+min-max 归一化，未知值记中性 0.5；权重必须有限、非负且总和大于 0。
+可靠性 HIGH/MEDIUM/LOW 阈值尚未冻结，因此默认显示 UNKNOWN；可向
+`CardsBuilder` 提供审核后的 `reliability_high` 与 `reliability_medium`。
+卡片与候选不会包含可靠性原始值；公开商品投影只输出结构化声明。
+
+本轮模块可独立调用；`main.py` 仍使用 M1 fixtures。接入 HTTP/LLM 前还需要完成
+`disclosure.py` 和 Valio 客户端，并在出口应用 `field_policy.yaml`。
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=backend .venv/bin/python -m pytest -q tests
+```
