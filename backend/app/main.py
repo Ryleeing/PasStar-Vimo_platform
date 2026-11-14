@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import fixtures as fx
 from .channel.approvals import check_approver
 from .channel.authorization import AuthorizationError, verify as verify_authorization
+from .orchestrator import parser_api
 from .schemas import *  # noqa: F401,F403
 
 app = FastAPI(
@@ -114,7 +115,11 @@ def get_product(product_id: str):
 @app.post("/v1/requests/parse", response_model=ParseResult, tags=["BE3 · requests"])
 def parse_request(body: ParseRequest):
     """自然语言 → 预填面板。没有副作用，不建 request。"""
-    return fx.PARSE_RESULT
+    # Real parser (LLM via OpenRouter, rule-based without OPENROUTER_API_KEY). Profiles come from the
+    # fixtures until the database is wired in.
+    profile = fx.PROFILE if body.profile_id == fx.PROFILE.id else None
+    structured, ambiguities, applied = parser_api.parse(body.text, profile)
+    return ParseResult(structured=structured, ambiguities=ambiguities, profile_applied=applied)
 
 @app.post("/v1/requests", response_model=RequestResult, tags=["BE3 · requests"])
 def create_request(body: CreateRequest, x_agent_key: Optional[str] = AgentKey, x_demo_user: Optional[str] = DemoUser):

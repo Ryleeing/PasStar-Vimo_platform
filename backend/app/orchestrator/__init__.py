@@ -2,9 +2,11 @@
 
 Other modules get BE3's interface implementations from here:
     from app.orchestrator import parser_api, pipeline_api, explain_api
-These are fakes for now; swap the exports below when the real ones are ready."""
-from .fakes import FakeExplain, FakeParser, FakePipeline
+parser_api is real (LLM via OpenRouter, rule-based fallback without a key).
+pipeline_api and explain_api are still fakes until the database is wired in."""
+from .fakes import FakeExplain, FakePipeline
+from .parser import Parser
 
-parser_api = FakeParser()
+parser_api = Parser()
 pipeline_api = FakePipeline()
 explain_api = FakeExplain()
