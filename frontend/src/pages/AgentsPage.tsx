@@ -10,6 +10,7 @@ import { describeError } from '../api/client';
 import type { AgentConnection, AgentKind, Fault, IssuedKey, Protocol } from '../api/types';
 import { accountByUserId } from '../config/accounts';
 import { eur } from '../lib/format';
+import { AgentConsole } from '../components/AgentConsole';
 import { useSession } from '../state/session';
 import { Banner, Button, Empty, ErrorState, PageHead, Pill, Segmented, Skeleton, Switch, useAsync, useToast } from '../components/ui';
 
@@ -46,7 +47,7 @@ export function AgentsPage() {
   const { account, workspace } = useSession();
   const valio = workspace.kind === 'seller';
   const list = useAsync(listAgents, [account.key]);
-  const [tab, setTab] = useState<'connected' | 'connect'>('connected');
+  const [tab, setTab] = useState<'connected' | 'connect' | 'console'>('connected');
   const [preset, setPreset] = useState<string | null>(null);
   const canManage = (a: AgentConnection) => a.approver === account.userId;
 
@@ -62,14 +63,15 @@ export function AgentsPage() {
           ? 'Every buyer’s external agents: how they connect, the protocol they act under, and what they did in the last 24 hours.'
           : 'The AI assistants and systems that may order for you. Each one gets its own key, tied to your signed protocol.'} />
 
-      {!valio && (
-        <div style={{ marginBottom: 16 }}>
-          <Segmented label="View" value={tab} onChange={(v) => { setTab(v); setPreset(null); }}
-            options={[['connected', 'Connected'], ['connect', 'Connect an agent']]} />
-        </div>
-      )}
+      <div style={{ marginBottom: 16 }}>
+        <Segmented label="View" value={tab} onChange={(v) => { setTab(v); setPreset(null); }}
+          options={valio ? [['connected', 'Connected'], ['console', 'Console']]
+                         : [['connected', 'Connected'], ['connect', 'Connect an agent'], ['console', 'Console']]} />
+      </div>
 
-      {tab === 'connect' && !valio ? (
+      {tab === 'console' ? (
+        list.loading ? <Skeleton h={420} /> : list.error ? <ErrorState error={list.error} onRetry={list.reload} /> : <AgentConsole agents={list.data ?? []} />
+      ) : tab === 'connect' && !valio ? (
         <ConnectAgent agents={list.data ?? []} preset={preset} onDone={() => { list.reload(); }} />
       ) : list.loading ? <Skeleton h={320} /> : list.error ? <ErrorState error={list.error} onRetry={list.reload} /> : (
         <div className={valio ? 'grid two' : ''} style={{ alignItems: 'start' }}>
