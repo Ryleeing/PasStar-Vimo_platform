@@ -66,6 +66,7 @@ PROFILE = Profile(
 
 FACETS = Facets(
     categories=[FacetItem(code="10400", label="Milk"), FacetItem(code="10401", label="Cream"),
+                FacetItem(code="10405", label="Milk powder"),
                 FacetItem(code="10430", label="Quark")],
     claims=[FacetItem(code="FREE_FROM_LACTOSE", label="Lactose-free"), FacetItem(code="FREE_FROM_GLUTEN", label="Gluten-free"),
             FacetItem(code="VEGAN", label="Vegan"), FacetItem(code="LOW_FAT", label="Low fat")],

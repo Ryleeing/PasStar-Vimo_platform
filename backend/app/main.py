@@ -97,6 +97,13 @@ def _out(who: Audience, model) -> dict:
 
 # ───── Protocols (BE1) ─────
 
+@app.get("/v1/protocols", response_model=list[Protocol], tags=["BE1 · protocols"])
+def list_protocols(status: Optional[ProtocolStatus] = None, who: Audience = Caller):
+    """Valio sees every buyer's protocols, a buyer its own. status=PENDING_VALIO_CONFIRMATION is Valio's to-do list."""
+    if who.kind == "AGENT":
+        raise errors.ApiError("OUT_OF_SCOPE", "Agents read their own protocol at /v1/agents/{agent_id}/protocol")
+    return [_out(who, p) for p in protocols.list_for(who, status)]
+
 @app.get("/v1/agents/{agent_id}/protocol", response_model=Protocol, tags=["BE1 · protocols"])
 def active_protocol(agent_id: str, who: Audience = Caller):
     """The protocol this agent acts under now (its latest ACTIVE version). Use it instead of a fixed protocol id:

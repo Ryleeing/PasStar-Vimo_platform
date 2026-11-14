@@ -33,5 +33,5 @@ def restore_deps(monkeypatch):
 def fresh_database(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "the_pass.db")
     db.init()
-    seed.reset()
+    seed.reset(onboarding=False)
     be3_seed.reset()

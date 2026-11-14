@@ -5,13 +5,16 @@
 // What A.I.mo understood is mirrored into the form, so the two never disagree and you can adjust it there.
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowUp, Check, ChevronDown, RotateCcw } from 'lucide-react';
+import { ArrowRight, ArrowUp, Check, ChevronDown, RotateCcw, ShieldCheck } from 'lucide-react';
 import { Mascot, MascotFace, type MascotMood } from '../components/Mascot';
 import { createRequest, getActiveProtocol, getFacets, listProfiles, parseRequest, rejectNode } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Ambiguity, Facets, Requirement, StructuredRequest } from '../api/types';
 import { useSession } from '../state/session';
 import { useFlow } from '../state/flow';
+import { useActiveProtocol } from '../state/protocol';
+import { ACCOUNTS, PAGES_BY_ROLE } from '../config/accounts';
+import { eur } from '../lib/format';
 import { Banner, Button, ErrorState, PageHead, Segmented, Skeleton, useAsync, useToast } from '../components/ui';
 
 type Sub = StructuredRequest['substitution'];
@@ -214,6 +217,7 @@ export function RequestPage() {
         </div>
       ) : (
         <>
+          <MandateStrip />
           {/* ── Way 1: tell A.I.mo ── */}
           <section className="hero" aria-labelledby="hero-title">
           <span className="hero-mascot"><Mascot mood={mood} size={150} /></span>
@@ -280,6 +284,26 @@ export function RequestPage() {
           Find options <ArrowRight size={17} />
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** Step 0 at a glance: the signed protocol every request below is checked against. */
+function MandateStrip() {
+  const { protocol } = useActiveProtocol();
+  const { account } = useSession();
+  if (!protocol) return null;
+  const b = protocol.body;
+  const approver = ACCOUNTS.find((a) => a.userId === b.approver);
+  const approves = !approver ? `${b.approver} approves` : approver.userId === account.userId ? 'you approve' : `${approver.name} approves`;
+  const canView = PAGES_BY_ROLE[account.key].some((p) => p.key === 'protocol');
+  return (
+    <div className="mandate-strip" role="note" aria-label="Your authorisation">
+      <span className="mandate-step"><ShieldCheck size={16} aria-hidden /> Step 0 done · protocol v{protocol.version}, signed and confirmed by Valio</span>
+      <span className="mandate-terms">
+        Up to {eur(b.auto_approve_limit_cents)} orders straight away · {eur(b.auto_approve_limit_cents)}–{eur(b.max_order_cents)} {approves} · over {eur(b.max_order_cents)} not allowed
+      </span>
+      {canView && <a href="#/protocol">View or change</a>}
     </div>
   );
 }

@@ -118,10 +118,37 @@ def draft(req: ProtocolDraftRequest, who: Caller) -> Protocol:
     if who.buyer_id != req.buyer_id:
         raise ApiError("OUT_OF_SCOPE", "A protocol can only be drafted for your own buyer")
     body, questions = deps.parser.draft_protocol(req.buyer_id, req.agent_id, req.description)
+    body, questions = _approver_from_buyer(body, questions, req.buyer_id)
     p = Protocol(id=db.new_id("prot"), version=1, status="DRAFT", body=body, open_questions=questions, created_at=db.now())
     insert(p)
     _log("PROTOCOL_DRAFTED", p, who, f"Protocol {p.id} drafted from: {req.description}")
     return p
+
+
+def _approver_from_buyer(body: ProtocolBody, questions: list[dict], buyer_id: str) -> tuple[ProtocolBody, list[dict]]:
+    """The approver must be a person of this buyer. A buyer with an owner and no separate approver (a one-person
+    business) always approves its own orders, so the draft says so and does not ask."""
+    users = db.all("SELECT id, role FROM users WHERE buyer_id = ?", (buyer_id,))
+    owner = next((u["id"] for u in users if u["role"] == "OWNER"), None)
+    approver = next((u["id"] for u in users if u["role"] == "APPROVER"), None)
+    if owner and not approver:
+        body = body.model_copy(update={"approval_mode": "SELF", "approver": owner})
+        questions = [q for q in questions if q["field"] not in ("approval_mode", "approver")]
+    elif body.approval_mode == "SELF":
+        body = body.model_copy(update={"approver": owner or approver or body.approver})
+    else:
+        body = body.model_copy(update={"approver": approver or owner or body.approver})
+    return body, questions
+
+
+def list_for(who: Caller, status: Optional[str]) -> list[Protocol]:
+    """Valio sees every buyer's protocols (e.g. the ones waiting for its confirmation); a buyer sees its own."""
+    sql, args = "SELECT * FROM protocols WHERE 1=1", []
+    if who.kind != "VALIO_USER":
+        sql, args = sql + " AND buyer_id = ?", [who.buyer_id]
+    if status:
+        sql, args = sql + " AND status = ?", args + [status]
+    return [_load(r) for r in db.all(sql + " ORDER BY created_at, id", tuple(args))]
 
 
 def update(protocol_id: str, body: ProtocolBody, who: Caller) -> Protocol:

@@ -37,7 +37,12 @@ def _body(buyer: str, agent: str, approver: str, **over) -> ProtocolBody:
                         valid_until=db.now().date() + timedelta(days=91), **over)
 
 
-def reset() -> None:
+# Starts unsigned, so the demo can show step 0: the owner signs the protocol, Valio confirms, then ordering starts.
+ONBOARDING = {"prot_bistro_v1"}
+
+
+def reset(onboarding: bool = True) -> None:
+    """onboarding=True leaves the ONBOARDING protocols out (the app and /v1/admin/reset); tests sign them all."""
     for t in TABLES:
         db.run(f"DELETE FROM {t}")
     db.run("DELETE FROM sqlite_sequence WHERE name = 'audit_log'")
@@ -62,6 +67,8 @@ def reset() -> None:
         # SELF mode: the owner both requests and approves
         "prot_bistro_v1": _body("buy_bistro", "agt_bistro", "usr_owner", approval_mode="SELF"),
     }
+    if onboarding:
+        bodies = {k: v for k, v in bodies.items() if k not in ONBOARDING}
     now = db.now()
     for protocol_id, body in bodies.items():
         protocols.insert(Protocol(id=protocol_id, version=1, status="ACTIVE", body=body,

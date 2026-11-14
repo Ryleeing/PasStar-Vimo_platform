@@ -57,7 +57,7 @@ def add_request():
 def c(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "test.db")
     db.init()
-    seed.reset()
+    seed.reset(onboarding=False)
     add_request()
     deps.valio, deps.disclosure, deps.parser = FakeValio(), FakeDisclosure(), FakeParser()
     return TestClient(app)

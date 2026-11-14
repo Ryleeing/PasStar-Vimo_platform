@@ -799,3 +799,20 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
   .timeline .body { padding-left: 0; }
   .stats { grid-template-columns: 1fr 1fr 1fr; gap: var(--s2); }
 }
+
+/* ── Step 0: authorise the agent (OnboardingPage) and the authorisation strip on the request page ── */
+.eyebrow { font-size: var(--fs-meta); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink); }
+.onboard-stages { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5); }
+.onboard-stages li { display: inline-flex; align-items: center; gap: var(--s2); font-weight: 600; color: var(--muted); }
+.onboard-stages li.current { color: var(--text); }
+.onboard-stages li.done .step-dot { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.onboard-stages li.current .step-dot { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.mandate-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin-bottom: var(--s5);
+  padding: var(--s3) var(--s4); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-2);
+  font-size: 0.9375rem;
+}
+.mandate-strip .mandate-step { display: inline-flex; align-items: center; gap: var(--s2); font-weight: 700; color: var(--text); }
+.mandate-strip .mandate-step svg { color: var(--ok); }
+.mandate-strip .mandate-terms { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.mandate-strip a { margin-left: auto; font-weight: 600; color: var(--accent-ink); }

@@ -74,12 +74,15 @@ export interface Step {
   label: string;
   hint: string;
   state: StepState;
-  page?: 'request' | 'options' | 'approvals' | 'orders';
+  page?: 'protocol' | 'request' | 'options' | 'approvals' | 'orders';
 }
 
 /** Progress shown in the sidebar. Derived only from flow state, never stored.
  *  Hints appear only once a step has happened, so the list stays quiet. */
-export function progressSteps(f: FlowState, mode: 'SEPARATE' | 'SELF'): Step[] {
+/** Step 0, authorising the agent, as the sidebar shows it: done once the protocol is active. */
+export interface Authorised { done: boolean; hint: string }
+
+export function progressSteps(f: FlowState, mode: 'SEPARATE' | 'SELF', authorised?: Authorised): Step[] {
   const described = !!f.request;
   const chosen = !!f.order || f.sentToApproval;
   const waiting = f.sentToApproval || f.order?.status === 'PENDING_BUYER_APPROVAL';
@@ -90,10 +93,13 @@ export function progressSteps(f: FlowState, mode: 'SEPARATE' | 'SELF'): Step[] {
   const approver = mode === 'SELF' ? 'you' : 'the manager';
   const q = f.request?.structured;
 
+  const open = !authorised || authorised.done;
   return [
+    ...(authorised ? [{ key: 'authorise', label: 'Authorise the agent', page: 'protocol' as const, hint: authorised.hint,
+                        state: (authorised.done ? 'done' : 'current') as StepState }] : []),
     { key: 'describe', label: 'Describe the need', page: 'request',
       hint: q ? `${q.category_label ?? 'Request'} · ${q.quantity.value.toLocaleString('en')} ${q.quantity.unit}` : '',
-      state: described ? 'done' : 'current' },
+      state: described ? 'done' : open ? 'current' : 'todo' },
     { key: 'options', label: 'Choose an option', page: 'options',
       hint: chosen && f.selection ? f.selection.candidate.lines[0].name : '',
       state: chosen ? 'done' : described ? 'current' : 'todo' },

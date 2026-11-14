@@ -174,12 +174,8 @@ def _understood_line(u: dict) -> str:
     return f"I understood: {u['quantity']} of {u['product']}{must}, delivered {u['delivery_date']}."
 
 
-# Categories in the demo protocols that the shared facets do not name; the catalogue has no category names yet.
-EXTRA_CATEGORY_NAMES = {"10405": "Milk powder"}
-
-
 def _category(code: str) -> dict:
-    label = next((f.label for f in fixtures.FACETS.categories if f.code == code), EXTRA_CATEGORY_NAMES.get(code))
+    label = next((f.label for f in fixtures.FACETS.categories if f.code == code), None)
     return {"code": code, "name": label}
 
 

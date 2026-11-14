@@ -87,6 +87,7 @@ const routes: [string, RegExp, Handler][] = [
     return d;
   }],
   ['GET', /^\/v1\/protocols\/([^/]+)$/, ([, id]) => db.protocols[id] ?? db.protocol],
+  ['GET', /^\/v1\/protocols$/, () => Object.values(db.protocols)],
   ['GET', /^\/v1\/agents\/([^/]+)\/protocol$/, ([, agentId]) =>
     Object.values(db.protocols).filter((p) => p.body.agent_id === agentId && p.status === 'ACTIVE')
       .sort((a, b) => b.version - a.version)[0] ?? db.protocol],

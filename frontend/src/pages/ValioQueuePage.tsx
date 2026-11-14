@@ -1,23 +1,26 @@
 import { useState } from 'react';
 import { Eye, Inbox, Route, ShieldX, ThumbsUp } from 'lucide-react';
-import { confirmProtocol, decideApproval, listApprovals } from '../api/endpoints';
+import { confirmProtocol, decideApproval, listApprovals, listProtocols } from '../api/endpoints';
 import { describeError } from '../api/client';
-import type { ApprovalCard } from '../api/types';
+import type { ApprovalCard, Protocol } from '../api/types';
 import { APPROVAL_STATUS, eur, levelOf } from '../lib/format';
 import { useFlow } from '../state/flow';
+import { WORKSPACES } from '../config/accounts';
 import { Banner, Button, Empty, ErrorState, PageHead, Pill, Skeleton, useAsync, useToast } from '../components/ui';
 
 export function ValioQueuePage() {
   const { flow } = useFlow();
   const list = useAsync(() => listApprovals('VALIO'), []);
   const items = (list.data ?? []).map((a) => flow.decisions[a.id]?.approval ?? a);
+  // Protocols the buyer signed, from the backend: a first protocol (step 0) or a raised limit (a new version).
+  const toConfirm = useAsync(() => listProtocols('PENDING_VALIO_CONFIRMATION'), []);
 
   return (
     <>
       <PageHead title="Review queue"
         desc="Requests the channel won’t answer on its own." />
       <div className="stack lg">
-        {flow.signedDraft && <ConfirmProtocolCard />}
+        {(toConfirm.data ?? []).map((p) => <ConfirmProtocolCard key={p.id} d={p} onDone={toConfirm.reload} />)}
         {list.loading ? <Skeleton h={380} /> : list.error ? <ErrorState error={list.error} onRetry={list.reload} /> : !items.length ? (
           <Empty icon={<Inbox size={22} />} title="Queue is empty">Nothing needs a Valio decision right now.</Empty>
         ) : items.map((a) => <ValioCard key={a.id} a={a} />)}
@@ -26,17 +29,20 @@ export function ValioQueuePage() {
   );
 }
 
-function ConfirmProtocolCard() {
-  const { flow, patch } = useFlow();
+function ConfirmProtocolCard({ d, onDone }: { d: Protocol; onDone: () => void }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  const d = flow.signedDraft!;
-  if (d.status === 'ACTIVE') return <Banner tone="ok" title={`${d.id} confirmed and active`}>The previous version is superseded.</Banner>;
+  const [confirmed, setConfirmed] = useState(false);
+  if (confirmed) {
+    return <Banner tone="ok" title={`${d.id} confirmed and active`}>{d.supersedes ? `${d.supersedes} is superseded.` : 'The buyer’s agent can start ordering.'}</Banner>;
+  }
   const confirm = async () => {
     setBusy(true);
     try {
-      patch({ signedDraft: await confirmProtocol(d.id) });
+      await confirmProtocol(d.id);
+      setConfirmed(true);
       toast('Protocol confirmed and active', 'ok');
+      setTimeout(onDone, 2500);
     } catch (e) {
       toast(describeError(e), 'bad');
     } finally {
@@ -46,7 +52,7 @@ function ConfirmProtocolCard() {
   return (
     <section className="card row wrap">
       <div className="grow">
-        <h3>New protocol {d.id} signed by the buyer</h3>
+        <h3>{d.supersedes ? `Protocol change ${d.id}` : `New protocol ${d.id}`} signed by {Object.values(WORKSPACES).find((w) => w.buyerId === d.body.buyer_id)?.name ?? d.body.buyer_id}</h3>
         <div className="small muted">Auto-order up to {eur(d.body.auto_approve_limit_cents)} · max {eur(d.body.max_order_cents)} · confirm the customer and set Valio’s scope</div>
       </div>
       <Button variant="primary" loading={busy} onClick={confirm}>Confirm protocol</Button>

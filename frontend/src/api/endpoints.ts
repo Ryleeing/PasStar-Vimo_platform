@@ -13,6 +13,9 @@ export const draftProtocol = (buyer_id: string, agent_id: string, description: s
   api<Protocol>('POST', '/v1/protocols/draft', { body: { buyer_id, agent_id, description } });
 export const getProtocol = (id: string) => api<Protocol>('GET', `/v1/protocols/${enc(id)}`);
 /** The protocol the workspace's agent acts under now. Never keep a protocol id: raising a limit makes a new version. */
+/** Valio: every buyer's protocols; a buyer: its own. PENDING_VALIO_CONFIRMATION is Valio's to-do list. */
+export const listProtocols = (status?: string) =>
+  api<Protocol[]>('GET', '/v1/protocols', { query: { status } });
 export const getActiveProtocol = (agentId: string) => api<Protocol>('GET', `/v1/agents/${enc(agentId)}/protocol`);
 export const updateProtocol = (id: string, body: ProtocolBody) =>
   api<Protocol>('PUT', `/v1/protocols/${enc(id)}`, { body: { body } });

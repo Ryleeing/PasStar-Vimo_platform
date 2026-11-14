@@ -5,6 +5,7 @@ import { MascotFace } from './Mascot';
 import { ACCOUNTS, PAGES_BY_ROLE, WORKSPACES, type RoleKey } from '../config/accounts';
 import { useSession } from '../state/session';
 import { progressSteps, useFlow } from '../state/flow';
+import { useActiveProtocol } from '../state/protocol';
 import { listApprovals, resetDemo } from '../api/endpoints';
 import { describeError } from '../api/client';
 import { API_BASE, type ApiMode } from '../api/client';
@@ -105,7 +106,12 @@ function ProgressTracker({ mode, onNavigate }: { mode: 'SEPARATE' | 'SELF'; onNa
   const { flow } = useFlow();
   const { account } = useSession();
   const navigate = useNavigate();
-  const steps = progressSteps(flow, mode);
+  const p = useActiveProtocol();
+  const authorised = p.status === 'active' || p.status === 'none'
+    ? { done: p.status === 'active', hint: p.protocol ? `Protocol v${p.protocol.version} · confirmed by Valio` : 'Sign before the first order' }
+    : undefined;
+  const steps = progressSteps(flow, mode, authorised);
+  const first = authorised ? 0 : 1;
   const allowed = new Set(PAGES_BY_ROLE[account.key].map((p) => p.key));
   const go = (page?: string) => {
     if (!page) return;
@@ -125,7 +131,7 @@ function ProgressTracker({ mode, onNavigate }: { mode: 'SEPARATE' | 'SELF'; onNa
       <ol className="steps">
         {steps.map((s, i) => (
           <li key={s.key} className={`step ${s.state}`} aria-current={s.state === 'current' ? 'step' : undefined}>
-            <span className="step-dot">{s.state === 'done' ? <Check size={14} strokeWidth={3} /> : s.state === 'blocked' ? '!' : s.state === 'skipped' ? '–' : i + 1}</span>
+            <span className="step-dot">{s.state === 'done' ? <Check size={14} strokeWidth={3} /> : s.state === 'blocked' ? '!' : s.state === 'skipped' ? '–' : i + first}</span>
             <div className="step-body">
               <button onClick={() => go(s.page)}>{s.label}</button>
               {s.hint && <div className="hint" title={s.hint}>{s.hint}</div>}

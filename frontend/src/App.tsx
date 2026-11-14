@@ -4,6 +4,7 @@ import { Menu } from 'lucide-react';
 import { MascotFace } from './components/Mascot';
 import { SessionProvider, useSession } from './state/session';
 import { FlowProvider } from './state/flow';
+import { ProtocolProvider, useActiveProtocol } from './state/protocol';
 import { PAGES_BY_ROLE, type PageKey } from './config/accounts';
 import { Sidebar } from './components/Sidebar';
 import { ToastProvider } from './components/ui';
@@ -19,6 +20,8 @@ import { ProfilePage } from './pages/ProfilePage';
 import { AuditPage } from './pages/AuditPage';
 import { ValioQueuePage } from './pages/ValioQueuePage';
 import { AgentsPage } from './pages/AgentsPage';
+import { OnboardingPage } from './pages/OnboardingPage';
+import { ErrorState, Skeleton } from './components/ui';
 
 const ROUTES: Record<PageKey, () => JSX.Element> = {
   request: RequestPage,
@@ -42,6 +45,15 @@ function Guard({ page, children }: { page: PageKey; children: ReactNode }) {
   return pages.some((p) => p.key === page) ? <>{children}</> : <Navigate to={pages[0].path} replace />;
 }
 
+/** Step 0 first: a buyer workspace without an active protocol sees only the authorisation page. */
+function ProtocolGate({ children }: { children: ReactNode }) {
+  const p = useActiveProtocol();
+  if (p.status === 'loading') return <Skeleton h={320} />;
+  if (p.status === 'none') return <OnboardingPage />;
+  if (p.status === 'error') return <ErrorState error={p.error} onRetry={p.reload} />;
+  return <>{children}</>;
+}
+
 function Shell() {
   const { account } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -58,6 +70,7 @@ function Shell() {
       <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} />
       <main className="content" id="main">
         <div className="content-inner" key={location.pathname + account.key}>
+          <ProtocolGate>
           <Routes>
             {(Object.keys(ROUTES) as PageKey[]).map((k) => {
               const Page = ROUTES[k];
@@ -65,6 +78,7 @@ function Shell() {
             })}
             <Route path="*" element={<Navigate to={home} replace />} />
           </Routes>
+          </ProtocolGate>
         </div>
       </main>
     </div>
@@ -77,7 +91,9 @@ export default function App() {
       <SessionProvider>
         <ToastProvider>
           <FlowProvider>
-            <Shell />
+            <ProtocolProvider>
+              <Shell />
+            </ProtocolProvider>
           </FlowProvider>
         </ToastProvider>
       </SessionProvider>

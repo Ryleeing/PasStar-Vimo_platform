@@ -18,7 +18,7 @@ from app.orchestrator.llm import LlmClient  # noqa: E402
 
 db.DB_PATH = pathlib.Path(tempfile.mkdtemp()) / "export.db"
 db.init()
-seed.reset()
+seed.reset(onboarding=False)
 be3_seed.reset()
 parser_api.llm = LlmClient(task="parse", api_key="")          # examples must not depend on an LLM key
 
