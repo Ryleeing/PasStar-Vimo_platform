@@ -11,7 +11,7 @@ from app.orchestrator.profiles import ProfileRepo
 from app.orchestrator.stubs import (
     StubCards, StubCatalog, StubDisclosure, StubGate, StubProtocols, StubUnits, StubValio,
 )
-from app.schemas import CreateRequest, RejectNodeRequest
+from app.schemas import CreateRequest, Quantity, RejectNodeRequest
 
 SCHEMA = Path(__file__).resolve().parents[1] / "backend" / "app" / "schema.sql"
 
@@ -135,7 +135,7 @@ def test_exclude_option_defaults_to_current_top(env):
 def test_wrong_quantity_replaces_structured_request(env):
     p, _ = env
     rid = new_request(p)
-    fixed = fx.STRUCTURED.model_copy(update={"quantity": {"value": 200, "unit": "L"}}).model_dump(mode="json")
+    fixed = fx.STRUCTURED.model_copy(update={"quantity": Quantity(value=200, unit="L")}).model_dump(mode="json")
     r = reject(p, rid, 1, "WRONG_QUANTITY", structured=fixed)
     assert r.structured.quantity.value == 200
     assert "200 L" in r.chain[0].summary
