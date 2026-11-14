@@ -93,7 +93,8 @@ class StubValio:
     def __init__(self) -> None:
         self.calls: list[tuple[str, list[str]]] = []   # lets tests check batching
 
-    def prices(self, product_ids: list[str], buyer_id: str) -> dict[str, PriceInfo]:
+    def prices(self, product_ids: list[str], buyer_id: str, *,
+               delivery_date: Optional[date] = None) -> dict[str, PriceInfo]:
         self.calls.append(("prices", list(product_ids)))
         return {pid: PriceInfo(unit_price_cents=PRICES_CENTS[pid], vat_rate=0.135, deposit_cents_per_unit=0)
                 for pid in product_ids if pid in PRICES_CENTS}

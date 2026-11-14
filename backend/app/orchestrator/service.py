@@ -3,8 +3,9 @@
 main.py stays thin; these functions do the work with the caller resolved by channel.identity.
 Every response goes through checkpoints.check_response (the BE2 disclosure filter).
 
-BE2 is not wired yet: catalogue search, unit conversion and cards use BE3's stubs; price, stock and the
-disclosure filter use whatever BE2 registered in app.deps (BE3's stubs until then, see __init__.py).
+Catalogue, units, cards, price and stock come from orchestrator/be2.py: BE2's real implementations when the
+catalogue and the Valio key are present, BE3's stubs otherwise. The disclosure filter is still a pass-through
+until BE1 and BE2 agree how responses are handed to it (see __init__.py).
 """
 from __future__ import annotations
 
@@ -20,13 +21,15 @@ from ..schemas import (
 )
 from .pipeline import AGENT_PREFIX, Deps, Pipeline
 from .profiles import ProfileRepo
-from .stubs import StubCards, StubCatalog, StubUnits
+from .be2 import get as get_be2
 
 
 def _deps() -> Deps:
     from . import explain_api
-    return Deps(catalog=StubCatalog(), units=StubUnits(), valio=deps.valio, cards=StubCards(),
-                disclosure=deps.disclosure, protocols=protocols, gate=gate, explain=explain_api, audit=audit)
+    be2 = get_be2()
+    return Deps(catalog=be2.catalog, units=be2.units, valio=deps.valio, cards=be2.cards,
+                disclosure=deps.disclosure, protocols=protocols, gate=gate, explain=explain_api, audit=audit,
+                unverified=be2.unverified)
 
 
 @contextmanager

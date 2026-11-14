@@ -2,13 +2,18 @@
 
 - Unit tests never call a real LLM, even when OPENROUTER_API_KEY is set in the shell.
   Real-model evaluation is what tests/runner.py is for.
-- Every test gets a fresh database with the BE1 and BE3 demo seed data, so HTTP tests run the real routes."""
-import pytest
+- Every test gets a fresh database with the BE1 and BE3 demo seed data, so HTTP tests run the real routes.
+- The pipeline runs on BE3's BE2 stubs, never the product catalogue file or the Valio API."""
+import os
 
-from app import db, deps
-from app.channel import seed
-from app.orchestrator import explain_api, parser_api, seed as be3_seed
-from app.orchestrator.llm import LlmClient
+os.environ["THE_PASS_BE2"] = "stub"     # before the app is imported: orchestrator/be2.py reads it once
+
+import pytest  # noqa: E402
+
+from app import db, deps  # noqa: E402
+from app.channel import seed  # noqa: E402
+from app.orchestrator import explain_api, parser_api, seed as be3_seed  # noqa: E402
+from app.orchestrator.llm import LlmClient  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

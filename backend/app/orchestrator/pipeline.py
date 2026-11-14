@@ -21,7 +21,7 @@ from ..internal import (
 )
 from ..schemas import (
     Candidate, CandidateLine, ChainEvent, ChainNode, ChainTimeline, CreateRequest, EvidenceRef, GateDecision,
-    RejectNodeRequest, RequestResult, RuleHit, StructuredRequest, Totals, Violation,
+    RejectNodeRequest, RequestResult, Requirement, RuleHit, StructuredRequest, Totals, Violation,
 )
 from .holds import record_blocked
 from .profiles import ProfileRepo
@@ -56,6 +56,9 @@ class Deps:
     gate: GateApi
     explain: ExplainApi
     audit: Optional[AuditApi] = None    # hold events (CANDIDATES_BLOCKED); skipped when not wired
+    # product, requirement -> True when the requirement is not proven (R-DATA-UNVERIFIED). BE2's
+    # requirement_check in live mode (orchestrator/be2.py); without it, only structured claims count.
+    unverified: Optional[Callable[[ProductRecord, Requirement], bool]] = None
 
 
 def reliability_level(value: Optional[float]) -> str:
@@ -229,7 +232,7 @@ class Pipeline:
             if p.id in excluded:
                 continue
             conv = self.d.units.convert(p, structured.quantity)
-            if conv.sales_units > 0:
+            if conv.sales_units > 0 and conv.qty_covered is not None:   # no defensible conversion: not offered
                 convs[p.id] = (p, conv)
             if len(convs) == MAX_CANDIDATES:
                 break
@@ -237,7 +240,7 @@ class Pipeline:
         drafts: list[Draft] = []
         if convs:
             ids = list(convs)
-            prices = self.d.valio.prices(ids, buyer_id)
+            prices = self.d.valio.prices(ids, buyer_id, delivery_date=structured.delivery_date)
             avail = self.d.valio.availability(ids, structured.delivery_date,
                                               {pid: c.sales_units for pid, (_, c) in convs.items()}, agent_id)
             for pid, (p, conv) in convs.items():
@@ -264,7 +267,7 @@ class Pipeline:
 
         candidates: list[Candidate] = []
         for d in drafts:
-            unverified = _data_unverified(self.d.catalog, d.lines, rules)
+            unverified = self._data_unverified(d.lines, rules)
             gate = self.d.gate.preview(d.lines, d.totals.gross_cents, rules, unverified)
             outcome, reasons = gate.outcome, [h.description for h in gate.rules_hit]
             if force_approval and OUTCOME_ORDER.index(outcome) < OUTCOME_ORDER.index("BUYER_APPROVAL"):
@@ -279,7 +282,7 @@ class Pipeline:
         for p, violations in blocked:
             conv = self.d.units.convert(p, structured.quantity)
             line = CandidateLine(product_id=p.id, name=p.name_en, brand=p.brand, sales_unit=p.sales_unit,
-                                 sales_units=conv.sales_units, qty_covered=conv.qty_covered,
+                                 sales_units=conv.sales_units, qty_covered=conv.qty_covered or structured.quantity,
                                  conversion_source=conv.source, available_on_date="UNKNOWN")
             gate = _reject_decision(violations)
             cand = Candidate(id=_new_id("cand"), selectable=False, lines=[line], delivery_date=structured.delivery_date,
@@ -297,6 +300,11 @@ class Pipeline:
         out.candidates(candidates)
 
     # ───────────── helpers ─────────────
+
+    def _data_unverified(self, lines: list[CandidateLine], rules: EffectiveRules) -> bool:
+        check = self.d.unverified or _claim_unverified
+        products = [self.d.catalog.get(line.product_id) for line in lines]
+        return any(check(p, r) for p in products for r in rules.hard_requirements)
 
     def _event(self, title: str, logic: str, evidence: list[EvidenceRef]) -> ChainEvent:
         return ChainEvent(at=self.clock(), title=title, logic=logic, evidence=evidence)
@@ -416,12 +424,8 @@ def _draft(p: ProductRecord, conv, price, avail) -> Draft:
                  reliability_level=reliability_level(p.delivery_reliability))
 
 
-def _data_unverified(catalog: CatalogApi, lines: list[CandidateLine], rules: EffectiveRules) -> bool:
-    for line in lines:
-        p = catalog.get(line.product_id)
-        if any(r.kind == "CLAIM" and p.claims.get(r.code) != "STRUCTURED" for r in rules.hard_requirements):
-            return True
-    return False
+def _claim_unverified(product: ProductRecord, r: Requirement) -> bool:
+    return r.kind == "CLAIM" and product.claims.get(r.code) != "STRUCTURED"
 
 
 def _reject_decision(violations: list[Violation]) -> GateDecision:
