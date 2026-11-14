@@ -2,6 +2,7 @@
 Product IDs and units are real; prices are made up until the Valio API is connected."""
 from datetime import date, datetime, timedelta, timezone
 
+from . import demo_keys
 from .schemas import *  # noqa: F401,F403
 
 TZ = timezone(timedelta(hours=2))
@@ -22,6 +23,18 @@ PROTOCOL = Protocol(
         approver="usr_manager",
         valid_until=date(2027, 2, 13),
     ),
+    jws="eyJhbGciOiJFZERTQSIsImtpZCI6InZhbGlvLTEifQ.mock.mock",
+    created_at=NOW - timedelta(days=1), buyer_signed_at=NOW - timedelta(days=1),
+    valio_confirmed_at=NOW - timedelta(days=1),
+)
+
+# 外部审批：酒店自己的采购 agent（agt_hotel_ext），超额时在酒店自己的系统里批
+PROTOCOL_EXTERNAL = Protocol(
+    id="prot_hotel_ext_v1", version=1, status="ACTIVE",
+    body=PROTOCOL.body.model_copy(update={
+        "agent_id": "agt_hotel_ext", "approval_channel": "EXTERNAL",
+        "approver_public_key": ApproverKey(**demo_keys.public_jwk()),
+    }),
     jws="eyJhbGciOiJFZERTQSIsImtpZCI6InZhbGlvLTEifQ.mock.mock",
     created_at=NOW - timedelta(days=1), buyer_signed_at=NOW - timedelta(days=1),
     valio_confirmed_at=NOW - timedelta(days=1),
@@ -209,6 +222,18 @@ QUOTE_VERIFY = QuoteVerifyResult(quote_id="quo_1", signature_valid=True, expired
 
 ORDER = Order(id="ord_1", request_id="req_1", quote_id="quo_1", status="PLACED", gate=GATE_AUTO,
               created_at=NOW, placed_at=NOW)
+
+# 外部审批的例子：agent 选了 cand_3（€1,078.25，超出 €1,000 自动额度）
+QUOTE_EXT = QUOTE.model_copy(update={"id": "quo_7", "candidate_id": "cand_3", "protocol_id": "prot_hotel_ext_v1",
+                                     "lines": CAND_3.lines, "totals": CAND_3.totals})
+AUTHORIZATION_REQUEST = AuthorizationRequest(
+    protocol_id="prot_hotel_ext_v1", buyer_id="buy_hotel", request_id="req_1", quote_id="quo_7",
+    amount_gross_cents=CAND_3.totals.gross_cents, delivery_date=MONDAY, quote_valid_until=QUOTE_EXT.valid_until,
+    reason_codes=["R-SPEND-APPROVAL"], reasons=["Total €1,078.25 is above the auto-approve limit of €1,000"],
+    approver="usr_manager", sign_with_kid=demo_keys.KID,
+)
+ORDER_AUTH_REQUIRED = Order(id="ord_7", request_id="req_1", quote_id="quo_7", status="BUYER_AUTHORIZATION_REQUIRED",
+                            gate=GATE_APPROVAL, authorization_request=AUTHORIZATION_REQUEST, created_at=NOW)
 
 APPROVAL_BUYER = ApprovalCard(
     id="apr_1", kind="BUYER", subject="ORDER", status="PENDING", created_at=NOW,

@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ───────────────────────── 通用 ─────────────────────────
 
@@ -30,7 +30,7 @@ class ErrorDetail(BaseModel):
     code: Literal[
         "VALIDATION_ERROR", "PROTOCOL_INVALID", "OUT_OF_SCOPE", "RATE_LIMITED", "PROBE_LIMIT",
         "QUOTE_EXPIRED", "QUOTE_CHANGED", "RETRY_LIMIT", "NOT_FOUND", "UPSTREAM_ERROR",
-        "SELF_APPROVAL_FORBIDDEN", "NOT_APPROVER",
+        "SELF_APPROVAL_FORBIDDEN", "NOT_APPROVER", "AUTHORIZATION_INVALID",
     ]
     message: str
     details: dict[str, Any] = {}
@@ -64,6 +64,14 @@ class ValioScope(BaseModel):
     sensitivity_ceiling: Sensitivity = "L1"
 
 
+class ApproverKey(BaseModel):
+    """审批人的 Ed25519 公钥（JWK）。外部审批时，买方系统用对应的私钥签授权凭证。"""
+    kty: Literal["OKP"] = "OKP"
+    crv: Literal["Ed25519"] = "Ed25519"
+    kid: str
+    x: str
+
+
 class ProtocolBody(BaseModel):
     buyer_id: str
     agent_id: str
@@ -78,8 +86,18 @@ class ProtocolBody(BaseModel):
     # SEPARATE：提需求的人不能审批自己的单（酒店、医院、连锁厨房）
     # SELF：老板兼采购，可以审批自己的单，但审批仍是单独的一步并记入日志（小餐厅）
     approver: str                      # 审批人用户 ID；SELF 模式下通常就是下单人
+    approval_channel: Literal["HOSTED", "EXTERNAL"] = "HOSTED"
+    # HOSTED：在 The Pass 的审批页上批（单子进 PENDING_BUYER_APPROVAL）
+    # EXTERNAL：在买方自己的系统里批，agent 带着签名的授权凭证回来下单（BUYER_AUTHORIZATION_REQUIRED）
+    approver_public_key: Optional[ApproverKey] = None   # EXTERNAL 时必填
     valid_until: date
     valio_scope: ValioScope = ValioScope()
+
+    @model_validator(mode="after")
+    def _external_needs_key(self) -> "ProtocolBody":
+        if self.approval_channel == "EXTERNAL" and self.approver_public_key is None:
+            raise ValueError("approval_channel EXTERNAL requires approver_public_key")
+        return self
 
 
 class OpenQuestion(BaseModel):
@@ -464,10 +482,43 @@ class QuoteVerifyResult(BaseModel):
 class CreateOrderRequest(BaseModel):
     quote_id: str
     protocol_id: str
+    buyer_authorization: Optional[str] = None   # 外部审批：买方系统签的授权凭证（compact JWS，alg Ed25519）
+
+
+class AuthorizeOrderRequest(BaseModel):
+    buyer_authorization: str                   # 买方系统签的授权凭证（compact JWS）
+
+
+class AuthorizationRequest(BaseModel):
+    """BUYER_AUTHORIZATION_REQUIRED 时返回：买方系统要批准、签名的内容。凭证的 payload 是 BuyerAuthorizationClaims。"""
+    protocol_id: str
+    buyer_id: str
+    request_id: str
+    quote_id: str
+    amount_gross_cents: int
+    currency: Literal["EUR"] = "EUR"
+    delivery_date: date
+    quote_valid_until: datetime
+    reason_codes: list[str]                    # 为什么需要授权，如 R-SPEND-APPROVAL
+    reasons: list[str]                         # 人话
+    approver: str                              # 协议里的审批人
+    sign_with_kid: str                         # 用哪把钥匙签
+
+
+class BuyerAuthorizationClaims(BaseModel):
+    """授权凭证里签名的内容。只授权这一张报价、这个金额，过期作废。"""
+    typ: Literal["buyer-authorization/v1"] = "buyer-authorization/v1"
+    protocol_id: str
+    buyer_id: str
+    quote_id: str
+    amount_gross_cents: int
+    approver: str
+    iat: int                                   # 批准时间（Unix 秒）
+    exp: int                                   # 过期时间（Unix 秒），最长 15 分钟
 
 
 OrderStatus = Literal[
-    "PLACED", "PENDING_BUYER_APPROVAL", "PENDING_VALIO_REVIEW",
+    "PLACED", "PENDING_BUYER_APPROVAL", "BUYER_AUTHORIZATION_REQUIRED", "PENDING_VALIO_REVIEW",
     "REQUOTE_REQUIRED", "REJECTED", "CANCELLED",
 ]
 
@@ -481,6 +532,8 @@ class Order(BaseModel):
     approval_id: Optional[str] = None
     requote_reason: Optional[str] = None
     new_quote_id: Optional[str] = None
+    authorization_request: Optional[AuthorizationRequest] = None   # 仅 BUYER_AUTHORIZATION_REQUIRED
+    authorized_by: Optional[str] = None                            # 外部审批通过时，凭证里的审批人
     created_at: datetime
     placed_at: Optional[datetime] = None
 

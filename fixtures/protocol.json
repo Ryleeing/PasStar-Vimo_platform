@@ -28,6 +28,8 @@
     },
     "approval_mode": "SEPARATE",
     "approver": "usr_manager",
+    "approval_channel": "HOSTED",
+    "approver_public_key": null,
     "valid_until": "2027-02-13",
     "valio_scope": {
       "prices": "OWN_ONLY",

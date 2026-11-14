@@ -2521,7 +2521,7 @@
           "BE1 · orders"
         ],
         "summary": "Create Order",
-        "description": "复核报价（签名、有效期、价格库存是否变化）→ 闸门 → PLACED / PENDING_* / REQUOTE_REQUIRED / REJECTED。\n同一个 Idempotency-Key 返回同一张订单。",
+        "description": "复核报价（签名、有效期、价格库存是否变化）→ 闸门 → PLACED / PENDING_* / BUYER_AUTHORIZATION_REQUIRED /\nREQUOTE_REQUIRED / REJECTED。同一个 Idempotency-Key 返回同一张订单。\n协议是外部审批（EXTERNAL）且超额时：没带凭证 → BUYER_AUTHORIZATION_REQUIRED（附 authorization_request）；\n带了有效凭证 → PLACED；凭证无效 → 403 AUTHORIZATION_INVALID。\n假服务器里 prot_hotel_ext_v1 走外部审批，其余协议返回 fx.ORDER。",
         "operationId": "create_order_v1_orders_post",
         "parameters": [
           {
@@ -2556,6 +2556,135 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateOrderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orders/{order_id}/authorization": {
+      "post": {
+        "tags": [
+          "BE1 · orders"
+        ],
+        "summary": "Authorize Order",
+        "description": "外部审批：agent 带着买方系统签的凭证回来，同一张订单继续走。\n先验凭证（签名、报价、金额、审批人、有效期），再复核报价；价格变了 → REQUOTE_REQUIRED，新报价要新凭证。",
+        "operationId": "authorize_order_v1_orders__order_id__authorization_post",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Order Id"
+            }
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorizeOrderRequest"
               }
             }
           }
@@ -4106,6 +4235,37 @@
         ],
         "title": "ApprovalDecisionResult"
       },
+      "ApproverKey": {
+        "properties": {
+          "kty": {
+            "type": "string",
+            "const": "OKP",
+            "title": "Kty",
+            "default": "OKP"
+          },
+          "crv": {
+            "type": "string",
+            "const": "Ed25519",
+            "title": "Crv",
+            "default": "Ed25519"
+          },
+          "kid": {
+            "type": "string",
+            "title": "Kid"
+          },
+          "x": {
+            "type": "string",
+            "title": "X"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kid",
+          "x"
+        ],
+        "title": "ApproverKey",
+        "description": "审批人的 Ed25519 公钥（JWK）。外部审批时，买方系统用对应的私钥签授权凭证。"
+      },
       "AuditEntry": {
         "properties": {
           "seq": {
@@ -4203,6 +4363,97 @@
           "entries_checked"
         ],
         "title": "AuditVerifyResult"
+      },
+      "AuthorizationRequest": {
+        "properties": {
+          "protocol_id": {
+            "type": "string",
+            "title": "Protocol Id"
+          },
+          "buyer_id": {
+            "type": "string",
+            "title": "Buyer Id"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "quote_id": {
+            "type": "string",
+            "title": "Quote Id"
+          },
+          "amount_gross_cents": {
+            "type": "integer",
+            "title": "Amount Gross Cents"
+          },
+          "currency": {
+            "type": "string",
+            "const": "EUR",
+            "title": "Currency",
+            "default": "EUR"
+          },
+          "delivery_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Delivery Date"
+          },
+          "quote_valid_until": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Quote Valid Until"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reason Codes"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "approver": {
+            "type": "string",
+            "title": "Approver"
+          },
+          "sign_with_kid": {
+            "type": "string",
+            "title": "Sign With Kid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "protocol_id",
+          "buyer_id",
+          "request_id",
+          "quote_id",
+          "amount_gross_cents",
+          "delivery_date",
+          "quote_valid_until",
+          "reason_codes",
+          "reasons",
+          "approver",
+          "sign_with_kid"
+        ],
+        "title": "AuthorizationRequest",
+        "description": "BUYER_AUTHORIZATION_REQUIRED 时返回：买方系统要批准、签名的内容。凭证的 payload 是 BuyerAuthorizationClaims。"
+      },
+      "AuthorizeOrderRequest": {
+        "properties": {
+          "buyer_authorization": {
+            "type": "string",
+            "title": "Buyer Authorization"
+          }
+        },
+        "type": "object",
+        "required": [
+          "buyer_authorization"
+        ],
+        "title": "AuthorizeOrderRequest"
       },
       "Candidate": {
         "properties": {
@@ -4636,6 +4887,17 @@
           "protocol_id": {
             "type": "string",
             "title": "Protocol Id"
+          },
+          "buyer_authorization": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buyer Authorization"
           }
         },
         "type": "object",
@@ -4721,7 +4983,8 @@
               "NOT_FOUND",
               "UPSTREAM_ERROR",
               "SELF_APPROVAL_FORBIDDEN",
-              "NOT_APPROVER"
+              "NOT_APPROVER",
+              "AUTHORIZATION_INVALID"
             ],
             "title": "Code"
           },
@@ -5132,6 +5395,7 @@
             "enum": [
               "PLACED",
               "PENDING_BUYER_APPROVAL",
+              "BUYER_AUTHORIZATION_REQUIRED",
               "PENDING_VALIO_REVIEW",
               "REQUOTE_REQUIRED",
               "REJECTED",
@@ -5174,6 +5438,27 @@
               }
             ],
             "title": "New Quote Id"
+          },
+          "authorization_request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthorizationRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "authorized_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authorized By"
           },
           "created_at": {
             "type": "string",
@@ -5717,6 +6002,25 @@
           "approver": {
             "type": "string",
             "title": "Approver"
+          },
+          "approval_channel": {
+            "type": "string",
+            "enum": [
+              "HOSTED",
+              "EXTERNAL"
+            ],
+            "title": "Approval Channel",
+            "default": "HOSTED"
+          },
+          "approver_public_key": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApproverKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "valid_until": {
             "type": "string",

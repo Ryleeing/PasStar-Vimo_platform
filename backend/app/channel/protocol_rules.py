@@ -87,6 +87,9 @@ def classify_changes(current: ProtocolBody, changes: dict[str, Any], actor: str,
                 add("expanded", field, old, new)                     # 允许自批：放宽，要重新签字
             elif old == "SELF" and new == "SEPARATE":
                 add("tightened", field, old, new)
+        elif field in ("approval_channel", "approver_public_key"):
+            if new != old:
+                add("expanded", field, old, new)                     # 换审批渠道或审批人钥匙：都要重新签字
         elif field == "approver":
             if new != old:
                 add("expanded", field, old, new)                     # 换审批人要重新签字

@@ -34,8 +34,17 @@ for name, (method, path, body) in calls.items():
     r = getattr(c, method)(path, headers=H, **({"json": body} if body is not None else {}))
     assert r.status_code == 200, (name, r.status_code, r.text)
     (out / f"{name}.json").write_text(json.dumps(r.json(), ensure_ascii=False, indent=2), encoding="utf-8")
+# 外部审批：协议和“需要买方授权”的订单
+extra = {
+    "protocol_external": c.get("/v1/protocols/prot_hotel_ext_v1", headers=H),
+    "order_auth_required": c.post("/v1/orders", json={"quote_id": "quo_7", "protocol_id": "prot_hotel_ext_v1"},
+                                  headers={**H, "Idempotency-Key": "export-ext"}),
+}
+for name, r in extra.items():
+    assert r.status_code == 200, (name, r.status_code, r.text)
+    (out / f"{name}.json").write_text(json.dumps(r.json(), ensure_ascii=False, indent=2), encoding="utf-8")
 # 幂等性自检
 o1 = c.post("/v1/orders", json={"quote_id": "quo_1", "protocol_id": "prot_hotel_v1"}, headers={**H, "Idempotency-Key": "k1"}).json()
 o2 = c.post("/v1/orders", json={"quote_id": "quo_1", "protocol_id": "prot_hotel_v1"}, headers={**H, "Idempotency-Key": "k1"}).json()
 assert o1 == o2
-print("openapi paths:", len(app.openapi()["paths"]), "| fixtures:", len(calls))
+print("openapi paths:", len(app.openapi()["paths"]), "| fixtures:", len(calls) + len(extra))
