@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Check, ChevronsUpDown, Moon, RotateCcw, ShieldCheck, Sun } from 'lucide-react';
+import { Check, ChevronsUpDown, Moon, RotateCcw, Sun } from 'lucide-react';
+import { MascotFace } from './Mascot';
 import { ACCOUNTS, PAGES_BY_ROLE, WORKSPACES, type RoleKey } from '../config/accounts';
 import { useSession } from '../state/session';
 import { progressSteps, useFlow } from '../state/flow';
@@ -23,7 +24,7 @@ export function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () =>
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Workspace navigation">
       <div className="brand">
-        <div className="brand-mark"><ShieldCheck size={18} /></div>
+        <div className="brand-mark"><MascotFace /></div>
         <div>
           <b>The Pass</b>
           <span>Valio Aimo ordering channel</span>
