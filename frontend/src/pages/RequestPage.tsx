@@ -267,12 +267,7 @@ export function RequestPage() {
 
       {/* ── Way 2: the form ── */}
       <section className={`card form-card ${aiFilled ? 'ai-filled' : ''}`} aria-labelledby="form-title">
-        <div className="row" style={{ marginBottom: 'var(--s4)', alignItems: 'baseline', gap: 'var(--s3)', flexWrap: 'wrap' }}>
-          <h2 id="form-title" className="grow">{flow.correcting ? 'Your request' : 'Order form'}</h2>
-          <span className="small muted">
-            {formSource === 'ai' ? 'Filled in by A.I.mo from your message. Change anything you like.' : 'Product, quantity and date are required.'}
-          </span>
-        </div>
+        <h2 id="form-title" style={{ marginBottom: 'var(--s4)' }}>{flow.correcting ? 'Your request' : 'Order form'}</h2>
         {facets.loading ? <Skeleton h={300} /> : facets.error ? <ErrorState error={facets.error} onRetry={facets.reload} /> : (
           <DetailsForm facets={facets.data!} form={form} setForm={setForm} errors={tried ? errors : {}} />
         )}
@@ -281,7 +276,7 @@ export function RequestPage() {
       <div className="form-actions">
         {tried && blocker && <span className="small" style={{ color: 'var(--bad)' }}>{blocker}</span>}
         <Button variant={message === null || flow.correcting ? 'primary' : 'default'} size="lg" className="ml-auto" loading={busy === 'form'} onClick={submitForm}>
-          Find options with this form <ArrowRight size={17} />
+          Find options <ArrowRight size={17} />
         </Button>
       </div>
     </div>
@@ -310,11 +305,11 @@ function AiReply({ message, answers, asking, stuck, thinking, onPick, onStartOve
                 ))}
               </div>
             )}
-            <p className="small muted">Pick one, or type your answer above.</p>
+            <p className="small muted">Pick one, type your answer above, or set it in the form and find options there.</p>
           </>
         )}
         {!thinking && stuck && (
-          <p>I still couldn’t work out “{stuck.question.replace(/\?$/, '')}”. Set it in the form below, then find options with the form.</p>
+          <p>I still couldn’t work out “{stuck.question.replace(/\?$/, '')}”. Set it in the form below and find options there.</p>
         )}
         {!thinking && !asking && !stuck && (
           <p className="ai-done"><Check size={16} className="ok-ink" aria-hidden /> I’ve filled in the form below.</p>
