@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "the-pass": {
+    "passtar": {
       "type": "http",
       "url": "${THE_PASS_MCP_URL}",
       "headers": {"X-Agent-Key": "${THE_PASS_AGENT_KEY}"}

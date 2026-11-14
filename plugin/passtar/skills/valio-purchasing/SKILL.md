@@ -1,12 +1,12 @@
 ---
 name: valio-purchasing
-description: Order food supplies from Valio Aimo for a professional kitchen (hotel, hospital, restaurant) through The Pass. Use when the user wants to buy, reorder, compare or check the status of products such as milk, cream or other dairy, or asks what they are allowed to order.
+description: Order food supplies from Valio Aimo for a professional kitchen (hotel, hospital, restaurant) through PasStar. Use when the user wants to buy, reorder, compare or check the status of products such as milk, cream or other dairy, or asks what they are allowed to order.
 ---
 
-# Purchasing through The Pass
+# Purchasing through PasStar
 
 You are the purchasing agent of one buyer. The buyer signed a protocol with Valio that fixes what you may buy,
-how much you may spend on your own, and who approves the rest. The Pass enforces it on every call; your job is
+how much you may spend on your own, and who approves the rest. PasStar enforces it on every call; your job is
 to understand the user, show them honest options, and order what they choose.
 
 ## Workflow
@@ -14,7 +14,7 @@ to understand the user, show them honest options, and order what they choose.
 1. **Start with `get_mandate`**, once per conversation. Remember the buyer, allowed categories, the
    auto-order limit, the maximum order, the approver, `how_to_read` and `rules`.
 2. **`find_options`** with the user's request in their own words. Do not rewrite it into a structure yourself;
-   The Pass parses it and cross-checks the result.
+   PasStar parses it and cross-checks the result.
    - `NEEDS_INPUT`: ask the user the `questions`, in plain words. Do not guess. Then call `find_options` again
      with the same `text` and their replies in `answers`, keyed by each question's `field`.
    - `NO_OPTIONS`: explain `why_none` and what the user could change.
@@ -49,7 +49,7 @@ Mention blocked products only when the user would expect them, with the reason.
   UNKNOWN, NO_DATA, and DEMO_DATA (demo stand-in data, not Valio's).
 - You see sensitivity levels L0 and L1 only: product facts and this buyer's own prices, totals and
   deliverable yes/no. Stock quantities, supplier performance, costs and other customers' data are withheld.
-  If asked, say The Pass does not disclose them to agents.
+  If asked, say PasStar does not disclose them to agents.
 - Orders carry `verification`: the quote Valio signed. When `signature_valid` is true you can tell the user the
   price, products and date are exactly what Valio quoted.
 

@@ -1,14 +1,14 @@
-# The Pass as an AI assistant plugin
+# PasStar as an AI assistant plugin
 
-ChatGPT or Claude acts as a buyer's purchasing agent: it connects to The Pass over MCP with that buyer's agent key
+ChatGPT or Claude acts as a buyer's purchasing agent: it connects to PasStar over MCP with that buyer's agent key
 and orders within the buyer's signed protocol. The server is `backend/app/orchestrator/mcp_server.py` (`POST /mcp`).
 
 ```
-the-pass/
+passtar/
   mcp.json                          ChatGPT: MCP server, API key in the X-Agent-Key header
   .mcp.json                         Claude: the same server; URL and key from environment variables
   .claude-plugin/plugin.json        Claude plugin manifest
-  skills/valio-purchasing/SKILL.md  How to buy through The Pass: workflow, presenting options, honesty rules
+  skills/valio-purchasing/SKILL.md  How to buy through PasStar: workflow, presenting options, honesty rules
 ```
 
 ## Run it for a demo
@@ -23,7 +23,7 @@ the-pass/
 4. **ChatGPT**: set `url` in `mcp.json` to `https://….trycloudflare.com/mcp`, build the plugin with the skill and
    upload it; give the agent key when connecting.
    **Claude Code**: `export THE_PASS_MCP_URL=https://….trycloudflare.com/mcp THE_PASS_AGENT_KEY=<key>`, then
-   `claude --plugin-dir plugin/the-pass`.
+   `claude --plugin-dir plugin/passtar`.
 
 Check the endpoint without an assistant:
 
@@ -37,9 +37,9 @@ curl -s https://….trycloudflare.com/mcp -H 'Content-Type: application/json' \
 
 | Agent | Buyer | Protocol | Approval |
 |---|---|---|---|
-| `agt_hotel` | Hotel Helsinki Central | lactose-free | procurement manager, in The Pass |
-| `agt_hospital` | Hospital | nut-free | hospital manager, in The Pass |
-| `agt_bistro` | Bistro Kallio | owner approves own orders | owner, in The Pass |
+| `agt_hotel` | Hotel Helsinki Central | lactose-free | procurement manager, in PasStar |
+| `agt_hospital` | Hospital | nut-free | hospital manager, in PasStar |
+| `agt_bistro` | Bistro Kallio | owner approves own orders | owner, in PasStar |
 | `agt_rogue` | – | no protocol: every call is refused and reported | – |
 
 Each protocol orders automatically up to €1,000 and refuses anything over €3,000; in between, a person approves.

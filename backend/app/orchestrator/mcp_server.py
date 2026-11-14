@@ -1,4 +1,4 @@
-"""MCP server: The Pass as tools for an AI assistant (ChatGPT or Claude plugin), at POST /mcp.
+"""MCP server: PasStar as tools for an AI assistant (ChatGPT or Claude plugin), at POST /mcp.
 
 The assistant connects with the buyer's agent key in the X-Agent-Key header (an API-key auth with a custom header
 in the plugin's mcp.json), exactly like the HTTP API. Each tool is a thin wrapper around agent_api; refusals come
@@ -24,7 +24,7 @@ from ..errors import ApiError
 from . import agent_api
 
 INSTRUCTIONS = """\
-The Pass is Valio Aimo's ordering channel. You act as the purchasing agent of one buyer (a hotel, hospital or
+PasStar is Valio Aimo's ordering channel. You act as the purchasing agent of one buyer (a hotel, hospital or
 restaurant kitchen), within the protocol that buyer signed: what you may buy, how much you may spend on your own,
 and who must approve the rest.
 
@@ -42,7 +42,7 @@ grade C or D requirement, or a fact from PRODUCT_NAME, NAME_PARSE, NO_DATA or DE
 READ = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
 WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
 
-server = MCPServer("the-pass", title="The Pass · Valio Aimo", instructions=INSTRUCTIONS, version="0.1.0")
+server = MCPServer("passtar", title="PasStar · Valio Aimo", instructions=INSTRUCTIONS, version="0.1.0")
 
 
 def _call(ctx: Context, tool: str, fn: Callable[..., dict], *args: Any, **kwargs: Any) -> dict:

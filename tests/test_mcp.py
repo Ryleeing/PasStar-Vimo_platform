@@ -36,7 +36,7 @@ def call(client, tool, key="demo-hotel", **arguments):
 def test_initialize_returns_the_instructions(client):
     res = rpc(client, "initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
                                      "clientInfo": {"name": "test", "version": "0"}})["result"]
-    assert res["serverInfo"]["name"] == "the-pass" and "get_mandate" in res["instructions"]
+    assert res["serverInfo"]["name"] == "passtar" and "get_mandate" in res["instructions"]
 
 
 def test_six_tools_and_no_approval(client):

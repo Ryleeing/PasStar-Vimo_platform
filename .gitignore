@@ -140,3 +140,4 @@ temp/
 documents/
 # Runner reports (tests/runner.py)
 tests/reports/
+plugin/*.zip

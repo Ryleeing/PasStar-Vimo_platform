@@ -35,7 +35,7 @@ GUIDE = {
     "reliability": "HIGH / MEDIUM / LOW: the lowest of four checks - evidence, match, fulfilment, compliance.",
     "if_chosen": {
         "AUTO": "Choosing it places the order straight away.",
-        "BUYER_APPROVAL": "Choosing it holds the order until the named approver approves it in The Pass.",
+        "BUYER_APPROVAL": "Choosing it holds the order until the named approver approves it in PasStar.",
         "VALIO_REVIEW": "Choosing it holds the order until Valio reviews it.",
         "REJECT": "It breaks the buyer's protocol and cannot be ordered.",
     },
@@ -96,7 +96,7 @@ PRIORITIES = {
 
 NEXT_STEP = {
     "PLACED": "Tell the user the order is placed.",
-    "PENDING_BUYER_APPROVAL": "Tell the user the order is held for approval by {approver} in The Pass "
+    "PENDING_BUYER_APPROVAL": "Tell the user the order is held for approval by {approver} in PasStar "
                               "(Approvals page). Check again with order_status after they approve.",
     "PENDING_VALIO_REVIEW": "Tell the user Valio is reviewing the order. Check again later with order_status.",
     "BUYER_AUTHORIZATION_REQUIRED": "The order needs approval in the buyer's own system by {approver}. "
@@ -143,7 +143,7 @@ def get_mandate(who: Audience) -> dict:
             "hard_requirements": [r.label or r.code for r in b.hard_requirements],
             "auto_order_up_to_eur": _eur(b.auto_approve_limit_cents),
             "max_order_eur": _eur(b.max_order_cents),
-            "approver": _user_name(b.approver), "approval_where": "The Pass" if b.approval_channel == "HOSTED" else "buyer's own system",
+            "approver": _user_name(b.approver), "approval_where": "PasStar" if b.approval_channel == "HOSTED" else "buyer's own system",
         },
         "profiles": [{"id": pr["id"], "name": pr["name"]} for pr in _profiles(b.buyer_id, who)],
         "disclosure": {"your_level": who.ceiling,
