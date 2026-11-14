@@ -44,6 +44,14 @@ export function withMilkQuestion(p: ParseResult, text: string): ParseResult {
     out.ambiguities = [{ field: 'requirements', question: 'Whole, semi-skimmed or skimmed?', options: ['Any', 'Whole', 'Semi-skimmed', 'Skimmed'] }];
   }
   if (isMilk && saysType) out.ambiguities = [];
+  // The fixture always says 1000 L; honour a quantity written in the text (the last one wins, so a
+  // follow-up like "make it 800 litres" changes it).
+  const qty = [...text.matchAll(/(\d[\d,. ]*)\s*(l|litres?|liters?|kg|kilos?|pcs|pieces)\b/gi)].pop();
+  if (qty) {
+    const value = Number(qty[1].replace(/[ ,]/g, ''));
+    const u = qty[2].toLowerCase();
+    if (value > 0) out.structured.quantity = { value, unit: u.startsWith('k') ? 'kg' : u.startsWith('p') ? 'pcs' : 'L' };
+  }
   return out;
 }
 

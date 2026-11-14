@@ -1,18 +1,19 @@
-// Step 1. One flow, not two competing paths:
-//   type what you need → the AI fills in the form → check / adjust → find options.
-// The form can also be filled by hand without typing anything.
-// When the AI is unsure about something, the form shows an empty slot for it, the AI asks in its reply,
-// and the chosen answer visibly flies into that slot: the question exists to complete the form.
+// Step 1. Two equal ways in, side by side:
+//   left  — the order form, filled in by hand;
+//   right — a chat with A.I.mo: describe the order in your own words and it writes it into the form.
+// Both end in the same form, which is what gets submitted. When A.I.mo is unsure about something, the form
+// shows an empty slot for it, A.I.mo asks in the chat, and the chosen answer visibly flies into that slot.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowUp, Check, ChevronDown, WandSparkles } from 'lucide-react';
+import { ArrowRight, ArrowUp, Check, ChevronDown, MessageCircle } from 'lucide-react';
 import { Mascot, MascotFace, type MascotMood } from '../components/Mascot';
 import { createRequest, getFacets, listProfiles, parseRequest, rejectNode } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Ambiguity, Facets, Requirement, StructuredRequest } from '../api/types';
+import { dayLabel, num } from '../lib/format';
 import { useSession } from '../state/session';
 import { useFlow } from '../state/flow';
-import { Banner, Button, ErrorState, PageHead, Segmented, Skeleton, useAsync, useToast } from '../components/ui';
+import { Banner, Button, ErrorState, PageHead, Segmented, Skeleton, useAsync } from '../components/ui';
 
 type Sub = StructuredRequest['substitution'];
 interface Form {
@@ -42,9 +43,18 @@ const formFrom = (s: StructuredRequest): Form => ({
   substitution: s.substitution ?? 'SAME_CATEGORY',
 });
 
-interface Flight { text: string; from: DOMRect; to: DOMRect }
+/** "1,000 L lactose-free milk, by Mon 16 Nov" */
+function summarize(s: StructuredRequest, facets: Facets | null) {
+  const cat = s.category_label ?? facets?.categories.find((c) => c.code === s.category)?.label ?? 'products';
+  const reqs = (s.requirements ?? []).map((r) => (r.label ?? r.code).toLowerCase()).join(', ');
+  return `${num(s.quantity.value)} ${s.quantity.unit} ${reqs ? `${reqs} ` : ''}${cat.toLowerCase()}, by ${dayLabel(s.delivery_date)}`;
+}
 
-/** Example prompts: one click fills the message box, which teaches what A.I.mo can read. */
+interface Flight { text: string; from: DOMRect; to: DOMRect }
+type Reply = { state: 'pending' } | { state: 'done'; summary: string } | { state: 'error'; error: string };
+interface Turn { id: number; text: string; reply: Reply }
+
+/** Example messages: one click puts it in the message box, which shows what A.I.mo can read. */
 const EXAMPLES = [
   '1000 litres of lactose-free milk by Monday',
   'Nut-free cream for 200 desserts, Friday',
@@ -55,7 +65,6 @@ export function RequestPage() {
   const { workspace } = useSession();
   const { flow, patch } = useFlow();
   const navigate = useNavigate();
-  const toast = useToast();
 
   const facets = useAsync(getFacets, []);
   const profiles = useAsync(() => listProfiles(workspace.buyerId!), [workspace.buyerId]);
@@ -70,6 +79,10 @@ export function RequestPage() {
   const [submitting, setSubmitting] = useState(false);
   const [tried, setTried] = useState(false);
   const [aiFilled, setAiFilled] = useState(false);
+  const [draft, setDraft] = useState('');
+  // Coming back to this page: show the last exchange again.
+  const [turns, setTurns] = useState<Turn[]>(() => (flow.parse && flow.rawText
+    ? [{ id: 1, text: flow.rawText, reply: { state: 'done', summary: summarize(flow.parse.structured, null) } }] : []));
   const slotRef = useRef<HTMLDivElement>(null);
 
   // Profile defaults go into empty fields only.
@@ -87,7 +100,7 @@ export function RequestPage() {
   const question = flow.correcting ? undefined : flow.parse?.ambiguities?.[0];
   const errors = useMemo(() => {
     const e: Partial<Record<'category' | 'qty' | 'date', string>> = {};
-    if (!form.category) e.category = 'Choose a category';
+    if (!form.category) e.category = 'Choose a product';
     if (!(Number(form.qty) > 0)) e.qty = 'Enter a quantity';
     if (!form.date) e.date = 'Choose a date';
     else if (form.date < isoIn(0)) e.date = 'Date is in the past';
@@ -95,18 +108,30 @@ export function RequestPage() {
   }, [form]);
   const blocker = question && !answer ? `Choose the ${clarifyLabel(question).toLowerCase()} first` : Object.values(errors)[0];
 
-  const understand = async () => {
-    if (!flow.rawText.trim()) return;
+  /** Send a message to A.I.mo: it reads it and writes the order into the form. */
+  const send = async (text = draft) => {
+    const t = text.trim();
+    if (!t || parsing) return;
+    const id = Date.now();
+    setTurns((ts) => [...ts, { id, text: t, reply: { state: 'pending' } }]);
+    setDraft('');
     setParsing(true);
-    setAnswer(null);
+    // A follow-up ("make it 800 litres") is read together with what was said before.
+    const full = turns.length && flow.parse ? `${flow.rawText}. ${t}` : t;
+    const prevQuestion = question?.question;
+    const prevAnswer = answer;
+    patch({ rawText: full });
     try {
-      const parse = await parseRequest(flow.rawText, profile?.id);
+      const parse = await parseRequest(full, profile?.id);
       patch({ parse });
+      // Keep an answer already given if A.I.mo would ask the same thing again.
+      setAnswer(parse.ambiguities?.[0]?.question === prevQuestion ? prevAnswer : null);
       setForm(formFrom(parse.structured));
+      setTurns((ts) => ts.map((x) => (x.id === id ? { ...x, reply: { state: 'done', summary: summarize(parse.structured, facets.data ?? null) } } : x)));
       setAiFilled(true);
       setTimeout(() => setAiFilled(false), 1600);
     } catch (e) {
-      toast(describeError(e), 'bad');
+      setTurns((ts) => ts.map((x) => (x.id === id ? { ...x, reply: { state: 'error', error: describeError(e) } } : x)));
     } finally {
       setParsing(false);
     }
@@ -119,7 +144,7 @@ export function RequestPage() {
     setTimeout(() => setLanded(false), 1100);
   };
 
-  /** Picking an answer in the AI's reply sends a copy of the chip down into its slot in the form. */
+  /** Picking an answer in the chat sends a copy of the chip across into its slot in the form. */
   const pick = (o: string, chip: HTMLElement) => {
     const slot = slotRef.current;
     if (!slot || reducedMotion()) return commit(o);
@@ -170,82 +195,83 @@ export function RequestPage() {
   };
 
   const mood: MascotMood = parsing ? 'thinking' : question && !answer ? 'asking' : flow.parse ? 'happy' : 'idle';
+  const profilePick = profiles.data && profiles.data.length > 0 && (
+    <label className="profile-pick">
+      <span>Profile</span>
+      <select value={profile?.id ?? ''} onChange={(e) => setProfileId(e.target.value)}>
+        {profiles.data.map((p) => <option key={p.id} value={p.id}>{p.body.name}</option>)}
+      </select>
+    </label>
+  );
 
   return (
-    <div className="narrow">
-      {flow.correcting && <PageHead title="Adjust your request" />}
-
+    <div className="req-page">
       {flow.correcting ? (
-        <div style={{ marginBottom: 16 }}>
-          <Banner tone="info" title="Change the details below"
-            action={<Button size="sm" variant="ghost" onClick={() => { patch({ correcting: null }); navigate('/options'); }}>Cancel</Button>}>
-            The options are found again from here on.
-          </Banner>
-        </div>
-      ) : (
         <>
-          {/* ── Hero: A.I.mo + message box + examples ── */}
-          <section className="hero" aria-labelledby="hero-title">
-          <span className="hero-mascot"><Mascot mood={mood} size={150} /></span>
-          <div>
-            <h1 id="hero-title" className="display hero-title">What does your kitchen need?</h1>
-            <p className="hero-sub">Tell A.I.mo in your own words. It fills in the order form for you to check.</p>
+          <PageHead title="Adjust your request" />
+          <div style={{ marginBottom: 16 }}>
+            <Banner tone="info" title="Change the details below"
+              action={<Button size="sm" variant="ghost" onClick={() => { patch({ correcting: null }); navigate('/options'); }}>Cancel</Button>}>
+              The options are found again from here on.
+            </Banner>
           </div>
-          <div className="composer">
-            <textarea
-              aria-label="Describe what you need"
-              rows={2}
-              value={flow.rawText}
-              placeholder="e.g. 1000 litres of lactose-free milk by Monday"
-              onChange={(e) => patch({ rawText: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  understand();
-                }
-              }}
-            />
-            <div className="composer-foot">
-              {profiles.data && profiles.data.length > 0 && (
-                <label className="profile-pick">
-                  <span className="muted">Profile</span>
-                  <select value={profile?.id ?? ''} onChange={(e) => setProfileId(e.target.value)}>
-                    {profiles.data.map((p) => <option key={p.id} value={p.id}>{p.body.name}</option>)}
-                  </select>
-                </label>
-              )}
-              <Button variant="primary" size="sm" className="ml-auto" loading={parsing} disabled={!flow.rawText.trim()} onClick={understand} aria-label="Fill in the form from my message">
-                {!parsing && <WandSparkles size={16} />} Fill in form
-              </Button>
-            </div>
-          </div>
-          <div className="examples">
-            <span className="small strong label">Try</span>
-            {EXAMPLES.map((ex) => (
-              <button key={ex} type="button" className="chip example" onClick={() => patch({ rawText: ex, parse: null })}>{ex}</button>
-            ))}
-          </div>
-          </section>
-
-          {flow.parse && (
-            <AiReply question={question} answer={answer} inFlight={!!flight} onPick={pick} highlight={tried && !!question && !answer} />
-          )}
         </>
+      ) : (
+        <header className="req-head">
+          <div>
+            <h1 className="display req-title">What does your kitchen need?</h1>
+            <p className="req-sub">Fill in the order yourself, or describe it to A.I.mo and it writes it in for you.</p>
+          </div>
+          {profilePick}
+        </header>
       )}
 
-      {/* ── The form ── */}
-      <section className={`card form-card ${aiFilled ? 'ai-filled' : ''}`} aria-label="Request details">
-        {facets.loading ? <Skeleton h={300} /> : facets.error ? <ErrorState error={facets.error} onRetry={facets.reload} /> : (
-          <DetailsForm facets={facets.data!} form={form} setForm={setForm} errors={tried ? errors : {}}
-            clarify={question && { question, answer, setAnswer: commit, slotRef, landed, needed: tried && !answer, hidden: !!flight }} />
-        )}
-      </section>
+      <div className={`req-layout ${flow.correcting ? 'solo' : ''}`}>
+        {/* ── left: the order form ── */}
+        <div className="req-form">
+          <section className={`card form-card ${aiFilled ? 'ai-filled' : ''}`} aria-labelledby="order-title">
+            <header className="form-head">
+              <h2 id="order-title">Your order</h2>
+              {flow.parse && !flow.correcting && <span className="form-src"><MascotFace size={22} mood="happy" /> Written in by A.I.mo · edit anything</span>}
+            </header>
+            {facets.loading ? <Skeleton h={300} /> : facets.error ? <ErrorState error={facets.error} onRetry={facets.reload} /> : (
+              <DetailsForm facets={facets.data!} form={form} setForm={setForm} errors={tried ? errors : {}}
+                clarify={question && { question, answer, setAnswer: commit, slotRef, landed, needed: tried && !answer, hidden: !!flight }} />
+            )}
+          </section>
+          <div className="form-actions">
+            {tried && blocker && <span className="small" style={{ color: 'var(--bad)' }}>{blocker}</span>}
+            <Button variant="primary" size="lg" className="ml-auto" loading={submitting} onClick={submit}>
+              Find options <ArrowRight size={17} />
+            </Button>
+          </div>
+        </div>
 
-      <div className="form-actions">
-        {tried && blocker && <span className="small" style={{ color: 'var(--bad)' }}>{blocker}</span>}
-        <Button variant="primary" size="lg" className="ml-auto" loading={submitting} onClick={submit}>
-          Find options <ArrowRight size={17} />
-        </Button>
+        {/* ── right: describe it to A.I.mo ── */}
+        {!flow.correcting && (
+          <aside className="chat" aria-label="Describe your order to A.I.mo">
+           <div className="chat-inner">
+            <header className="chat-head">
+              <span className="chat-mascot" aria-hidden><Mascot mood={mood} size={64} /></span>
+              <div>
+                <h2>Ask A.I.mo</h2>
+                <p>Describe it in your own words. It goes straight into the form.</p>
+              </div>
+            </header>
+            <Thread turns={turns} question={question} answer={answer} inFlight={!!flight} onPick={pick}
+              highlight={tried && !!question && !answer} onExample={(ex) => { setDraft(ex); }} />
+            <div className="chat-compose">
+              <textarea aria-label="Message to A.I.mo" rows={2} value={draft}
+                placeholder={turns.length ? 'Change something, e.g. “make it 800 litres”' : 'e.g. 1000 litres of lactose-free milk by Monday'}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} />
+              <button type="button" className="send" onClick={() => send()} disabled={!draft.trim() || parsing} aria-label="Send to A.I.mo">
+                <ArrowUp size={18} />
+              </button>
+            </div>
+           </div>
+          </aside>
+        )}
       </div>
 
       {flight && (
@@ -258,39 +284,73 @@ export function RequestPage() {
   );
 }
 
-function AiReply({ question, answer, inFlight, onPick, highlight }: {
-  question?: Ambiguity; answer: string | null; inFlight: boolean; onPick: (o: string, el: HTMLElement) => void; highlight: boolean;
+/** The conversation: a greeting with examples, then each message and A.I.mo's reply. */
+function Thread({ turns, question, answer, inFlight, onPick, highlight, onExample }: {
+  turns: Turn[]; question?: Ambiguity; answer: string | null; inFlight: boolean;
+  onPick: (o: string, el: HTMLElement) => void; highlight: boolean; onExample: (ex: string) => void;
 }) {
+  const end = useRef<HTMLDivElement>(null);
+  useEffect(() => { end.current?.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' }); }, [turns, answer]);
+  const last = turns[turns.length - 1];
   const answered = !!question && !!answer && !inFlight;
+
   return (
-    <div className={`ai-reply ${question && !answered ? 'asking' : ''}`} aria-live="polite">
-      <span className="ai-avatar" aria-hidden><MascotFace mood={question && !answered ? 'asking' : 'happy'} /></span>
-      <div className="stack sm grow">
-        {!question && <p>I’ve filled in the details below. Check them, then find options.</p>}
-        {question && (answered ? (
-          <p className="ai-done">
-            <Check size={16} className="ok-ink" aria-hidden /> Got it. <b>{answer}</b> is in the form. Check the details, then find options.
-          </p>
-        ) : (
-          <p>I’ve filled in the form below. Choose one more thing to finish it:</p>
-        ))}
-        {question && (
-          // Stays mounted so it can fold away smoothly once the answer has landed in the form.
-          <div className={`fold ${answered ? 'closed' : ''}`} aria-hidden={answered}>
-            <div className={`stack sm ${highlight ? 'needs-answer' : ''}`}>
-              <p className="ai-question">{question.question}</p>
-              <div className="chips" role="radiogroup" aria-label={question.question}>
-                {question.options?.map((o) => (
-                  <button key={o} type="button" className="chip" role="radio" aria-checked={false} disabled={inFlight || answered}
-                    tabIndex={answered ? -1 : undefined} onClick={(e) => onPick(o, e.currentTarget)}>
-                    {o}
-                  </button>
-                ))}
+    <div className="chat-body" aria-live="polite">
+      <div className="bubble ai">
+        <span className="bubble-face" aria-hidden><MascotFace size={26} /></span>
+        <div className="bubble-text">
+          <p>Hi! Tell me what you need and when. I’ll put it into the order for you to check.</p>
+          {!turns.length && (
+            <div className="chat-examples">
+              {EXAMPLES.map((ex) => <button key={ex} type="button" className="chip example" onClick={() => onExample(ex)}>{ex}</button>)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {turns.map((t) => {
+        const isLast = t === last;
+        return (
+          <div key={t.id} className="turn">
+            <div className="bubble user"><div className="bubble-text"><p>{t.text}</p></div></div>
+            <div className={`bubble ai ${isLast && question && !answered && t.reply.state === 'done' ? 'asking' : ''}`}>
+              <span className="bubble-face" aria-hidden>
+                <MascotFace size={26} mood={t.reply.state === 'pending' ? 'thinking' : isLast && question && !answered ? 'asking' : 'happy'} />
+              </span>
+              <div className="bubble-text">
+                {t.reply.state === 'pending' && <p className="typing" aria-label="A.I.mo is reading"><i /><i /><i /></p>}
+                {t.reply.state === 'error' && <p className="bad-text">I couldn’t read that: {t.reply.error}</p>}
+                {t.reply.state === 'done' && (
+                  <>
+                    <p>I’ve put this into the order: <b>{t.reply.summary}</b>.</p>
+                    {isLast && question && (
+                      <div className={`fold ${answered ? 'closed' : ''}`} aria-hidden={answered}>
+                        <div className={`stack sm ${highlight ? 'needs-answer' : ''}`}>
+                          <p>One thing to finish it:</p>
+                          <p className="ai-question">{question.question}</p>
+                          <div className="chips" role="radiogroup" aria-label={question.question}>
+                            {question.options?.map((o) => (
+                              <button key={o} type="button" className="chip" role="radio" aria-checked={false} disabled={inFlight || answered}
+                                tabIndex={answered ? -1 : undefined} onClick={(e) => onPick(o, e.currentTarget)}>{o}</button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {isLast && (!question || answered) && (
+                      <p className="ai-done">
+                        <Check size={15} className="ok-ink" aria-hidden />
+                        {answered ? <>Got it, <b>{answer}</b>. Check the order, then find options.</> : <>Check the order, then find options.</>}
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
-        )}
-      </div>
+        );
+      })}
+      <div ref={end} />
     </div>
   );
 }
@@ -409,7 +469,7 @@ function ClarifyField({ question, answer, setAnswer, slotRef, landed, needed, hi
               <button type="button" className="btn ghost sm" onClick={() => setEditing(true)}>Change</button>
             </>
           ) : (
-            <span className="slot-empty"><ArrowUp size={15} /> Answer the question above</span>
+            <span className="slot-empty"><MessageCircle size={15} /> Answer A.I.mo’s question</span>
           )}
         </div>
       )}
