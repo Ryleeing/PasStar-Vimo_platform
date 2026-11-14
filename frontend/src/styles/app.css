@@ -1489,3 +1489,12 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
 .md hr { border: 0; border-top: 1px solid var(--border); margin: var(--s2) 0; }
 .msg-user .md code { background: rgba(255, 255, 255, 0.2); }
 .excl .inactive-grid { padding: var(--s4); border-top: 1px solid var(--border); }
+
+/* Setup commands (e.g. "claude mcp add …") stay inside the card: long commands wrap instead of overflowing.
+   Copying still copies the whole command as one line. */
+.connect, .connect .card { min-width: 0; }
+.setup-steps { grid-template-columns: minmax(0, 1fr); }
+.setup-steps li { min-width: 0; }
+.key-box { min-width: 0; max-width: 100%; }
+.setup-steps .key-box code { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-all; overflow-x: visible; line-height: 1.5; }
+.setup-steps .key-box { align-items: flex-start; }
