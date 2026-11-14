@@ -1637,3 +1637,14 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 /* pastel on white is too faint for the big number: keep it dark; the hovered segment already shows which one */
 .donut-center b { color: var(--text) !important; }
 .donut-center b.warn-text { color: var(--warn) !important; }
+
+/* Serif, used sparingly: page titles and the order confirmation only. Everything people scan or act on stays in Inter.
+   (The request page's big headline keeps its condensed display face.) */
+:root { --serif: 'Cormorant Garamond', Garamond, Georgia, 'Times New Roman', serif; }
+h1 { font-family: var(--serif); font-weight: 600; font-size: 3.125rem; line-height: 1.02; letter-spacing: -0.01em; }
+.ordered h1 { font-family: var(--serif); font-weight: 600; font-size: 3.75rem; line-height: 1; letter-spacing: -0.01em; }
+@media (max-width: 900px) { h1 { font-size: 2.5rem; } }
+/* the request (and onboarding) headline joins the serif page titles */
+.display.hero-title { font-family: var(--serif); font-weight: 600; letter-spacing: -0.01em; line-height: 1.02; }
+.request-split .display.hero-title { font-size: 3.125rem; }
+
