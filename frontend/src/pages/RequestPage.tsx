@@ -141,10 +141,19 @@ export function RequestPage() {
       notes: question && answer && answer !== 'Any' ? `${clarifyLabel(question)}: ${answer}` : null,
     };
     const fromText = !!flow.parse;
+    const correcting = flow.correcting;
+    const prev = flow.request;
+    // Go straight to the options page: it shows the agent working through the steps while this call runs.
     setSubmitting(true);
+    patch({
+      run: { from: 1, pending: true }, request: correcting ? prev : null, panel: structured,
+      regenFrom: correcting ? 1 : null, correcting: null,
+      selection: null, order: null, sentToApproval: false, approvalResult: null,
+    });
+    navigate('/options');
     try {
-      const request = flow.correcting && flow.request
-        ? await rejectNode(flow.request.request_id, 1, { reason: flow.correcting, params: { structured } })
+      const request = correcting && prev
+        ? await rejectNode(prev.request_id, 1, { reason: correcting, params: { structured } })
         : await createRequest({
             protocol_id: workspace.protocolId!,
             profile_id: profile?.id ?? null,
@@ -152,13 +161,9 @@ export function RequestPage() {
             raw_text: fromText ? flow.rawText : null,
             structured,
           });
-      patch({
-        request, panel: structured, regenFrom: flow.correcting ? 1 : null, correcting: null,
-        selection: null, order: null, sentToApproval: false, approvalResult: null,
-      });
-      navigate('/options');
+      patch({ request, run: { from: 1, pending: false } });
     } catch (e) {
-      toast(describeError(e), 'bad');
+      patch({ run: { from: 1, pending: false, error: describeError(e) }, correcting });
     } finally {
       setSubmitting(false);
     }

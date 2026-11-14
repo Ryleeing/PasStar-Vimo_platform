@@ -13,6 +13,9 @@ import { CheckoutBar } from '../components/CheckoutBar';
 import { Mascot } from '../components/Mascot';
 import { Banner, Button, Empty, PageHead, Pill, useToast } from '../components/ui';
 
+/** "Milk type: Semi-skimmed" → ["semi-skimmed"]: the answer to the AI's question, if any. */
+const clarifiedOf = (notes?: string | null) => (notes?.includes(': ') ? [notes.split(': ').pop()!.toLowerCase()] : []);
+
 const newKey = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `idem-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
 export function OptionsPage() {
@@ -23,8 +26,9 @@ export function OptionsPage() {
   const [showMore, setShowMore] = useState(false);
   const [selecting, setSelecting] = useState<string | null>(null);
   const r = flow.request;
+  const run = flow.run;
 
-  if (!r) {
+  if (!r && !run) {
     return (
       <>
         <PageHead title="Options" />
@@ -36,19 +40,23 @@ export function OptionsPage() {
     );
   }
 
-  const s = r.structured;
-  const top = r.candidates.slice(0, 3);
-  const more = r.candidates.slice(3);
-  const all = [...r.candidates, ...(r.blocked ?? [])];
-  const clarified = s.notes?.includes(': ') ? s.notes.split(': ').pop()!.toLowerCase() : null; // e.g. "Milk type: Semi-skimmed"
-  const summary = [s.category_label ?? s.category, ...(clarified ? [clarified] : []), ...(s.requirements ?? []).map((q) => (q.label ?? q.code).toLowerCase()),
-    `${num(s.quantity.value)} ${s.quantity.unit}`, `by ${dayLabel(s.delivery_date)}`].join(' · ');
+  const s = r?.structured ?? flow.panel;
+  const summary = s ? [s.category_label ?? s.category, ...clarifiedOf(s.notes), ...(s.requirements ?? []).map((q) => (q.label ?? q.code).toLowerCase()),
+    `${num(s.quantity.value)} ${s.quantity.unit}`, `by ${dayLabel(s.delivery_date)}`].join(' · ') : undefined;
+
+  // While the agent works, only the steps are shown; the options follow once they're done.
+  // ChainView stays mounted across both so it can fold itself away when the run ends.
+  const working = !!run || !r;
+  const top = r?.candidates.slice(0, 3) ?? [];
+  const more = r?.candidates.slice(3) ?? [];
+  const all = r ? [...r.candidates, ...(r.blocked ?? [])] : [];
 
   const choose = async (c: Candidate) => {
     if (flow.order && flow.order.status !== 'REQUOTE_REQUIRED') {
       toast('This request already has an order.', 'info');
       return;
     }
+    if (!r) return;
     setSelecting(c.id);
     try {
       const result = await selectCandidate(r.request_id, c.id);
@@ -65,16 +73,21 @@ export function OptionsPage() {
 
   return (
     <>
-      <PageHead title="Choose an option" desc={summary}
-        actions={<Button variant="ghost" onClick={() => navigate('/request')}><PencilLine size={15} /> Edit request</Button>} />
+      <PageHead title={working && !run?.error ? 'Finding options' : 'Choose an option'} desc={summary}
+        actions={!working && <Button variant="ghost" onClick={() => navigate('/request')}><PencilLine size={15} /> Edit request</Button>} />
 
+      <div className="run-slot">
+        <ChainView request={r} />
+      </div>
+
+      {r && !working && (<>
       {r.candidates.length === 0 ? (
         <Banner tone="warn" title="Nothing meets every requirement">
-          {r.no_candidate_reason ?? 'No product matched.'} Mark “Filter products” below as not right, or edit the request.
+          {r.no_candidate_reason ?? 'No product matched.'} Open the steps above and mark “Filter products” as not right, or edit the request.
         </Banner>
       ) : (
         <>
-          <div className="grid three" id="options-grid">
+          <div className="grid three reveal" id="options-grid">
             {top.map((c, i) => (
               <CandidateCard key={c.id} c={c} all={all} featured={i === 0} mode={mode}
                 onChooseAlt={(id) => { const alt = all.find((x) => x.id === id); if (alt?.selectable) choose(alt); }}
@@ -113,10 +126,6 @@ export function OptionsPage() {
         </>
       )}
 
-      <div style={{ marginTop: 28 }}>
-        <ChainView request={r} />
-      </div>
-
       {(r.blocked?.length ?? 0) > 0 && (
         <details className="details excluded" style={{ marginTop: 16 }}>
           <summary>{r.blocked!.length} excluded by your requirements <ChevronDown size={14} className="chev" /></summary>
@@ -136,6 +145,8 @@ export function OptionsPage() {
           <Banner tone="info" title={mode === 'SEPARATE' ? 'Sent to the procurement manager' : 'Waiting for your approval'} />
         </div>
       )}
+
+      </>)}
 
       {flow.selection && <CheckoutBar selection={flow.selection} onClear={() => patch({ selection: null })} />}
     </>

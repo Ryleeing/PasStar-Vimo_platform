@@ -17,6 +17,9 @@ export interface FlowState {
   panel: StructuredRequest | null;
   request: RequestResult | null;
   regenFrom: number | null;
+  /** The agent is working: steps before `from` are kept, `from` onward are being (re)done.
+   *  `pending` while the API call is in flight; the options page reveals the steps, then clears this. */
+  run: { from: number; pending: boolean; error?: string } | null;
   /** Step ① was marked "not right" with this reason: the request page is in correction mode. */
   correcting: RejectReason | null;
   selection: Selection | null;
@@ -36,6 +39,7 @@ const initial: FlowState = {
   panel: null,
   request: null,
   regenFrom: null,
+  run: null,
   correcting: null,
   selection: null,
   order: null,
