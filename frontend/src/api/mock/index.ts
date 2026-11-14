@@ -6,7 +6,7 @@ import type {
   ApprovalCard, ApprovalDecision, AuditEntry, Candidate, CreateRequest, GateDecision, Order, ProfileBody,
   Protocol, Quote, RejectNodeRequest, RequestResult,
 } from '../types';
-import { draftFrom, ROGUE_AUDIT, seed, selfProtocol } from './data';
+import { draftFrom, ROGUE_AUDIT, seed, selfProtocol, withMilkQuestion } from './data';
 
 interface Ctx {
   body?: unknown;
@@ -47,12 +47,13 @@ async function sha256(text: string): Promise<string> {
 }
 
 /** Append-only, hash-chained: hash = sha256(prev_hash + at + actor + event + payload_json). */
-async function audit(actor: string, event: string, summary: string, disclosed: AuditEntry['disclosed_fields'] = []) {
+async function audit(actor: string, event: string, summary: string, disclosed: AuditEntry['disclosed_fields'] = [],
+  requestId: string | null = db.request?.request_id ?? null) {
   const prev = db.audit[db.audit.length - 1];
   const at = nowIso();
   const payload = {};
   const hash = await sha256(prev.hash + at + actor + event + JSON.stringify(payload));
-  db.audit.push({ seq: prev.seq + 1, at, request_id: 'req_1', actor, event, summary, disclosed_fields: disclosed, payload, prev_hash: prev.hash, hash });
+  db.audit.push({ seq: prev.seq + 1, at, request_id: requestId, actor, event, summary, disclosed_fields: disclosed, payload, prev_hash: prev.hash, hash });
 }
 
 const userLabel = (u: string) => `user:${u}`;
@@ -94,17 +95,17 @@ const routes: [string, RegExp, Handler][] = [
   ['POST', /^\/v1\/protocols\/([^/]+)\/sign$/, async ([, id], { headers }) => {
     const p = db.protocols[id] ?? db.protocol;
     db.protocols[id] = { ...p, status: 'PENDING_VALIO_CONFIRMATION', buyer_signed_at: nowIso() };
-    await audit(userLabel(headers['X-Demo-User']), 'PROTOCOL_SIGNED', `Protocol ${id} signed by the buyer; waiting for Valio`);
+    await audit(userLabel(headers['X-Demo-User']), 'PROTOCOL_SIGNED', `Protocol ${id} signed by the buyer; waiting for Valio`, [], null);
     return db.protocols[id];
   }],
   ['POST', /^\/v1\/protocols\/([^/]+)\/confirm$/, async ([, id]) => {
     const p = db.protocols[id] ?? db.protocol;
     db.protocols[id] = { ...p, status: 'ACTIVE', valio_confirmed_at: nowIso(), jws: 'eyJhbGciOiJFZERTQSIsImtpZCI6InZhbGlvLTEifQ.mock.mock' };
-    await audit('user:usr_valio', 'PROTOCOL_CONFIRMED', `Valio confirmed ${id}; protocol is active`);
+    await audit('user:usr_valio', 'PROTOCOL_CONFIRMED', `Valio confirmed ${id}; protocol is active`, [], null);
     return db.protocols[id];
   }],
   ['POST', /^\/v1\/protocols\/([^/]+)\/amend$/, async () => {
-    await audit('user:usr_manager', 'PROTOCOL_AMENDED', 'Tightening applied; expansion waits for signature; forbidden change rejected');
+    await audit('user:usr_manager', 'PROTOCOL_AMENDED', 'Tightening applied; expansion waits for signature; forbidden change rejected', [], null);
     return db.protocolDiff;
   }],
   // ── profiles ──
@@ -112,13 +113,13 @@ const routes: [string, RegExp, Handler][] = [
   ['PUT', /^\/v1\/profiles\/([^/]+)$/, async ([, id], { body }) => {
     const i = Math.max(0, db.profiles.findIndex((p) => p.id === id));
     db.profiles[i] = { ...db.profiles[i], body: body as ProfileBody, updated_at: nowIso() };
-    await audit('user:buyer', 'PROFILE_UPDATED', `Profile “${(body as ProfileBody).name}” updated`);
+    await audit('user:buyer', 'PROFILE_UPDATED', `Profile “${(body as ProfileBody).name}” updated`, [], null);
     return db.profiles[i];
   }],
   // ── catalog ──
   ['GET', /^\/v1\/catalog\/facets$/, () => db.facets],
   // ── requests ──
-  ['POST', /^\/v1\/requests\/parse$/, () => db.parse],
+  ['POST', /^\/v1\/requests\/parse$/, (_m, { body }) => withMilkQuestion(db.parse, String((body as { text?: string })?.text ?? ''))],
   ['POST', /^\/v1\/requests$/, async (_m, { body, headers }) => {
     const b = body as CreateRequest;
     if (db.faults.find((f) => f.name === 'TIMEOUT')?.enabled) throw err(502, 'UPSTREAM_ERROR', 'Valio API timed out');
@@ -160,7 +161,7 @@ const routes: [string, RegExp, Handler][] = [
         summary: c.node === node ? `${c.summary.replace(/ \(regenerated.*\)$/, '')} (regenerated: ${b.reason.toLowerCase().replace(/_/g, ' ')})` : c.summary,
       })),
     };
-    await audit('user:buyer', 'NODE_REJECTED', `Step ${node} marked “not right” (${b.reason}); regenerated from step ${node}`);
+    await audit('user:buyer', 'NODE_REJECTED', `Step ${node} adjusted (${b.reason}); regenerated from step ${node}`);
     return db.request;
   }],
   ['GET', /^\/v1\/requests\/([^/]+)\/chain$/, () => ({ ...db.chain, attempt: db.request.attempt })],

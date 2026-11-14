@@ -9,7 +9,7 @@ import { ArrowRight, ArrowUp, Check, ChevronDown, RotateCcw, ShieldCheck } from 
 import { Mascot, MascotFace, type MascotMood } from '../components/Mascot';
 import { createRequest, getActiveProtocol, getFacets, listProfiles, parseRequest, rejectNode } from '../api/endpoints';
 import { describeError } from '../api/client';
-import type { Ambiguity, Facets, Requirement, StructuredRequest } from '../api/types';
+import type { Ambiguity, Facets, RequestResult, Requirement, StructuredRequest } from '../api/types';
 import { useSession } from '../state/session';
 import { useFlow } from '../state/flow';
 import { useActiveProtocol } from '../state/protocol';
@@ -103,22 +103,33 @@ export function RequestPage() {
   }, [form]);
   const blocker = Object.values(errors)[0];
 
-  /** Run the four steps on a request and go to the options. */
-  const find = async (structured: StructuredRequest, rawText: string | null) => {
+  /** Go straight to the options page, which shows the agent working through the steps while this call runs. */
+  const run = async (structured: StructuredRequest, call: () => Promise<RequestResult>, correcting = flow.correcting) => {
+    const prev = flow.request;
+    patch({
+      run: { from: 1, pending: true }, request: correcting ? prev : null, panel: structured,
+      regenFrom: correcting ? 1 : null, correcting: null,
+      selection: null, order: null, sentToApproval: false, approvalResult: null,
+    });
+    navigate('/options');
+    try {
+      patch({ request: await call(), run: { from: 1, pending: false } });
+    } catch (e) {
+      patch({ run: { from: 1, pending: false, error: describeError(e) }, correcting });
+    }
+  };
+
+  /** Run the four steps on a new request. */
+  const find = (structured: StructuredRequest, rawText: string | null) => run(structured, async () => {
     const protocol = await getActiveProtocol(workspace.agentId!);
-    const request = await createRequest({
+    return createRequest({
       protocol_id: protocol.id,
       profile_id: profile?.id ?? null,
       input_mode: rawText ? 'NATURAL_LANGUAGE' : 'PANEL',
       raw_text: rawText,
       structured,
     });
-    patch({
-      request, panel: structured, regenFrom: null, correcting: null,
-      selection: null, order: null, sentToApproval: false, approvalResult: null,
-    });
-    navigate('/options');
-  };
+  }, null);
 
   /** Way 1: a message to A.I.mo, or the answer to its question. */
   const send = async (reply?: string) => {
@@ -152,7 +163,7 @@ export function RequestPage() {
         return;
       }
       setAsking(null);
-      await find(parse.structured, text);
+      find(parse.structured, text);
     } catch (e) {
       toast(describeError(e), 'bad');
     } finally {
@@ -184,21 +195,12 @@ export function RequestPage() {
       substitution: form.substitution,
       notes: null,
     };
-    setBusy('form');
-    try {
-      if (flow.correcting && flow.request) {
-        const request = await rejectNode(flow.request.request_id, 1, { reason: flow.correcting, params: { structured } });
-        patch({ request, panel: structured, regenFrom: 1, correcting: null, selection: null, order: null,
-                sentToApproval: false, approvalResult: null });
-        navigate('/options');
-      } else {
-        // Untouched since A.I.mo filled it: the request still comes from the message, so keep the words with it.
-        await find(structured, formSource === 'ai' && message !== null ? withAnswers(message, answers) : null);
-      }
-    } catch (e) {
-      toast(describeError(e), 'bad');
-    } finally {
-      setBusy(null);
+    if (flow.correcting && flow.request) {
+      const { request_id } = flow.request, reason = flow.correcting;
+      run(structured, () => rejectNode(request_id, 1, { reason, params: { structured } }));
+    } else {
+      // Untouched since A.I.mo filled it: the request still comes from the message, so keep the words with it.
+      find(structured, formSource === 'ai' && message !== null ? withAnswers(message, answers) : null);
     }
   };
 

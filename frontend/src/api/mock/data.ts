@@ -34,6 +34,27 @@ export const seed = () => ({
   select: clone(selectJson) as unknown as SelectResult,
 });
 
+/** Mock-only: the parser asks about the milk type when the text doesn't say it. The shared fixture no longer
+ *  carries this question, but the real parser may; this keeps the clarify step demonstrable in mock mode. */
+export function withMilkQuestion(p: ParseResult, text: string): ParseResult {
+  const out = clone(p);
+  const isMilk = out.structured.category === '10400';
+  const saysType = /(whole|full[- ]fat|semi|skim|skimmed|light|rasvaton|kevyt|täys)/i.test(text);
+  if (isMilk && !saysType && !(out.ambiguities ?? []).length) {
+    out.ambiguities = [{ field: 'requirements', question: 'Whole, semi-skimmed or skimmed?', options: ['Any', 'Whole', 'Semi-skimmed', 'Skimmed'] }];
+  }
+  if (isMilk && saysType) out.ambiguities = [];
+  // The fixture always says 1000 L; honour a quantity written in the text (the last one wins, so a
+  // follow-up like "make it 800 litres" changes it).
+  const qty = [...text.matchAll(/(\d[\d,. ]*)\s*(l|litres?|liters?|kg|kilos?|pcs|pieces)\b/gi)].pop();
+  if (qty) {
+    const value = Number(qty[1].replace(/[ ,]/g, ''));
+    const u = qty[2].toLowerCase();
+    if (value > 0) out.structured.quantity = { value, unit: u.startsWith('k') ? 'kg' : u.startsWith('p') ? 'pcs' : 'L' };
+  }
+  return out;
+}
+
 /** Mock-only: two lower-ranked options so "show more options" has something to show (the fixture has 3). */
 function withExtraCandidates(r: RequestResult): RequestResult {
   const base = r.candidates.find((c) => c.id === 'cand_2') ?? r.candidates[0];

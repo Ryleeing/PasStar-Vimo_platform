@@ -57,17 +57,22 @@ function ProtocolGate({ children }: { children: ReactNode }) {
 function Shell() {
   const { account } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('thepass.sidebar') === 'collapsed'; } catch { return false; } });
+  const toggleCollapsed = () => setCollapsed((c) => {
+    try { localStorage.setItem('thepass.sidebar', c ? 'open' : 'collapsed'); } catch { /* private mode */ }
+    return !c;
+  });
   const location = useLocation();
   const home = PAGES_BY_ROLE[account.key][0].path;
   return (
-    <div className="shell">
+    <div className={`shell ${collapsed ? 'collapsed' : ''}`}>
       <div className="mobile-bar">
         <button className="btn ghost icon-btn" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={18} /></button>
         <span className="brand-mark" style={{ width: 32, height: 32, borderRadius: 10 }}><MascotFace size={24} /></span>
         <b>The Pass</b>
       </div>
       {menuOpen && <div className="scrim" onClick={() => setMenuOpen(false)} aria-hidden />}
-      <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} />
+      <Sidebar open={menuOpen} collapsed={collapsed} onToggle={toggleCollapsed} onNavigate={() => setMenuOpen(false)} />
       <main className="content" id="main">
         <div className="content-inner" key={location.pathname + account.key}>
           <ProtocolGate>

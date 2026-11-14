@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Check, ChevronsUpDown, Moon, RotateCcw, Sun } from 'lucide-react';
+import { Check, ChevronsUpDown, Moon, PanelLeftClose, PanelLeftOpen, RotateCcw, Sun } from 'lucide-react';
 import { MascotFace } from './Mascot';
 import { ACCOUNTS, PAGES_BY_ROLE, WORKSPACES, type RoleKey } from '../config/accounts';
 import { useSession } from '../state/session';
@@ -11,7 +11,7 @@ import { describeError } from '../api/client';
 import { API_BASE, type ApiMode } from '../api/client';
 import { Avatar, Button, useAsync, useDismiss, useToast } from './ui';
 
-export function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
+export function Sidebar({ open, collapsed, onToggle, onNavigate }: { open: boolean; collapsed: boolean; onToggle: () => void; onNavigate: () => void }) {
   const { account, workspace, mode } = useSession();
   const { flow } = useFlow();
   const pages = PAGES_BY_ROLE[account.key];
@@ -24,22 +24,27 @@ export function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () =>
   const pendingCount = (pending.data ?? []).filter((a) => !flow.decisions[a.id]).length;
 
   return (
-    <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Workspace navigation">
+    <aside className={`sidebar ${open ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`} aria-label="Workspace navigation">
       <div className="brand">
         <div className="brand-mark"><MascotFace /></div>
-        <div>
+        <div className="brand-text">
           <b>The Pass</b>
-          <span>Valio Aimo ordering channel</span>
+          <span>Valio Aimo channel</span>
         </div>
+        <button type="button" className="collapse-btn" onClick={onToggle} aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
       </div>
 
       <AccountSwitcher />
 
       <nav className="nav" aria-label="Pages">
         {pages.filter((p) => !p.hidden).map((p) => (
-          <NavLink key={p.key} to={p.path} onClick={onNavigate} className={({ isActive }) => (isActive ? 'active' : '')}>
+          <NavLink key={p.key} to={p.path} onClick={onNavigate} className={({ isActive }) => (isActive ? 'active' : '')}
+            title={collapsed ? p.label : undefined} aria-label={collapsed ? p.label : undefined}>
             <p.icon size={17} aria-hidden />
-            {p.label}
+            <span className="nav-label">{p.label}</span>
             {(p.key === 'approvals' || p.key === 'valio') && pendingCount > 0 && <span className="count" aria-label={`${pendingCount} pending`}>{pendingCount}</span>}
           </NavLink>
         ))}
@@ -47,7 +52,7 @@ export function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () =>
 
       {workspace.kind === 'buyer' ? <ProgressTracker mode={mode} onNavigate={onNavigate} /> : <ValioSummary pending={pendingCount} />}
 
-      <SideFooter />
+      <SideFooter collapsed={collapsed} />
     </aside>
   );
 }
@@ -72,7 +77,8 @@ function AccountSwitcher() {
 
   return (
     <div className="switcher" ref={ref}>
-      <button className="account-btn" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <button className="account-btn" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}
+        title={`${account.name} · ${account.title}, ${workspace.name}`}>
         <Avatar role={account.key} name={account.name} />
         <span className="who">
           <b>{account.name}</b>
@@ -130,7 +136,8 @@ function ProgressTracker({ mode, onNavigate }: { mode: 'SEPARATE' | 'SELF'; onNa
       </div>
       <ol className="steps">
         {steps.map((s, i) => (
-          <li key={s.key} className={`step ${s.state}`} aria-current={s.state === 'current' ? 'step' : undefined}>
+          <li key={s.key} className={`step ${s.state}`} aria-current={s.state === 'current' ? 'step' : undefined}
+            title={`${s.label}${s.hint ? ` · ${s.hint}` : ''}`} onClick={() => go(s.page)}>
             <span className="step-dot">{s.state === 'done' ? <Check size={14} strokeWidth={3} /> : s.state === 'blocked' ? '!' : s.state === 'skipped' ? '–' : i + first}</span>
             <div className="step-body">
               <button onClick={() => go(s.page)}>{s.label}</button>
@@ -156,16 +163,16 @@ function ValioSummary({ pending }: { pending: number }) {
   );
 }
 
-function SideFooter() {
+function SideFooter({ collapsed }: { collapsed: boolean }) {
   const { theme, toggleTheme, apiMode, setApiMode, source } = useSession();
   const { reset } = useFlow();
   const toast = useToast();
   const label = source === 'live' ? 'Live API' : source === 'mock' ? 'Mock data' : 'Connecting…';
   return (
     <div className="side-foot">
-      <div className="source" title={source === 'live' ? API_BASE : 'In-browser mock built from fixtures/*.json'}>
+      <div className="source" title={`${label}${source === 'live' ? ` · ${API_BASE}` : ' · in-browser mock built from fixtures/*.json'}`}>
         <span className={`dot ${source}`} aria-hidden />
-        <span>{label}</span>
+        <span className="source-label">{label}</span>
         <label className="sr-only" htmlFor="api-mode">Data source</label>
         <select id="api-mode" value={apiMode} onChange={(e) => setApiMode(e.target.value as ApiMode)}>
           <option value="auto">Auto</option>
@@ -173,15 +180,18 @@ function SideFooter() {
           <option value="mock">Mock</option>
         </select>
       </div>
-      <div className="row">
-        <Button variant="ghost" size="sm" onClick={toggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>
+      <div className="row foot-actions">
+        <Button variant="ghost" size="sm" onClick={toggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          title={collapsed ? (theme === 'dark' ? 'Light theme' : 'Dark theme') : undefined}>
           {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-          {theme === 'dark' ? 'Light' : 'Dark'}
+          <span className="foot-label">{theme === 'dark' ? 'Light' : 'Dark'}</span>
         </Button>
         <Button
           variant="ghost"
           size="sm"
           className="ml-auto"
+          title={collapsed ? 'Reset demo' : undefined}
+          aria-label="Reset demo"
           onClick={async () => {
             try {
               await resetDemo();
@@ -194,7 +204,7 @@ function SideFooter() {
             window.location.reload();
           }}
         >
-          <RotateCcw size={15} /> Reset demo
+          <RotateCcw size={15} /> <span className="foot-label">Reset demo</span>
         </Button>
       </div>
     </div>

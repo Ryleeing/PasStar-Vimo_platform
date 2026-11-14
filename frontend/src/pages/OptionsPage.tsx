@@ -1,17 +1,28 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, PencilLine } from 'lucide-react';
+import { Ban, ChevronDown, ChevronUp, CircleX, PencilLine } from 'lucide-react';
 import { selectCandidate } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Candidate } from '../api/types';
-import { dayLabel, eur, num, outcomeOf } from '../lib/format';
+import { dayLabel, eur, num } from '../lib/format';
 import { useFlow } from '../state/flow';
 import { useSession } from '../state/session';
 import { ChainView } from '../components/ChainView';
-import { CandidateCard } from '../components/CandidateCard';
+import { OptionRow } from '../components/OptionRow';
 import { CheckoutBar } from '../components/CheckoutBar';
 import { Mascot } from '../components/Mascot';
-import { Banner, Button, Empty, PageHead, Pill, useToast } from '../components/ui';
+import { Banner, Button, Empty, PageHead, useToast } from '../components/ui';
+
+/** "Milk type: Semi-skimmed" → ["semi-skimmed"]: the answer to the AI's question, if any. */
+const clarifiedOf = (notes?: string | null) => (notes?.includes(': ') ? [notes.split(': ').pop()!.toLowerCase()] : []);
+
+/** "€998.80–€1,044.20" for a set of options. */
+const priceRange = (cs: Candidate[]) => {
+  const p = cs.map((c) => c.totals?.gross_cents).filter((v): v is number => v != null);
+  if (!p.length) return '';
+  const lo = Math.min(...p), hi = Math.max(...p);
+  return lo === hi ? eur(lo) : `${eur(lo)}–${eur(hi)}`;
+};
 
 const newKey = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `idem-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
@@ -21,10 +32,12 @@ export function OptionsPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const [showMore, setShowMore] = useState(false);
+  const [showExcluded, setShowExcluded] = useState(false);
   const [selecting, setSelecting] = useState<string | null>(null);
   const r = flow.request;
+  const run = flow.run;
 
-  if (!r) {
+  if (!r && !run) {
     return (
       <>
         <PageHead title="Options" />
@@ -36,19 +49,23 @@ export function OptionsPage() {
     );
   }
 
-  const s = r.structured;
-  const top = r.candidates.slice(0, 3);
-  const more = r.candidates.slice(3);
-  const all = [...r.candidates, ...(r.blocked ?? [])];
-  const clarified = s.notes?.includes(': ') ? s.notes.split(': ').pop()!.toLowerCase() : null; // e.g. "Milk type: Semi-skimmed"
-  const summary = [s.category_label ?? s.category, ...(clarified ? [clarified] : []), ...(s.requirements ?? []).map((q) => (q.label ?? q.code).toLowerCase()),
-    `${num(s.quantity.value)} ${s.quantity.unit}`, `by ${dayLabel(s.delivery_date)}`].join(' · ');
+  const s = r?.structured ?? flow.panel;
+  const summary = s ? [s.category_label ?? s.category, ...clarifiedOf(s.notes), ...(s.requirements ?? []).map((q) => (q.label ?? q.code).toLowerCase()),
+    `${num(s.quantity.value)} ${s.quantity.unit}`, `by ${dayLabel(s.delivery_date)}`].join(' · ') : undefined;
+
+  // While the agent works, only the steps are shown; the options follow once they're done.
+  // ChainView stays mounted across both so it can fold itself away when the run ends.
+  const working = !!run || !r;
+  const top = r?.candidates.slice(0, 3) ?? [];
+  const more = r?.candidates.slice(3) ?? [];
+  const all = r ? [...r.candidates, ...(r.blocked ?? [])] : [];
 
   const choose = async (c: Candidate) => {
     if (flow.order && flow.order.status !== 'REQUOTE_REQUIRED') {
       toast('This request already has an order.', 'info');
       return;
     }
+    if (!r) return;
     setSelecting(c.id);
     try {
       const result = await selectCandidate(r.request_id, c.id);
@@ -65,70 +82,61 @@ export function OptionsPage() {
 
   return (
     <>
-      <PageHead title="Choose an option" desc={summary}
-        actions={<Button variant="ghost" onClick={() => navigate('/request')}><PencilLine size={15} /> Edit request</Button>} />
+      <PageHead title={working && !run?.error ? 'Finding options' : 'Choose an option'} desc={summary}
+        actions={!working && <Button className="edit-req" onClick={() => navigate('/request')}><PencilLine size={16} /> Edit request</Button>} />
 
+      <div className="run-slot">
+        <ChainView request={r} />
+      </div>
+
+      {r && !working && (<>
       {r.candidates.length === 0 ? (
         <Banner tone="warn" title="Nothing meets every requirement">
-          {r.no_candidate_reason ?? 'No product matched.'} Mark “Filter products” below as not right, or edit the request.
+          {r.no_candidate_reason ?? 'No product matched.'} Open the steps above and adjust “Filter products”, or edit the request.
         </Banner>
       ) : (
         <>
-          <div className="grid three" id="options-grid">
-            {top.map((c, i) => (
-              <CandidateCard key={c.id} c={c} all={all} featured={i === 0} mode={mode}
+          <ol className="opts reveal" id="options-grid" aria-label="Options, best match first">
+            {(showMore ? r.candidates : top).map((c, i) => (
+              <OptionRow key={c.id} c={c} position={i + 1} best={r.candidates[0]} all={all} mode={mode}
                 onChooseAlt={(id) => { const alt = all.find((x) => x.id === id); if (alt?.selectable) choose(alt); }}
                 selected={flow.selection?.candidate.id === c.id} loading={selecting === c.id} onSelect={() => choose(c)} />
             ))}
-          </div>
+          </ol>
 
           {more.length > 0 && (
-            <div style={{ marginTop: 14 }}>
-              <Button variant="ghost" onClick={() => setShowMore((v) => !v)} aria-expanded={showMore}>
-                {showMore ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                {showMore ? 'Fewer options' : `${more.length} more option${more.length > 1 ? 's' : ''}`}
-              </Button>
-              {showMore && (
-                <div className="card" style={{ marginTop: 8, padding: 8 }}>
-                  <div className="table-wrap">
-                    <table className="table">
-                      <tbody>
-                        {more.map((c) => (
-                          <tr key={c.id}>
-                            <td><div className="strong">{c.lines[0].name}</div><div className="small muted">{c.explanation}</div></td>
-                            <td className="nowrap strong">{eur(c.totals?.gross_cents)}</td>
-                            <td>{c.outcome_preview !== 'AUTO' && <Pill tone={outcomeOf(c.outcome_preview, mode).tone}>{outcomeOf(c.outcome_preview, mode).label}</Pill>}</td>
-                            <td style={{ textAlign: 'right' }}>
-                              <Button size="sm" loading={selecting === c.id} onClick={() => choose(c)}>{flow.selection?.candidate.id === c.id ? 'Selected' : 'Choose'}</Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
+            <button type="button" className="opts-more" onClick={() => setShowMore((v) => !v)} aria-expanded={showMore} aria-controls="options-grid">
+              {showMore ? <ChevronUp size={17} aria-hidden /> : <ChevronDown size={17} aria-hidden />}
+              {showMore ? 'Show fewer options' : `Show ${more.length} more option${more.length > 1 ? 's' : ''}`}
+              {!showMore && <span className="opts-more-hint">{priceRange(more)}</span>}
+            </button>
           )}
         </>
       )}
 
-      <div style={{ marginTop: 28 }}>
-        <ChainView request={r} />
-      </div>
-
       {(r.blocked?.length ?? 0) > 0 && (
-        <details className="details excluded" style={{ marginTop: 16 }}>
-          <summary>{r.blocked!.length} excluded by your requirements <ChevronDown size={14} className="chev" /></summary>
-          <div className="details-body">
-            {r.blocked!.map((b) => (
-              <div key={b.id} className="row top" style={{ gap: 10 }}>
-                <span className="dot tone-dot-bad" style={{ marginTop: 7 }} aria-hidden />
-                <div><span className="strong">{b.lines[0].name}</span><div className="small muted">{(b.violations ?? []).map((v) => v.detail).join('; ')}</div></div>
-              </div>
-            ))}
-          </div>
-        </details>
+        <section className={`excl ${showExcluded ? 'open' : ''}`}>
+          <button type="button" className="excl-head" onClick={() => setShowExcluded((v) => !v)} aria-expanded={showExcluded} aria-controls="excluded-list">
+            <Ban size={18} className="excl-icon" aria-hidden />
+            <span className="grow">
+              <span className="excl-title">{r.blocked!.length} product{r.blocked!.length > 1 ? 's' : ''} left out</span>
+              <span className="excl-sub">They don’t meet your hard requirements, so they can’t be ordered here.</span>
+            </span>
+            <span className="excl-toggle">{showExcluded ? 'Hide' : 'See why'}<ChevronDown size={16} className="chev" aria-hidden /></span>
+          </button>
+          {showExcluded && (
+            <ul id="excluded-list" className="excl-list">
+              {r.blocked!.map((b) => (
+                <li key={b.id}>
+                  <div className="excl-name">{b.lines[0].name}</div>
+                  {(b.violations ?? []).map((v, i) => (
+                    <div key={i} className="excl-why"><CircleX size={15} aria-hidden />{v.detail}</div>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       )}
 
       {flow.sentToApproval && !flow.selection && (
@@ -136,6 +144,8 @@ export function OptionsPage() {
           <Banner tone="info" title={mode === 'SEPARATE' ? 'Sent to the procurement manager' : 'Waiting for your approval'} />
         </div>
       )}
+
+      </>)}
 
       {flow.selection && <CheckoutBar selection={flow.selection} onClear={() => patch({ selection: null })} />}
     </>
