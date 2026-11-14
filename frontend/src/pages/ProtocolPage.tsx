@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BadgeCheck, FilePlus2, FileSignature, HelpCircle, ShieldAlert, ShieldCheck, ShieldPlus, Sparkles } from 'lucide-react';
+import { ShieldAlert, ShieldCheck, ShieldPlus, Sparkles } from 'lucide-react';
 import { amendProtocol, decideApproval, draftProtocol, getProtocol, signProtocol } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Protocol, ProtocolBody, ProtocolDiff } from '../api/types';
@@ -57,9 +57,9 @@ export function ProtocolBodyView({ b }: { b: ProtocolBody }) {
 
 export function DiffList({ d }: { d: ProtocolDiff }) {
   const groups: [keyof Pick<ProtocolDiff, 'tightened' | 'expanded' | 'forbidden'>, 'ok' | 'warn' | 'bad', string, React.ReactNode][] = [
-    ['tightened', 'ok', 'Tightened · applied at once', <ShieldCheck key="i" size={16} />],
-    ['expanded', 'warn', 'Expanded · needs the approver’s signature', <ShieldPlus key="i" size={16} />],
-    ['forbidden', 'bad', 'Not allowed · rejected', <ShieldAlert key="i" size={16} />],
+    ['tightened', 'ok', 'Applied', <ShieldCheck key="i" size={16} />],
+    ['expanded', 'warn', 'Needs your signature', <ShieldPlus key="i" size={16} />],
+    ['forbidden', 'bad', 'Not allowed', <ShieldAlert key="i" size={16} />],
   ];
   return (
     <div className="stack sm">
@@ -79,13 +79,13 @@ export function DiffList({ d }: { d: ProtocolDiff }) {
 }
 
 export function ProtocolPage() {
-  const { workspace, mode } = useSession();
+  const { workspace } = useSession();
   const p = useAsync(() => getProtocol(workspace.protocolId!), [workspace.protocolId]);
 
   return (
     <>
-      <PageHead eyebrow="Trust protocol" title="Authorization protocol"
-        desc="What the agent may decide on its own. Signed by you and confirmed by Valio. Tightening applies at once; widening always needs a new signature." />
+      <PageHead title="Authorization protocol"
+        desc="What the agent may do on its own. Signed by you and Valio." />
       {p.loading ? <Skeleton h={420} /> : p.error ? <ErrorState error={p.error} onRetry={p.reload} /> : (
         <div className="grid two" style={{ alignItems: 'start' }}>
           <ActiveProtocol p={p.data!} />
@@ -93,13 +93,6 @@ export function ProtocolPage() {
             <AmendCard p={p.data!} />
             <DraftCard />
           </div>
-        </div>
-      )}
-      {p.data && p.data.body.approval_mode !== mode && (
-        <div style={{ marginTop: 16 }}>
-          <Banner tone="info" title="Backend returned a different approval mode">
-            The backend protocol for {workspace.name} says {p.data.body.approval_mode}; this workspace demos {mode}. The fixture server only seeds the hotel protocol.
-          </Banner>
         </div>
       )}
     </>
@@ -111,20 +104,13 @@ function ActiveProtocol({ p }: { p: Protocol }) {
   return (
     <section className="card stack" aria-labelledby="active-proto">
       <div className="row wrap">
-        <div className="icon-tile ok"><BadgeCheck size={18} /></div>
         <div className="grow">
-          <h2 id="active-proto">{p.id} <span className="muted" style={{ fontWeight: 500 }}>v{p.version}</span></h2>
-          <div className="small muted">Agent {p.body.agent_id} · buyer {p.body.buyer_id}</div>
+          <h2 id="active-proto">Current rules</h2>
+          <div className="small muted">Version {p.version}{p.buyer_signed_at && p.valio_confirmed_at ? ' · signed by you and Valio' : ''}</div>
         </div>
         <Pill tone={st.tone}>{st.label}</Pill>
       </div>
-      <div className="row wrap" style={{ gap: 6 }}>
-        <Pill tone={p.buyer_signed_at ? 'ok' : 'neutral'}>{p.buyer_signed_at ? '✓' : '○'} Buyer signed</Pill>
-        <Pill tone={p.valio_confirmed_at ? 'ok' : 'neutral'}>{p.valio_confirmed_at ? '✓' : '○'} Valio confirmed</Pill>
-        {p.jws && <span className="mono xs muted" title={p.jws}>JWS {p.jws.slice(0, 22)}…</span>}
-      </div>
       <ProtocolBodyView b={p.body} />
-      <div className="xs muted">Statements in chat (“the manager already agreed”) never count as authorization. Only the signed version does.</div>
     </section>
   );
 }
@@ -159,7 +145,6 @@ function AmendCard({ p }: { p: Protocol }) {
     try {
       await decideApproval(diff.approval_id, { decision, changes: {}, note: null });
       setDone(decision === 'APPROVE' ? 'signed' : 'rejected');
-      toast(decision === 'APPROVE' ? 'Signed. Waiting for Valio to confirm the new version.' : 'Expansion rejected; the tightening stays applied', decision === 'APPROVE' ? 'ok' : 'info');
     } catch (e) {
       toast(describeError(e), 'bad');
     } finally {
@@ -169,12 +154,9 @@ function AmendCard({ p }: { p: Protocol }) {
 
   return (
     <section className="card stack" aria-labelledby="amend-title">
-      <div className="row">
-        <div className="icon-tile warn"><FileSignature size={18} /></div>
-        <div className="grow"><h2 id="amend-title">Change the protocol</h2><div className="small muted">Every change is sorted into one of three kinds</div></div>
-      </div>
-      <div className="row wrap" style={{ gap: 6 }}>
-        <Pill tone="ok">Tighten → applies now</Pill><Pill tone="warn">Widen → needs signature</Pill><Pill tone="bad">Beyond buyer’s rights → rejected</Pill>
+      <div>
+        <h2 id="amend-title">Change the rules</h2>
+        <div className="small muted">Stricter rules apply at once. Looser rules need your signature.</div>
       </div>
       <div className="form-grid">
         <div className="field">
@@ -184,23 +166,21 @@ function AmendCard({ p }: { p: Protocol }) {
       </div>
       <label className="row small" style={{ gap: 8 }}><input type="checkbox" checked={addCat} onChange={(e) => setAddCat(e.target.checked)} /> Also allow dry goods (22540)</label>
       <label className="row small" style={{ gap: 8 }}><input type="checkbox" checked={allPrices} onChange={(e) => setAllPrices(e.target.checked)} /> Let the agent see all customers’ prices</label>
-      <Button onClick={submit} loading={busy === 'amend'} disabled={!limit}>Preview and submit change</Button>
+      <Button onClick={submit} loading={busy === 'amend'} disabled={!limit}>Submit change</Button>
 
       {diff && (
         <div className="stack fade-in">
           <DiffList d={diff} />
-          {done === 'signed' && <Banner tone="ok" title="Expansion signed">A new version waits for Valio’s confirmation; the old one is superseded once confirmed.</Banner>}
-          {done === 'rejected' && <Banner tone="info" title="Expansion rejected">The tightening stays applied.</Banner>}
+          {done === 'signed' && <Banner tone="ok" title="Signed">Valio confirms it next.</Banner>}
+          {done === 'rejected' && <Banner tone="info" title="Not signed">Only the stricter changes apply.</Banner>}
           {!done && (diff.expanded?.length ?? 0) > 0 && (
             <div className="row wrap">
-              <Button variant="primary" loading={busy === 'APPROVE'} onClick={() => decide('APPROVE')}>Sign the expansion</Button>
-              <Button variant="ghost" loading={busy === 'REJECT'} onClick={() => decide('REJECT')}>Reject expansion</Button>
+              <Button variant="primary" loading={busy === 'APPROVE'} onClick={() => decide('APPROVE')}>Sign</Button>
+              <Button variant="ghost" loading={busy === 'REJECT'} onClick={() => decide('REJECT')}>Don’t sign</Button>
             </div>
           )}
-          <div className="xs muted">Switching SEPARATE → SELF counts as a widening; SELF → SEPARATE tightens and applies at once. Only Valio can widen what an agent may see.</div>
         </div>
       )}
-      <div className="xs muted mono">POST /v1/protocols/{p.id}/amend · POST /v1/approvals/{'{approval_id}'}/decision</div>
     </section>
   );
 }
@@ -230,7 +210,6 @@ function DraftCard() {
       const signed = await signProtocol(draft.id);
       setDraft(signed);
       patch({ signedDraft: signed });
-      toast('Signed. Valio confirms it from their review queue.', 'ok');
     } catch (e) {
       toast(describeError(e), 'bad');
     } finally {
@@ -240,25 +219,24 @@ function DraftCard() {
 
   return (
     <section className="card stack" aria-labelledby="draft-title">
-      <div className="row">
-        <div className="icon-tile info"><FilePlus2 size={18} /></div>
-        <div className="grow"><h2 id="draft-title">Draft a new version</h2><div className="small muted">The agent drafts; only a person can sign</div></div>
+      <div>
+        <h2 id="draft-title">Write new rules</h2>
+        <div className="small muted">Describe them; the agent drafts, you sign.</div>
       </div>
       {!draft ? (
         <>
           <div className="field">
-            <label htmlFor="draft-text">Describe the rules in one sentence</label>
-            <textarea id="draft-text" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
+            <textarea aria-label="Describe the rules" id="draft-text" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
           </div>
           <Button onClick={make} loading={busy === 'draft'} disabled={!text.trim()}><Sparkles size={15} /> Draft it</Button>
         </>
       ) : (
         <div className="stack fade-in">
-          <div className="row"><b className="grow">{draft.id} · v{draft.version}</b><Pill tone={PROTOCOL_STATUS[draft.status].tone}>{PROTOCOL_STATUS[draft.status].label}</Pill></div>
+          <div className="row"><b className="grow">Draft, version {draft.version}</b><Pill tone={PROTOCOL_STATUS[draft.status].tone}>{PROTOCOL_STATUS[draft.status].label}</Pill></div>
           {(draft.open_questions?.length ?? 0) > 0 && draft.status === 'DRAFT' && (
             <div className="stack sm">
               {draft.open_questions!.map((q) => (
-                <Banner key={q.field} tone="warn" title={q.field}><span className="row top" style={{ gap: 6 }}><HelpCircle size={14} style={{ flex: 'none', marginTop: 2 }} />{q.question}</span></Banner>
+                <Banner key={q.field} tone="warn" title={q.question} />
               ))}
             </div>
           )}
@@ -268,13 +246,12 @@ function DraftCard() {
             <div className="k">Must be</div><div>{(draft.body.hard_requirements ?? []).map((r) => r.label).join(', ')}</div>
           </div>
           {draft.status === 'DRAFT' ? (
-            <div className="row"><Button variant="primary" loading={busy === 'sign'} onClick={sign}><FileSignature size={15} /> Sign draft</Button><Button variant="ghost" onClick={() => setDraft(null)}>Start over</Button></div>
+            <div className="row"><Button variant="primary" loading={busy === 'sign'} onClick={sign}>Sign</Button><Button variant="ghost" onClick={() => setDraft(null)}>Start over</Button></div>
           ) : (
-            <Banner tone="info" title="Signed by the buyer">Waiting for Valio to confirm. The agent keeps using the active version until then.</Banner>
+            <Banner tone="info" title="Signed. Waiting for Valio to confirm.">Until then the current rules apply.</Banner>
           )}
         </div>
       )}
-      <div className="xs muted mono">POST /v1/protocols/draft · POST /v1/protocols/{'{id}'}/sign</div>
     </section>
   );
 }

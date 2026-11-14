@@ -77,31 +77,29 @@ export interface Step {
   page?: 'request' | 'options' | 'approvals' | 'orders';
 }
 
-/** Progress shown in the sidebar. Derived only from flow state, never stored. */
+/** Progress shown in the sidebar. Derived only from flow state, never stored.
+ *  Hints appear only once a step has happened, so the list stays quiet. */
 export function progressSteps(f: FlowState, mode: 'SEPARATE' | 'SELF'): Step[] {
-  const gate = f.selection?.result.gate.outcome;
-  const needsApproval = f.sentToApproval || gate === 'BUYER_APPROVAL' || gate === 'VALIO_REVIEW' || f.order?.status === 'PENDING_BUYER_APPROVAL';
+  const described = !!f.request;
+  const chosen = !!f.order || f.sentToApproval;
+  const waiting = f.sentToApproval || f.order?.status === 'PENDING_BUYER_APPROVAL';
   const placed = f.order?.status === 'PLACED';
   const rejected = f.approvalResult === 'REJECTED' || f.order?.status === 'REJECTED';
+  const approvedByHuman = f.approvalResult === 'APPROVED';
+  const autoPlaced = placed && !approvedByHuman;
   const approver = mode === 'SELF' ? 'you' : 'the manager';
+  const q = f.request?.structured;
 
-  const s = (cond: boolean, prev: boolean): StepState => (cond ? 'done' : prev ? 'current' : 'todo');
-  const describe = !!f.request;
-  const reviewed = !!f.selection || f.sentToApproval;
-  const submitted = !!f.order || f.sentToApproval;
-
-  const steps: Step[] = [
-    { key: 'describe', label: 'Describe the need', hint: describe ? `${f.request!.structured.category_label ?? 'Request'} · ${f.request!.structured.quantity.value.toLocaleString('en')} ${f.request!.structured.quantity.unit}` : 'Words or the panel', state: describe ? 'done' : 'current', page: 'request' },
-    { key: 'options', label: 'Choose an option', hint: reviewed && f.selection ? f.selection.candidate.lines[0].name : `Up to 8 ranked options`, state: s(reviewed, describe), page: 'options' },
-    { key: 'quote', label: 'Signed quote', hint: f.selection ? 'Valid 15 minutes' : 'Locked price & date', state: s(submitted, reviewed), page: 'options' },
+  return [
+    { key: 'describe', label: 'Describe the need', page: 'request',
+      hint: q ? `${q.category_label ?? 'Request'} · ${q.quantity.value.toLocaleString('en')} ${q.quantity.unit}` : '',
+      state: described ? 'done' : 'current' },
+    { key: 'options', label: 'Choose an option', page: 'options',
+      hint: chosen && f.selection ? f.selection.candidate.lines[0].name : '',
+      state: chosen ? 'done' : described ? 'current' : 'todo' },
+    { key: 'approval', label: 'Approval', page: 'approvals',
+      hint: autoPlaced ? 'Not needed' : rejected ? 'Rejected' : f.approvalResult === 'REQUOTE' ? 'Price changed' : approvedByHuman ? `Approved by ${approver}` : waiting ? `Waiting for ${approver}` : '',
+      state: rejected ? 'blocked' : autoPlaced ? 'skipped' : approvedByHuman ? 'done' : waiting ? 'current' : 'todo' },
+    { key: 'placed', label: 'Ordered', page: 'orders', hint: '', state: placed ? 'done' : 'todo' },
   ];
-  steps.push({
-    key: 'approval',
-    label: 'Approval',
-    hint: !needsApproval && submitted ? 'Not needed: within protocol' : rejected ? 'Rejected' : f.approvalResult === 'REQUOTE' ? 'Price changed: re-confirm' : f.approvalResult === 'APPROVED' ? `Approved by ${approver}` : needsApproval ? `Waiting for ${approver}` : 'Only if outside the protocol',
-    state: rejected ? 'blocked' : !needsApproval && submitted ? 'skipped' : f.approvalResult === 'APPROVED' ? 'done' : needsApproval ? 'current' : 'todo',
-    page: 'approvals',
-  });
-  steps.push({ key: 'placed', label: 'Order placed', hint: placed ? f.order!.id : 'Re-checked before placing', state: placed ? 'done' : 'todo', page: 'orders' });
-  return steps;
 }

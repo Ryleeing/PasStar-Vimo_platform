@@ -33,8 +33,7 @@ export function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () =>
       <AccountSwitcher />
 
       <nav className="nav" aria-label="Pages">
-        <div className="side-label" title={workspace.modeLabel}>{workspace.kind === 'buyer' ? (workspace.mode === 'SELF' ? 'Single-owner mode' : 'Organisation mode') : 'Channel owner'}</div>
-        {pages.map((p) => (
+        {pages.filter((p) => !p.hidden).map((p) => (
           <NavLink key={p.key} to={p.path} onClick={onNavigate} className={({ isActive }) => (isActive ? 'active' : '')}>
             <p.icon size={17} aria-hidden />
             {p.label}
@@ -54,7 +53,6 @@ function AccountSwitcher() {
   const { account, workspace, switchAccount } = useSession();
   const { reset } = useFlow();
   const navigate = useNavigate();
-  const toast = useToast();
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const ref = useDismiss(open, close);
@@ -67,7 +65,6 @@ function AccountSwitcher() {
     if (next.workspace !== account.workspace && next.workspace !== 'valio' && account.workspace !== 'valio') reset();
     switchAccount(k);
     navigate(PAGES_BY_ROLE[k][0].path);
-    toast(`Signed in as ${next.name} · ${next.title}`, 'info');
   };
 
   return (
@@ -90,14 +87,12 @@ function AccountSwitcher() {
                   <Avatar role={a.key} name={a.name} size="sm" />
                   <span className="grow">
                     <span className="strong">{a.name}</span> <span className="sub">· {a.title}</span>
-                    <span className="sub mono" style={{ display: 'block' }}>{a.userId}</span>
                   </span>
                   {a.key === account.key && <Check size={16} color="var(--accent)" aria-hidden />}
                 </button>
               ))}
             </div>
           ))}
-          <div className="menu-note">Demo accounts. Switching sets the <span className="mono">X-Demo-User</span> header.</div>
         </div>
       )}
     </div>
@@ -122,7 +117,7 @@ function ProgressTracker({ mode, onNavigate }: { mode: 'SEPARATE' | 'SELF'; onNa
   return (
     <section className="progress" aria-label="Order progress">
       <div className="progress-head">
-        <span className="side-label" style={{ padding: 0, margin: 0 }}>{flow.request ? `Request ${flow.request.request_id}` : 'Current order'}</span>
+        <span className="side-label" style={{ padding: 0, margin: 0 }}>Current order</span>
         <span className="xs muted">{doneCount}/{steps.length}</span>
       </div>
       <ol className="steps">
@@ -131,7 +126,7 @@ function ProgressTracker({ mode, onNavigate }: { mode: 'SEPARATE' | 'SELF'; onNa
             <span className="step-dot">{s.state === 'done' ? <Check size={12} strokeWidth={3} /> : s.state === 'blocked' ? '!' : s.state === 'skipped' ? '–' : i + 1}</span>
             <div className="step-body">
               <button onClick={() => go(s.page)}>{s.label}</button>
-              <div className="hint" title={s.hint}>{s.hint}</div>
+              {s.hint && <div className="hint" title={s.hint}>{s.hint}</div>}
             </div>
           </li>
         ))}

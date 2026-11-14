@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 export type RoleKey = 'chef' | 'buyer_manager' | 'owner' | 'valio_reviewer';
-export type PageKey = 'request' | 'options' | 'orders' | 'approvals' | 'protocol' | 'profile' | 'audit' | 'valio' | 'agents';
+export type PageKey = 'request' | 'options' | 'review' | 'approve' | 'ordered' | 'orders' | 'approvals' | 'protocol' | 'profile' | 'audit' | 'valio' | 'agents';
 export type WorkspaceKey = 'hotel' | 'cafe' | 'valio';
 
 export interface Account {
@@ -45,11 +45,16 @@ export interface PageDef {
   label: string;
   icon: LucideIcon;
   path: string;
+  /** Reachable by navigation only (e.g. the order confirmation), not listed in the sidebar. */
+  hidden?: boolean;
 }
 
 const P: Record<PageKey, PageDef> = {
   request: { key: 'request', label: 'New request', icon: MessageSquarePlus, path: '/request' },
   options: { key: 'options', label: 'Options', icon: LayoutGrid, path: '/options' },
+  review: { key: 'review', label: 'Review order', icon: Package, path: '/review', hidden: true },
+  approve: { key: 'approve', label: 'Review and approve', icon: ClipboardCheck, path: '/approve', hidden: true },
+  ordered: { key: 'ordered', label: 'Order placed', icon: Package, path: '/ordered', hidden: true },
   orders: { key: 'orders', label: 'My orders', icon: Package, path: '/orders' },
   approvals: { key: 'approvals', label: 'Approvals', icon: ClipboardCheck, path: '/approvals' },
   protocol: { key: 'protocol', label: 'Authorization protocol', icon: FileSignature, path: '/protocol' },
@@ -60,9 +65,9 @@ const P: Record<PageKey, PageDef> = {
 };
 
 export const PAGES_BY_ROLE: Record<RoleKey, PageDef[]> = {
-  chef: [P.request, P.options, P.orders, P.profile, P.audit],
-  buyer_manager: [P.approvals, P.protocol, P.audit],
-  owner: [P.request, P.options, { ...P.approvals, label: 'Needs your approval' }, P.protocol, P.profile, P.audit],
+  chef: [P.request, P.options, P.orders, P.profile, P.audit, P.review, P.ordered],
+  buyer_manager: [P.approvals, P.protocol, P.audit, P.approve, P.ordered],
+  owner: [P.request, P.options, { ...P.approvals, label: 'Needs your approval' }, P.orders, P.protocol, P.profile, P.audit, P.review, P.approve, P.ordered],
   valio_reviewer: [P.valio, P.agents, { ...P.audit, label: 'Full audit log' }],
 };
 

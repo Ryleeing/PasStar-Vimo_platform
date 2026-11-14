@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Bot, FlaskConical } from 'lucide-react';
 import { listFaults, setFault } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Fault } from '../api/types';
@@ -31,11 +30,11 @@ export function AgentsPage() {
 
   return (
     <>
-      <PageHead eyebrow="Valio Aimo · operations" title="Agents & faults"
-        desc="Who is calling the channel, and switches that simulate Valio API trouble for demos and tests." />
+      <PageHead title="Agents & faults"
+        desc="Who is calling the channel, and demo switches for API trouble." />
       <div className="grid two" style={{ alignItems: 'start' }}>
         <section className="card stack">
-          <div className="row"><div className="icon-tile"><Bot size={18} /></div><div className="grow"><h2>Connected agents</h2><div className="small muted">Last 24 hours</div></div></div>
+          <div><h2>Connected agents</h2><div className="small muted">Last 24 hours</div></div>
           <div className="table-wrap">
             <table className="table">
               <thead><tr><th>Agent</th><th>Requests</th><th>Blocked</th><th /></tr></thead>
@@ -59,7 +58,7 @@ export function AgentsPage() {
         </section>
 
         <section className="card stack">
-          <div className="row"><div className="icon-tile warn"><FlaskConical size={18} /></div><div className="grow"><h2>Fault injection</h2><div className="small muted">Applied in the Valio proxy layer, before the cache</div></div></div>
+          <div><h2>Simulate problems</h2><div className="small muted">For demos and tests</div></div>
           {faults.loading ? <Skeleton h={220} /> : faults.error ? <ErrorState error={faults.error} onRetry={faults.reload} /> : (
             <div className="stack sm">
               {faults.data!.map((f) => (
@@ -70,7 +69,6 @@ export function AgentsPage() {
               ))}
             </div>
           )}
-          <div className="xs muted mono">GET /v1/admin/faults · PUT /v1/admin/faults/{'{name}'}</div>
         </section>
       </div>
     </>

@@ -34,17 +34,15 @@ export function AuditPage() {
 
   return (
     <>
-      <PageHead eyebrow="Traceability" title={valio ? 'Full audit log' : 'Activity log'}
-        desc={valio
-          ? 'Every buyer and agent, including blocked requests and which data fields were disclosed at which sensitivity level.'
-          : 'What happened on your organisation’s requests, in order. Entries are append-only and hash-chained.'}
-        actions={<Button onClick={runVerify} loading={checking}><ShieldCheck size={15} /> Verify hash chain</Button>} />
+      <PageHead title={valio ? 'Full audit log' : 'Activity log'}
+        desc={valio ? 'All buyers and agents, with the data each one was shown.' : 'Everything the agent and your team did, in order.'}
+        actions={<Button variant="ghost" onClick={runVerify} loading={checking}><ShieldCheck size={15} /> Check it hasn’t been altered</Button>} />
 
       {verify && (
         <div style={{ marginBottom: 16 }}>
           {verify.ok
-            ? <Banner tone="ok" title="Hash chain intact">{verify.entries_checked} entries checked; nothing was altered or removed.</Banner>
-            : <Banner tone="bad" title="Hash chain broken">The chain breaks at entry #{verify.first_bad_seq}. Entries after it cannot be trusted.</Banner>}
+            ? <Banner tone="ok" title="Log is intact">All {verify.entries_checked} entries checked. Nothing was changed or removed.</Banner>
+            : <Banner tone="bad" title="Log was altered">Entry #{verify.first_bad_seq} and later can’t be trusted.</Banner>}
         </div>
       )}
 
@@ -60,7 +58,7 @@ export function AuditPage() {
                   <b>{e.summary}</b>
                   <div className="row wrap xs muted" style={{ gap: 8 }}>
                     <span>{actorLabel(e.actor)}</span>
-                    <span className="mono">{e.event}</span>
+                    {valio && <span className="mono">{e.event}</span>}
                     {valio && <span className="row mono" style={{ gap: 4 }} title={e.hash}><Link2 size={12} />{e.hash.slice(0, 10)}…</span>}
                   </div>
                   {valio && (e.disclosed_fields?.length ?? 0) > 0 && (
@@ -74,8 +72,6 @@ export function AuditPage() {
               </li>
             ))}
           </ol>
-          {!valio && <div className="xs muted" style={{ marginTop: 8 }}>Entries about other buyers and Valio-internal checks are not shown to you.</div>}
-          <div className="xs muted mono" style={{ marginTop: 8 }}>GET /v1/audit?request_id= · GET /v1/audit/verify</div>
         </section>
       )}
     </>

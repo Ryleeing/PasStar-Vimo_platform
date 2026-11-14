@@ -19,8 +19,8 @@ export function ProfilePage() {
 
   return (
     <>
-      <PageHead eyebrow="Preferences" title="Buying profile"
-        desc="What you usually want, so you don’t repeat it every time. A profile can only narrow the protocol, never widen it."
+      <PageHead title="Buying profile"
+        desc="Your usual preferences, applied to every request."
         actions={profiles.data && profiles.data.length > 1 && (
           <select aria-label="Profile" value={current?.id} onChange={(e) => setId(e.target.value)} style={{ width: 'auto' }}>
             {profiles.data.map((p) => <option key={p.id} value={p.id}>{p.body.name}</option>)}

@@ -9,6 +9,9 @@ import { ToastProvider } from './components/ui';
 import { RequestPage } from './pages/RequestPage';
 import { OptionsPage } from './pages/OptionsPage';
 import { OrdersPage } from './pages/OrdersPage';
+import { OrderedPage } from './pages/OrderedPage';
+import { ReviewPage } from './pages/ReviewPage';
+import { ApproveReviewPage } from './pages/ApproveReviewPage';
 import { ApprovalsPage } from './pages/ApprovalsPage';
 import { ProtocolPage } from './pages/ProtocolPage';
 import { ProfilePage } from './pages/ProfilePage';
@@ -19,6 +22,9 @@ import { AgentsPage } from './pages/AgentsPage';
 const ROUTES: Record<PageKey, () => JSX.Element> = {
   request: RequestPage,
   options: OptionsPage,
+  review: ReviewPage,
+  approve: ApproveReviewPage,
+  ordered: OrderedPage,
   orders: OrdersPage,
   approvals: ApprovalsPage,
   protocol: ProtocolPage,

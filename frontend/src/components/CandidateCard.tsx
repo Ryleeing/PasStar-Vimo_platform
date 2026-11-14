@@ -1,4 +1,4 @@
-import { AlertTriangle, Award, Check, ChevronDown, Lightbulb, Repeat, ShieldCheck, Truck } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown } from 'lucide-react';
 import type { Candidate, Level } from '../api/types';
 import { ALLERGEN_STATUS, AVAILABILITY, BADGE, dayLabel, eur, levelOf, num, outcomeOf } from '../lib/format';
 import { Button, Pill } from './ui';
@@ -7,7 +7,7 @@ const BAR_W: Record<string, string> = { HIGH: '100%', MEDIUM: '62%', LOW: '28%' 
 const BAR_C: Record<string, string> = { HIGH: 'var(--ok)', MEDIUM: 'var(--warn)', LOW: 'var(--bad)' };
 
 export function TrustMeter({ t }: { t: Candidate['cards']['trust'] }) {
-  const dims: [string, Level][] = [['Evidence', t.evidence], ['Match', t.match], ['Fulfilment', t.fulfilment], ['Compliance', t.compliance]];
+  const dims: [string, Level][] = [['Evidence', t.evidence], ['Match', t.match], ['Delivery', t.fulfilment], ['Protocol', t.compliance]];
   return (
     <div className="meter" aria-label="Trust by dimension">
       {dims.map(([label, l]) => (
@@ -20,6 +20,7 @@ export function TrustMeter({ t }: { t: Candidate['cards']['trust'] }) {
   );
 }
 
+/** One option. Only what is needed to decide is visible; evidence lives under "Details". */
 export function CandidateCard({ c, selected, featured, onSelect, loading, mode, all }: {
   c: Candidate; selected: boolean; featured?: boolean; onSelect: () => void; loading: boolean;
   mode: 'SEPARATE' | 'SELF'; all: Candidate[];
@@ -28,82 +29,65 @@ export function CandidateCard({ c, selected, featured, onSelect, loading, mode, 
   const t = c.cards.trust;
   const out = outcomeOf(c.outcome_preview, mode);
   const av = AVAILABILITY[line.available_on_date];
+  const trust = levelOf(t.overall);
   const nameOf = (id: string) => all.find((x) => x.id === id)?.lines[0].name ?? id;
 
   return (
     <article className={`cand ${selected ? 'sel' : ''} ${featured ? 'featured' : ''}`} aria-label={line.name}>
-      <div className="row between">
-        <span className="badge">{c.badge ? <><Award size={14} /> {BADGE[c.badge]}</> : <>#{c.rank}</>}</span>
-        <Pill tone={out.tone}>{out.label}</Pill>
+      <div className="row between" style={{ minHeight: 22 }}>
+        <span className="badge">{c.badge ? BADGE[c.badge] : `Option ${c.rank}`}</span>
+        {c.outcome_preview !== 'AUTO' && <Pill tone={out.tone}>{out.label}</Pill>}
       </div>
 
       <div>
         <div className="name">{line.name}</div>
-        <div className="small muted" style={{ marginTop: 4 }}>
-          {line.brand} · {num(line.sales_units)} × {line.sales_unit} = {num(line.qty_covered.value)} {line.qty_covered.unit}
-          {line.overbuy && <> · +{num(line.overbuy.value)} {line.overbuy.unit} over</>}
-        </div>
+        <div className="small muted" style={{ marginTop: 2 }}>{num(line.sales_units)} × {line.sales_unit} · {num(line.qty_covered.value)} {line.qty_covered.unit}</div>
       </div>
 
       <div>
-        <div className="price">{eur(c.totals?.gross_cents)}<small>incl. VAT</small></div>
-        <div className="row wrap small" style={{ gap: 8, marginTop: 6 }}>
-          <span className="row" style={{ gap: 5 }}><Truck size={14} className="muted" /> by {dayLabel(c.delivery_date)}</span>
-          <Pill tone={av.tone}>{av.label}</Pill>
+        <div className="price">{eur(c.totals?.gross_cents)}</div>
+        <div className="small muted">
+          incl. VAT · arrives {dayLabel(c.delivery_date)}
+          {line.available_on_date !== 'YES' && <> · <span style={{ color: `var(--${av.tone === 'neutral' ? 'muted' : av.tone})` }}>{av.label.toLowerCase()}</span></>}
         </div>
       </div>
 
       <p className="why">{c.explanation}</p>
 
-      <div className="stack sm">
-        <div className="row between small">
-          <span className="row" style={{ gap: 6 }}><ShieldCheck size={15} className="muted" /> Trust</span>
-          <Pill tone={levelOf(t.overall).tone}>{levelOf(t.overall).label}</Pill>
-        </div>
-        <TrustMeter t={t} />
-        {t.how_to_improve && <div className="xs muted">How to improve: {t.how_to_improve}</div>}
+      <div className="small row" style={{ gap: 6 }}>
+        <span className={`dot tone-dot-${trust.tone}`} aria-hidden />Trust {trust.label.toLowerCase()}
       </div>
 
-      <div>
-        <details className="details">
-          <summary><ShieldCheck size={14} /> Allergen check <ChevronDown size={14} className="chev" /></summary>
-          <div className="details-body">
-            {c.cards.allergen.rows.map((r, i) => {
-              const s = ALLERGEN_STATUS[r.status];
-              return (
-                <div key={i} className="row wrap" style={{ gap: 8 }}>
-                  <span>{r.requirement.label ?? r.requirement.code}</span>
-                  <Pill tone={s.tone}>{s.label}</Pill>
-                  <span className="xs muted">grade {r.trust_grade} · {r.source}</span>
-                </div>
-              );
-            })}
-            {(c.cards.allergen.notes ?? []).map((n) => (
-              <div key={n} className="row top xs" style={{ gap: 6, color: 'var(--warn)' }}><AlertTriangle size={13} style={{ flex: 'none', marginTop: 2 }} /> {n}</div>
+      <details className="details">
+        <summary>Details <ChevronDown size={14} className="chev" /></summary>
+        <div className="details-body">
+          <div className="stack sm">
+            <TrustMeter t={t} />
+            {t.how_to_improve && <div className="xs muted">{t.how_to_improve}</div>}
+          </div>
+          <div className="stack sm">
+            {c.cards.allergen.rows.map((r, i) => (
+              <div key={i} className="row" style={{ gap: 8 }}>
+                <span className="grow">{r.requirement.label ?? r.requirement.code}</span>
+                <Pill tone={ALLERGEN_STATUS[r.status].tone}>{ALLERGEN_STATUS[r.status].label}</Pill>
+              </div>
             ))}
-            {c.cards.allergen.data_updated_at && <div className="xs muted">Data updated {new Date(c.cards.allergen.data_updated_at).toLocaleDateString('en-GB')}</div>}
+            {(c.cards.allergen.notes ?? []).map((n) => (
+              <div key={n} className="row top xs" style={{ gap: 6, color: 'var(--warn)' }}><AlertTriangle size={13} style={{ flex: 'none', marginTop: 2 }} />{n}</div>
+            ))}
+            {c.cards.allergen.rows[0] && <div className="xs muted">Source: {c.cards.allergen.rows[0].source}</div>}
           </div>
-        </details>
-        <details className="details">
-          <summary><Lightbulb size={14} /> Tips ({c.cards.tips?.length ?? 0}) <ChevronDown size={14} className="chev" /></summary>
-          <div className="details-body">
-            {(c.cards.tips ?? []).map((tip, i) => <div key={i} className="small text-2">• {tip.text}</div>)}
-            {!c.cards.tips?.length && <div className="small muted">None</div>}
-          </div>
-        </details>
-        <details className="details">
-          <summary><Repeat size={14} /> Alternatives ({c.cards.alternatives?.length ?? 0}) <ChevronDown size={14} className="chev" /></summary>
-          <div className="details-body">
-            {(c.cards.alternatives ?? []).map((a) => <div key={a.candidate_id} className="small"><b>{nameOf(a.candidate_id)}</b><div className="text-2">{a.tradeoff}</div></div>)}
-            {!c.cards.alternatives?.length && <div className="small muted">None</div>}
-          </div>
-        </details>
-      </div>
-
-      <div className="xs muted">{(c.outcome_reasons ?? []).join(' · ')}</div>
+          {(c.cards.tips?.length ?? 0) > 0 && (
+            <ul className="plain">{c.cards.tips!.filter((tip) => tip.kind !== 'QUOTE_TIMER').map((tip, i) => <li key={i}>{tip.text}</li>)}</ul>
+          )}
+          {(c.cards.alternatives ?? []).map((a) => (
+            <div key={a.candidate_id} className="small"><span className="muted">Instead: </span>{nameOf(a.candidate_id)}. {a.tradeoff}.</div>
+          ))}
+        </div>
+      </details>
 
       <Button variant={featured && !selected ? 'primary' : 'default'} block loading={loading} onClick={onSelect} aria-pressed={selected}>
-        {selected ? <><Check size={16} /> Selected</> : 'Choose this'}
+        {selected ? <><Check size={16} /> Selected</> : 'Choose'}
       </Button>
     </article>
   );

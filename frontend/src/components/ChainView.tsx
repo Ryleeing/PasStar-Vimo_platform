@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronRight, ListTree, Lock, ThumbsDown } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getChain, rejectNode } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { ChainNode, ChainTimeline, RejectReason, RequestResult } from '../api/types';
@@ -98,13 +98,12 @@ export function ChainView({ request }: { request: RequestResult }) {
   return (
     <section className="card" aria-labelledby="chain-title">
       <div className="row wrap" style={{ marginBottom: 14 }}>
-        <div className="icon-tile"><ListTree size={18} /></div>
         <div className="grow">
-          <h2 id="chain-title">How the agent got here</h2>
-          <div className="small muted">Attempt {request.attempt} · if a step is wrong, mark it and only that step onward is redone</div>
+          <h2 id="chain-title">How these options were found</h2>
+          <div className="small muted">If a step is wrong, tell us and only that step onward is redone.</div>
         </div>
         <Button variant="ghost" size="sm" onClick={toggleTimeline} aria-expanded={showTimeline}>
-          {showTimeline ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Full timeline
+          {showTimeline ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Timeline
         </Button>
       </div>
 
@@ -166,22 +165,21 @@ function NodeCard({ n, last, regen, open, busy, onToggle, onClose, followUps, on
       <div className="node-head">
         <span className="node-num">{n.node}</span>
         <span className="grow">{NODE_LABEL[n.name]}</span>
-        {regen && <Pill tone="accent">Redone</Pill>}
-        {isGate && <Lock size={13} aria-label="Rule-based, cannot be overridden" />}
+        {regen && <span className="xs" style={{ color: 'var(--accent)' }}>Updated</span>}
       </div>
       <p className="node-summary">{n.summary}</p>
       <div className="node-foot" ref={ref}>
         <Button size="sm" variant="ghost" className="danger" onClick={() => { setSub(null); onToggle(); }} loading={busy}
           disabled={!n.can_reject || outOfRetries} aria-haspopup="menu" aria-expanded={open}
           title={outOfRetries ? 'Retried 3 times. Send it to a human instead.' : undefined}>
-          <ThumbsDown size={14} /> Not right
+          Not right?
         </Button>
-        <span className="xs muted ml-auto">{isGate ? 'rules only' : `${n.retries_left} retries left`}</span>
+        {!isGate && n.retries_left <= 1 && <span className="xs muted ml-auto">{n.retries_left} retr{n.retries_left === 1 ? 'y' : 'ies'} left</span>}
         {open && (
           <div className="popover" role="menu" aria-label={`Why is step ${n.node} wrong?`}>
             {!sub ? (
               <>
-                <div className="menu-note">{n.node === 1 ? 'You will correct it in the panel' : isGate ? 'The protocol check cannot be overridden' : 'What is wrong with this step?'}</div>
+                <div className="menu-note">{isGate ? 'Rules can’t be overridden. You can:' : 'What’s wrong?'}</div>
                 {n.reject_options.map((r) => {
                   const reason = r as RejectReason;
                   const needs = followUps(reason) || reason === 'OTHER';

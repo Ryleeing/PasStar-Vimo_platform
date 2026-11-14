@@ -14,8 +14,8 @@ export function ValioQueuePage() {
 
   return (
     <>
-      <PageHead eyebrow="Valio Aimo · channel owner" title="Review queue"
-        desc="Requests the channel would not answer on its own: data outside the protocol, suspicious behaviour, or anything the API cannot price." />
+      <PageHead title="Review queue"
+        desc="Requests the channel won’t answer on its own." />
       <div className="stack lg">
         {flow.signedDraft && <ConfirmProtocolCard />}
         {list.loading ? <Skeleton h={380} /> : list.error ? <ErrorState error={list.error} onRetry={list.reload} /> : !items.length ? (
@@ -130,7 +130,6 @@ function ValioCard({ a }: { a: ApprovalCard }) {
           {a.status === 'REJECTED' ? 'Nothing was disclosed. The decision is in the audit log.' : 'Logged in the audit trail.'}
         </Banner>
       )}
-      <div className="xs muted mono">GET /v1/approvals?kind=VALIO · POST /v1/approvals/{a.id}/decision</div>
     </article>
   );
 }
