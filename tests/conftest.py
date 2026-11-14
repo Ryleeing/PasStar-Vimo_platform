@@ -32,6 +32,9 @@ def restore_deps(monkeypatch):
 @pytest.fixture(autouse=True)
 def fresh_database(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "the_pass.db")
+    # BE2's runtime database (Valio probe budgets): never the real backend/data/runtime.sqlite
+    from app.valio import client as valio_client
+    monkeypatch.setattr(valio_client, "DEFAULT_RUNTIME_DATABASE", tmp_path / "runtime.sqlite")
     db.init()
     seed.reset(onboarding=False)
     be3_seed.reset()

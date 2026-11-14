@@ -455,4 +455,7 @@ def reset():
     then clears the BE3 tables and writes the demo profiles."""
     seed.reset()
     be3_seed.reset()
-    return {"ok": True}
+    # Valio probe budgets live in BE2's runtime database: a demo reset starts every agent from zero there too.
+    # Only the budgets are cleared; the probe log stays.
+    from .valio.client import reset_probe_budgets
+    return {"ok": True, "probe_budgets_cleared": reset_probe_budgets()}
