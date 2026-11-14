@@ -193,14 +193,14 @@ def find_options(who: Audience, text: str, answers: Optional[dict[str, str]] = N
     body = CreateRequest(protocol_id=protocol_id, profile_id=profile_id, input_mode="NATURAL_LANGUAGE",
                          raw_text=full, structured=outcome.structured)
     result = service.create_request(body, who)
-    out = _options(result)
+    out = _options(result, who)
     out["assumptions"] = [a["question"] for a in outcome.ambiguities if a not in blocking]
     return out
 
 
 def get_options(who: Audience, request_id: str) -> dict:
     _agent_only(who)
-    return _options(service.get_request(request_id, who))
+    return _options(service.get_request(request_id, who), who)
 
 
 # ───── adjust_options ─────
@@ -222,7 +222,7 @@ def adjust_options(who: Audience, request_id: str, change: str, value: Optional[
         params["candidate_id"] = value
     elif arg:
         params[arg] = value
-    return _options(service.reject_node(request_id, node, RejectNodeRequest(reason=reason, params=params), who))
+    return _options(service.reject_node(request_id, node, RejectNodeRequest(reason=reason, params=params), who), who)
 
 
 # ───── place_order / order_status ─────
@@ -260,7 +260,7 @@ def _understood(s: dict) -> dict:
             "substitution": s.get("substitution")}
 
 
-def _options(r: dict) -> dict:
+def _options(r: dict, who: Audience) -> dict:
     status = "OPTIONS" if r["candidates"] else "NO_OPTIONS"
     out = {"status": status, "request_id": r["request_id"], "attempt": r["attempt"],
            "understood": _understood(r["structured"]),
@@ -268,13 +268,49 @@ def _options(r: dict) -> dict:
            "blocked": [{"product": l["name"], "brand": l.get("brand"),
                         "why": [v["detail"] for v in c.get("violations", [])]}
                        for c in r.get("blocked", []) for l in c["lines"][:1]]}
+    approver = _user_name(service._active_protocol(_protocol_id(who), who).body.approver)
+    for o in out["options"]:
+        o["card"] = _card(o, approver)
     if status == "NO_OPTIONS":
         out["why_none"] = r.get("no_candidate_reason")
         out["next_step"] = "Tell the user why nothing matched; they can change the request and you call find_options again."
     else:
-        out["next_step"] = ("Present the options with price, delivery and what choosing each will do. "
-                            "Use place_order with the option_id the user picks, or adjust_options to change the list.")
+        out["next_step"] = ("Show the user each option's card, line by line (translate it if the user writes in "
+                            "another language, but keep every line: reliability with its four parts, requirement "
+                            "grades, what choosing it does, and the tips). Show at least the top three. Then use "
+                            "place_order with the option_id the user picks, or adjust_options to change the list.")
     return out
+
+
+OUTCOME_WORDS = {"AUTO": "orders straight away", "BUYER_APPROVAL": "held until {approver} approves it",
+                 "VALIO_REVIEW": "held until Valio reviews it", "REJECT": "not allowed by your protocol"}
+GRADE_WORDS = {"A": "manufacturer data", "B": "manufacturer data, older than 24 months",
+               "C": "only the product name says so, not verified", "D": "no data, not verified"}
+SOURCE_WORDS = {"VALIO_PRICE_API": "Valio live price", "VALIO_STOCK_API": "Valio live stock",
+                "DEMO_DATA": "demo data, not Valio's", "UNIT_CONVERSIONS": "Valio unit table",
+                "NAME_PARSE": "read from the product name, check it", "UNKNOWN": "unknown"}
+
+
+def _card(o: dict, approver: str) -> list[str]:
+    """The option as fixed lines the assistant shows as they are, so no dimension is left out."""
+    rel = o["reliability"]
+    head = f"#{o['rank']}" + (f" {o['badge']}" if o["badge"] else "")
+    lines = [f"{head}: " + "; ".join(f"{p['name']} - order {p['order']}, covers {p['covers']}" for p in o["products"]),
+             f"Total EUR {o['total_eur']:,.2f} incl. VAT and deposits; delivery {o['delivery_date']}: "
+             + ", ".join(p["deliverable"] for p in o["products"]),
+             f"Reliability {rel['overall']} (evidence {rel['evidence']}, match {rel['match']}, "
+             f"fulfilment {rel['fulfilment']}, compliance {rel['compliance']})"
+             + (f" - to improve: {rel['how_to_improve']}" if rel["how_to_improve"] else "")]
+    lines += [f"{r['need']}: {r['status'].lower().replace('_', ' ')}, grade {r['grade']} ({GRADE_WORDS[r['grade']]})"
+              for r in o["requirements"]]
+    lines.append("If chosen: " + OUTCOME_WORDS[o["if_chosen"]["outcome"]].format(approver=approver)
+                 + "".join(f" - {r}" for r in o["if_chosen"]["reasons"][:2]))
+    src = o["sources"]
+    lines.append(f"Sources: price {SOURCE_WORDS[src['price']]}; delivery {SOURCE_WORDS[src['deliverable']]}; "
+                 f"pack size {', '.join(SOURCE_WORDS[x] for x in src['pack_size'])}")
+    lines += [f"Note: {n}" for n in o["allergen_notes"]]
+    lines += [f"Tip ({t['kind'].lower().replace('_', ' ')}): {t['text']}" for t in o["tips"]]
+    return lines
 
 
 def _option(c: dict) -> dict:

@@ -134,3 +134,13 @@ def test_orders_carry_the_checked_valio_signature(hotel):
     v = o["verification"]
     assert v["signed_by"] == "Valio" and v["signature_valid"] is True and v["expired"] is False
     assert v["protocol_id"] == "prot_hotel_v1"
+
+
+def test_every_option_has_a_card_with_all_dimensions(hotel):
+    r = api.find_options(hotel, "200 litres of lactose-free milk tomorrow")
+    for o in r["options"]:
+        card = "\n".join(o["card"])
+        assert "Reliability" in card and all(p in card for p in ("evidence", "match", "fulfilment", "compliance"))
+        assert "grade" in card and "If chosen:" in card and "Sources:" in card
+        assert all(t["text"] in card for t in o["tips"])
+    assert "card" in r["next_step"]
