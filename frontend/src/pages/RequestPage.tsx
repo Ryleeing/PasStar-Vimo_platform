@@ -131,17 +131,17 @@ export function RequestPage() {
     });
   }, null);
 
-  /** Way 1: a message to A.I.mo, or the answer to its question. */
-  const send = async (reply?: string) => {
+  /** Way 1: a new message to A.I.mo (top box), or the answer to its question (asked and answered in the reply card). */
+  const send = async (reply?: string, asAnswer = false) => {
     const typed = (reply ?? input).trim();
     if (!typed || busy) return;
-    const answering = asking && message !== null ? asking : null;
+    const answering = asAnswer && asking && message !== null ? asking : null;
     const msg = answering ? message! : typed;
     const ans = answering ? { ...answers, [answering.field]: typed } : {};
     const text = withAnswers(msg, ans);
     setMessage(msg);
     setAnswers(ans);
-    setInput('');
+    if (reply === undefined) setInput('');
     setStuck(null);
     patch({ rawText: msg });
     setBusy('chat');
@@ -256,10 +256,10 @@ export function RequestPage() {
             </div>
             <div className="composer">
               <textarea
-                aria-label={asking ? asking.question : 'Describe what you need'}
+                aria-label="Describe what you need"
                 rows={3}
                 value={input}
-                placeholder={asking ? `Answer: ${asking.question}` : 'e.g. 1000 litres of lactose-free milk by Monday'}
+                placeholder={message !== null ? 'Start a new request…' : 'e.g. 1000 litres of lactose-free milk by Monday'}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -277,8 +277,8 @@ export function RequestPage() {
                     </select>
                   </label>
                 )}
-                <Button variant="primary" size="sm" className="ml-auto" loading={busy === 'chat'} disabled={!input.trim() || !!busy} onClick={() => send()}>
-                  {asking ? <>Answer <ArrowUp size={16} /></> : <>Find options <ArrowRight size={16} /></>}
+                <Button variant="primary" size="sm" className="ml-auto" loading={busy === 'chat'} disabled={!!busy} onClick={() => send()}>
+                  Find options <ArrowRight size={16} />
                 </Button>
               </div>
             </div>
@@ -294,7 +294,7 @@ export function RequestPage() {
 
           {message !== null && (
             <AiReply message={message} answers={answers} asking={asking} stuck={stuck} thinking={busy === 'chat'}
-              onPick={(o) => send(o)} onStartOver={startOver} />
+              onAnswer={(o) => send(o, true)} onStartOver={startOver} />
           )}
         </div>
 
@@ -354,10 +354,20 @@ function MandateStrip() {
 }
 
 /** The exchange with A.I.mo: your message, your answers, and what it is doing or asking. */
-function AiReply({ message, answers, asking, stuck, thinking, onPick, onStartOver }: {
+/** Hint for the free-text answer, by the field A.I.mo is asking about. */
+const ANSWER_HINT: Record<string, string> = {
+  quantity: 'e.g. 200 litres',
+  delivery_date: 'e.g. Friday',
+  category: 'e.g. whipping cream',
+  requirements: 'e.g. nut-free',
+};
+
+function AiReply({ message, answers, asking, stuck, thinking, onAnswer, onStartOver }: {
   message: string; answers: Record<string, string>; asking: Ambiguity | null; stuck: Ambiguity | null; thinking: boolean;
-  onPick: (o: string) => void; onStartOver: () => void;
+  onAnswer: (o: string) => void; onStartOver: () => void;
 }) {
+  const [draft, setDraft] = useState('');
+  const submit = () => { const t = draft.trim(); if (!t) return; setDraft(''); onAnswer(t); };
   return (
     <div className={`ai-reply ${asking ? 'asking' : ''}`} aria-live="polite">
       <span className="ai-avatar" aria-hidden><MascotFace mood={thinking ? 'thinking' : asking || stuck ? 'asking' : 'happy'} /></span>
@@ -371,11 +381,18 @@ function AiReply({ message, answers, asking, stuck, thinking, onPick, onStartOve
             {(asking.options?.length ?? 0) > 0 && (
               <div className="chips" role="group" aria-label={asking.question}>
                 {asking.options!.map((o) => (
-                  <button key={o} type="button" className="chip" onClick={() => onPick(o)}>{o}</button>
+                  <button key={o} type="button" className="chip" onClick={() => onAnswer(o)}>{o}</button>
                 ))}
               </div>
             )}
-            <p className="small muted">Pick one, type your answer above, or set it in the form and find options there.</p>
+            {/* Answer right here, under the question */}
+            <form className="ai-answer" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+              <input aria-label={asking.question} value={draft} autoFocus
+                placeholder={(asking.options?.length ?? 0) > 0 ? 'Or type your answer' : ANSWER_HINT[asking.field] ?? 'Type your answer'}
+                onChange={(e) => setDraft(e.target.value)} />
+              <Button type="submit" variant="primary" size="sm">Answer <ArrowUp size={15} /></Button>
+            </form>
+            <p className="small muted">You can also set it in the order form and find options there.</p>
           </>
         )}
         {!thinking && stuck && (

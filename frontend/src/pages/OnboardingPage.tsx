@@ -44,6 +44,7 @@ export function OnboardingPage() {
   }, [waiting, active]);
 
   const make = async () => {
+    if (!text.trim() || busy) return;
     setBusy('draft');
     try {
       setDraft(await draftProtocol(workspace.buyerId!, workspace.agentId!, text));
@@ -119,7 +120,7 @@ export function OnboardingPage() {
             <textarea id="rules-text" aria-label="Describe the rules" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
           </div>
           <div className="row">
-            <Button variant="primary" onClick={make} loading={busy === 'draft'} disabled={!text.trim()}>
+            <Button variant="primary" onClick={make} loading={busy === 'draft'}>
               <Sparkles size={15} /> Draft the protocol
             </Button>
           </div>

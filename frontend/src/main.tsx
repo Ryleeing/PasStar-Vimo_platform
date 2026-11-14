@@ -1,7 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import '@fontsource-variable/hanken-grotesk';
+import '@fontsource-variable/inter';
 import '@fontsource/barlow-condensed/800.css';
+import '@fontsource/cormorant-garamond/600.css';
 import './styles/app.css';
 import App from './App';
 

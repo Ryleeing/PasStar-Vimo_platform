@@ -125,6 +125,7 @@ function AmendCard({ p }: { p: Protocol }) {
   const [done, setDone] = useState<'signed' | 'rejected' | null>(null);
 
   const submit = async () => {
+    if (!limit || busy) return;
     const changes: Record<string, unknown> = { auto_approve_limit_cents: Math.round(Number(limit) * 100) };
     if (addCat) changes.allowed_categories = [...p.body.allowed_categories, '22540'];
     if (allPrices) changes['valio_scope.prices'] = 'ALL_CUSTOMERS';
@@ -166,7 +167,7 @@ function AmendCard({ p }: { p: Protocol }) {
       </div>
       <label className="row small" style={{ gap: 8 }}><input type="checkbox" checked={addCat} onChange={(e) => setAddCat(e.target.checked)} /> Also allow dry goods (22540)</label>
       <label className="row small" style={{ gap: 8 }}><input type="checkbox" checked={allPrices} onChange={(e) => setAllPrices(e.target.checked)} /> Let the agent see all customers’ prices</label>
-      <Button onClick={submit} loading={busy === 'amend'} disabled={!limit}>Submit change</Button>
+      <Button onClick={submit} loading={busy === 'amend'}>Submit change</Button>
 
       {diff && (
         <div className="stack">
@@ -194,6 +195,7 @@ function DraftCard() {
   const [busy, setBusy] = useState<'draft' | 'sign' | null>(null);
 
   const make = async () => {
+    if (!text.trim() || busy) return;
     setBusy('draft');
     try {
       setDraft(await draftProtocol(workspace.buyerId!, workspace.agentId!, text));
@@ -228,7 +230,7 @@ function DraftCard() {
           <div className="field">
             <textarea aria-label="Describe the rules" id="draft-text" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
           </div>
-          <Button onClick={make} loading={busy === 'draft'} disabled={!text.trim()}><Sparkles size={15} /> Draft it</Button>
+          <Button onClick={make} loading={busy === 'draft'}><Sparkles size={15} /> Draft it</Button>
         </>
       ) : (
         <div className="stack">

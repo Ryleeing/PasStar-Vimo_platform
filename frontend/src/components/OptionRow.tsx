@@ -5,7 +5,7 @@ import {
 import type { Candidate } from '../api/types';
 import { ALLERGEN_STATUS, AVAILABILITY, BADGE, dayLabel, eur, num, outcomeOf } from '../lib/format';
 import { Button } from './ui';
-import { ScoreBar, TrustMark } from './TrustMark';
+import { ScoreBar, TrustLight, TrustMark } from './TrustMark';
 
 // Information architecture
 //  · Collapsed row = the signals people compare in a few seconds: can it be ordered without approval (and why),
@@ -61,16 +61,18 @@ function limitFrom(reasons: string[]): number | null {
   return null;
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
   return (
     <section className="dsec">
-      <h4 className="dsec-title">{title}</h4>
+      <div className="dsec-head"><h4 className="dsec-title">{title}</h4>{aside}</div>
       {children}
     </section>
   );
 }
 
 const REQ_CAUSE = 'REQ';
+/** Middle of each level's score band (Reliable 80-100, Reliable? 50-79, Risky 0-49). */
+const BAND_MID: Record<string, number> = { HIGH: 90, MEDIUM: 65, LOW: 25 };
 
 /** One option in the ranked list. */
 export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, loading, mode, all }: {
@@ -199,9 +201,9 @@ export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, 
                 const st = ALLERGEN_STATUS[r.status];
                 return (
                   <div key={i} className="ev-row">
-                    {tone === 'ok' ? <Check size={16} className="ok-ink" /> : <CircleAlert size={16} className={`${tone}-text`} />}
-                    <div className="grow">
-                      <div className="ev-head"><span className="strong">{reqLabel(r)}</span><span className={`lvl lvl-${tone}`}>{CHECK_WORD[check]}</span></div>
+                    <span className={`ev-icon ev-${tone}`} aria-hidden>{tone === 'ok' ? <Check size={14} strokeWidth={3} /> : <CircleAlert size={15} />}</span>
+                    <div className="ev-body">
+                      <div className="ev-head"><span className="ev-name">{reqLabel(r)}</span><span className={`ev-pill ev-${tone}`}>{CHECK_WORD[check]}</span></div>
                       <p className="ev-why">
                         {check === 'verified' && `Declared in ${/^manufacturer structured/i.test(r.source) ? 'the manufacturer’s structured product data' : r.source.toLowerCase()} (grade ${r.trust_grade}).`}
                         {check === 'unverified' && `Found only in the ${r.source.toLowerCase().replace(/ only$/, '')} (grade ${r.trust_grade}). The manufacturer’s data doesn’t confirm it.`}
@@ -217,18 +219,16 @@ export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, 
             </Section>
           )}
 
-          <Section title="Reliability">
-            <div className="trust-total">
-              <TrustMark level={t.overall} score={t.points?.overall} size={20} />
-              <span className="small muted">Overall = the weakest of the four checks below</span>
-            </div>
+          <Section title="Reliability" aside={<TrustMark level={t.overall} score={t.points?.overall} size={18} />}>
+            <p className="trust-caption">Overall is the weakest of the four checks below.</p>
             <div className="trust-rows">
               {dims.map((d) => (
                 <div key={d.key} className="ev-trust" title={d.asks}>
-                  <div className="trust-row scored">
-                    <span>{d.label}</span>
-                    <ScoreBar level={t[d.key]} score={t.points?.[d.key]} />
-                    <TrustMark level={t[d.key]} score={t.points?.[d.key]} size={16} />
+                  <div className="trust-line">
+                    <span className="trust-name">{d.label}</span>
+                    {/* No score from the API (e.g. mock data): draw the bar at the middle of the level's band, show no number. */}
+                    <ScoreBar level={t[d.key]} score={t.points?.[d.key] ?? BAND_MID[t[d.key]] ?? 25} />
+                    <span className="trust-score"><TrustLight level={t[d.key]} size={14} />{t.points?.[d.key] != null && <span className="num">{t.points[d.key]}</span>}</span>
                   </div>
                   <p className="ev-why">{reasonFor(d.key)}</p>
                 </div>

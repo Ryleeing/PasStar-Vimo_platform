@@ -295,10 +295,10 @@ function NotRight({ n, open, busy, onToggle, onClose, followUps, onReject }: {
               })}
             </>
           ) : sub === 'OTHER' ? (
-            <form className="stack sm" style={{ padding: 6 }} onSubmit={(e) => { e.preventDefault(); onReject('OTHER', {}, note); }}>
+            <form className="stack sm" style={{ padding: 6 }} onSubmit={(e) => { e.preventDefault(); if (note.trim()) onReject('OTHER', {}, note); }}>
               <label className="label" htmlFor={`note-${n.node}`}>Tell the agent what to change</label>
               <textarea id={`note-${n.node}`} rows={2} value={note} onChange={(e) => setNote(e.target.value)} autoFocus />
-              <div className="row"><Button size="sm" variant="ghost" type="button" onClick={() => setSub(null)}>Back</Button><Button size="sm" variant="primary" disabled={!note.trim()} className="ml-auto">Redo step</Button></div>
+              <div className="row"><Button size="sm" variant="ghost" type="button" onClick={() => setSub(null)}>Back</Button><Button size="sm" variant="primary" className="ml-auto">Redo step</Button></div>
             </form>
           ) : (
             <>
