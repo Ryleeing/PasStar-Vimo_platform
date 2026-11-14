@@ -62,14 +62,14 @@ const P: Record<PageKey, PageDef> = {
   profile: { key: 'profile', label: 'Buying profile', icon: SlidersHorizontal, path: '/profile' },
   audit: { key: 'audit', label: 'Activity log', icon: Activity, path: '/audit' },
   valio: { key: 'valio', label: 'Review queue', icon: Inbox, path: '/valio' },
-  agents: { key: 'agents', label: 'Agents & faults', icon: ServerCog, path: '/agents' },
+  agents: { key: 'agents', label: 'Agents', icon: ServerCog, path: '/agents' },
 };
 
 export const PAGES_BY_ROLE: Record<RoleKey, PageDef[]> = {
-  chef: [P.request, P.options, P.orders, P.profile, P.audit, P.review, P.ordered],
-  buyer_manager: [P.approvals, P.protocol, P.audit, P.approve, P.ordered],
-  owner: [P.request, P.options, { ...P.approvals, label: 'Needs your approval' }, P.orders, P.protocol, P.profile, P.audit, P.review, P.approve, P.ordered],
-  valio_reviewer: [P.valio, P.agents, { ...P.audit, label: 'Full audit log' }],
+  chef: [P.request, P.options, P.orders, P.profile, P.agents, P.audit, P.review, P.ordered],
+  buyer_manager: [P.approvals, P.protocol, P.agents, P.audit, P.approve, P.ordered],
+  owner: [P.request, P.options, { ...P.approvals, label: 'Needs your approval' }, P.orders, P.protocol, P.agents, P.profile, P.audit, P.review, P.approve, P.ordered],
+  valio_reviewer: [P.valio, { ...P.agents, label: 'Agents & faults' }, { ...P.audit, label: 'Full audit log' }],
 };
 
 export const accountByKey = (k: RoleKey) => ACCOUNTS.find((a) => a.key === k)!;
