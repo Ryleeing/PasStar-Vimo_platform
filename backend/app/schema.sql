@@ -96,6 +96,16 @@ CREATE TABLE agents (
   status       TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE','BLOCKED'))
 );
 
+-- How each agent connects, and its key's lifecycle. The key itself is only ever stored as agents.api_key_hash;
+-- key_hint is its first characters, so people can recognise which key an assistant was given.
+CREATE TABLE agent_connections (
+  agent_id      TEXT PRIMARY KEY REFERENCES agents(id),
+  kind          TEXT NOT NULL CHECK (kind IN ('CHATGPT','CLAUDE','ERP','UNKNOWN')),
+  key_hint      TEXT,                                 -- NULL: no key issued, or revoked
+  key_issued_at TEXT,
+  last_used_at  TEXT
+);
+
 CREATE TABLE protocols (
   id                 TEXT PRIMARY KEY,
   buyer_id           TEXT NOT NULL REFERENCES buyers(id),

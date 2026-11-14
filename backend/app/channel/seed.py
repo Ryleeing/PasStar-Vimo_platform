@@ -10,7 +10,7 @@ from ..schemas import ApproverKey, Protocol, ProtocolBody, Requirement
 from . import audit, checkpoints, protocols
 from .identity import key_hash
 
-TABLES = ["audit_log", "approvals", "orders", "quotes", "protocols", "agents", "users", "buyers"]
+TABLES = ["audit_log", "approvals", "orders", "quotes", "protocols", "agent_connections", "agents", "users", "buyers"]
 
 BUYERS = [("buy_hotel", "Hotel Helsinki Central", "Hotel Helsinki Central, loading dock"),
           ("buy_hospital", "Helsinki Hospital Kitchen", "Hospital kitchen, gate B"),
@@ -26,6 +26,9 @@ AGENTS = [("agt_hotel", "buy_hotel", "Hotel purchasing agent", "demo-hotel"),   
           ("agt_hospital", "buy_hospital", "Hospital purchasing agent", "demo-hospital"),
           ("agt_bistro", "buy_bistro", "Bistro purchasing agent", "demo-bistro"),
           ("agt_rogue", "buy_hotel", "Unknown Procurement Bot", "demo-rogue")]     # the misbehaving agent; has no protocol
+# How each demo agent connects: the hotel's ChatGPT plugin and ERP, the hospital's and bistro's assistants.
+AGENT_KINDS = {"agt_hotel": "CHATGPT", "agt_hotel_ext": "ERP", "agt_hospital": "CHATGPT", "agt_bistro": "CLAUDE",
+               "agt_rogue": "UNKNOWN"}
 
 LACTOSE_FREE = Requirement(kind="CLAIM", code="FREE_FROM_LACTOSE", label="Lactose-free")
 NUT_FREE = Requirement(kind="ALLERGEN_FREE", code="AN", label="Nut-free")
@@ -57,6 +60,8 @@ def reset(onboarding: bool = True) -> None:
     for agent_id, buyer_id, name, api_key in AGENTS:
         db.run("INSERT INTO agents (id, buyer_id, name, api_key_hash) VALUES (?,?,?,?)",
                (agent_id, buyer_id, name, key_hash(api_key)))
+        db.run("INSERT INTO agent_connections (agent_id, kind, key_hint, key_issued_at) VALUES (?,?,?,?)",
+               (agent_id, AGENT_KINDS[agent_id], api_key[:8], db.now().isoformat()))
 
     bodies = {
         "prot_hotel_v1": _body("buy_hotel", "agt_hotel", "usr_manager", hard_requirements=[LACTOSE_FREE]),

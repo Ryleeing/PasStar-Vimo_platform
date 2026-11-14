@@ -570,6 +570,40 @@ class AgentActivity(BaseModel):
     probe_alerts_24h: int
 
 
+AgentKind = Literal["CHATGPT", "CLAUDE", "ERP", "UNKNOWN"]
+
+
+class AgentConnection(BaseModel):
+    """An external agent as the buyer (or Valio) sees it: what it is, how it connects, its key and its protocol."""
+    agent_id: str
+    name: str
+    buyer_id: str
+    buyer_name: str
+    kind: AgentKind
+    connection: Literal["MCP", "REST", "NONE"]      # how it talks to PasStar
+    has_key: bool
+    key_hint: Optional[str] = None                  # first characters of the current key
+    key_issued_at: Optional[datetime] = None
+    last_used_at: Optional[datetime] = None
+    protocol_id: Optional[str] = None               # the active protocol it acts under; None: it can do nothing
+    protocol_version: Optional[int] = None
+    approver: Optional[str] = None                  # who may issue or revoke its key
+    activity: AgentActivity
+
+
+class IssueKeyRequest(BaseModel):
+    kind: AgentKind
+
+
+class IssuedKey(BaseModel):
+    """Returned once. PasStar keeps only the hash; a lost key is replaced, never shown again."""
+    agent_id: str
+    key: str
+    key_hint: str
+    kind: AgentKind
+    protocol_id: str
+
+
 class ApprovalCard(BaseModel):
     id: str
     kind: Literal["BUYER", "VALIO"]

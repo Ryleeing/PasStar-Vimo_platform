@@ -16,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import db, errors, fixtures as fx
-from .channel import approvals, audit as audit_store, checkpoints, identity, orders, protocols, quotes, reports, seed, signing
+from .channel import agents, approvals, audit as audit_store, checkpoints, identity, orders, protocols, quotes, reports, seed, signing
 from .internal import Audience
 from .orchestrator import parser_api, seed as be3_seed, service as be3
 from .orchestrator.holds import HoldCaller, record_parse
@@ -123,6 +123,28 @@ def list_protocols(status: Optional[ProtocolStatus] = None, who: Audience = Call
     if who.kind == "AGENT":
         raise errors.ApiError("OUT_OF_SCOPE", "Agents read their own protocol at /v1/agents/{agent_id}/protocol")
     return [_out(who, p) for p in protocols.list_for(who, status)]
+
+@app.get("/v1/agents", response_model=list[AgentConnection], tags=["BE1 · agents"])
+def list_agents(who: Audience = Caller):
+    """External agents: kind, how they connect, key status, protocol and activity. Valio: all; a buyer: its own."""
+    return [_out(who, a) for a in agents.list_for(who)]
+
+@app.get("/v1/agents/{agent_id}", response_model=AgentConnection, tags=["BE1 · agents"])
+def get_agent(agent_id: str, who: Audience = Caller):
+    return _out(who, agents.get(agent_id, who))
+
+@app.post("/v1/agents/{agent_id}/key", response_model=IssuedKey, tags=["BE1 · agents"])
+@_atomic
+def issue_agent_key(agent_id: str, body: IssueKeyRequest, who: Audience = Caller):
+    """Issue a new key (shown once; PasStar keeps only its hash). The previous key stops working. Only the approver of
+    the agent's active protocol may do this, so no agent gets a key before step 0."""
+    return agents.issue_key(agent_id, body.kind, who)
+
+@app.post("/v1/agents/{agent_id}/revoke", response_model=AgentConnection, tags=["BE1 · agents"])
+@_atomic
+def revoke_agent_key(agent_id: str, who: Audience = Caller):
+    """Revoke the agent's key: every call with it is refused from now on (and shows up in the hold report)."""
+    return _out(who, agents.revoke_key(agent_id, who))
 
 @app.get("/v1/agents/{agent_id}/protocol", response_model=Protocol, tags=["BE1 · protocols"])
 def active_protocol(agent_id: str, who: Audience = Caller):

@@ -25,6 +25,8 @@ def caller(agent_key: Optional[str], demo_user: Optional[str]) -> Caller:
         a = db.one("SELECT * FROM agents WHERE api_key_hash = ?", (key_hash(agent_key),))
         if a is None or a["status"] != "ACTIVE":
             raise ApiError("PROTOCOL_INVALID", "Unknown or blocked agent key")
+        # 'last used' on the agents page (agent_connections, see channel/agents.py)
+        db.run("UPDATE agent_connections SET last_used_at = ? WHERE agent_id = ?", (db.now().isoformat(), a["id"]))
         return Caller(kind="AGENT", buyer_id=a["buyer_id"], agent_id=a["id"])
     u = db.one("SELECT * FROM users WHERE id = ?", (demo_user,))
     if u is None:
