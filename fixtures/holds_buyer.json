@@ -1,0 +1,67 @@
+{
+  "audience": "BUYER",
+  "buyer_id": "buy_hotel",
+  "since": "2026-11-07T00:00:00+02:00",
+  "until": "2026-11-14T12:00:00+02:00",
+  "total": 6,
+  "by_event": {
+    "REQUEST_NEEDS_INPUT": 2,
+    "CANDIDATES_BLOCKED": 2,
+    "ORDER_HELD": 2
+  },
+  "by_reason": [
+    {
+      "reason_code": "NEEDS_QUANTITY",
+      "count": 2
+    },
+    {
+      "reason_code": "PROFILE_EXCLUDED_BRAND",
+      "count": 2
+    },
+    {
+      "reason_code": "R-SPEND-APPROVAL",
+      "count": 1
+    },
+    {
+      "reason_code": "R-DELIVERY-PARTIAL",
+      "count": 1
+    }
+  ],
+  "by_agent": [
+    {
+      "agent_id": "agt_hotel",
+      "total": 6,
+      "by_reason": [
+        {
+          "reason_code": "NEEDS_QUANTITY",
+          "count": 2
+        },
+        {
+          "reason_code": "PROFILE_EXCLUDED_BRAND",
+          "count": 2
+        },
+        {
+          "reason_code": "R-SPEND-APPROVAL",
+          "count": 1
+        },
+        {
+          "reason_code": "R-DELIVERY-PARTIAL",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "seq": 41,
+      "at": "2026-11-14T10:02:11+02:00",
+      "event": "ORDER_HELD",
+      "reason_code": "R-SPEND-APPROVAL",
+      "summary": "Held for approval: Total €1,078.25 is above the auto-approve limit of €1,000.00",
+      "request_id": "req_1",
+      "order_id": "ord_3",
+      "agent_id": "agt_hotel"
+    }
+  ],
+  "missing_attributes": []
+}

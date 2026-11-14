@@ -1,0 +1,10 @@
+# BE1 parameters that are not part of rules.yaml. The numbers are provisional; tune them once real prices are known.
+
+# Gate rule R-OUT-OF-API: a line above this quantity needs a custom quote from Valio sales.
+custom_quote_line_qty: {L: 5000, kg: 5000, pcs: 20000}
+
+# What an approver may change in a proposal.
+reviewer_price_band_pct: 10          # how far a Valio reviewer may move a unit price (vs. the current quote); beyond it the approval escalates
+price_escalation_to: VALIO_PRICING_LEAD
+counter_offer_valid_minutes: 15      # confirmation window after a counter-offer: the price lock is extended one round; after that, re-quote
+max_valid_minutes: 1440              # longest confirmation window an approver may set

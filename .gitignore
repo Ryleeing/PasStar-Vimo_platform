@@ -1,0 +1,30 @@
+# Local Claude Code settings
+.claude/
+
+# Design documents (shared outside the repo)
+documents/
+
+# Runtime data: SQLite database and generated private keys (Valio signing key, demo buyer ERP key)
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Environment files
+.env
+.env.*
+
+# Frontend build output
+node_modules/
+dist/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

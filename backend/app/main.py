@@ -1,79 +1,114 @@
-"""The Pass · M1 假数据服务器
+"""The Pass · Valio Aimo open procurement channel
 
-每个路由先返回 fixtures 里的对象，等各自的实现完成后再替换。
-运行：uvicorn app.main:app --reload    文档：http://localhost:8000/docs
-tags 里写了负责人：BE1 通道与交易、BE2 目录与数据、BE3 编排与 AI。
+BE1 routes (protocols, quotes, orders, approvals, audit) are real. BE2 and BE3 routes still return objects from
+fixtures until their implementations land.
+Run: uvicorn app.main:app --reload    Docs: http://localhost:8000/docs
+Tags name the owner: BE1 channel & transactions, BE2 catalogue & data, BE3 orchestration & AI.
 """
+from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Literal, Optional
 
-from fastapi import FastAPI, Header, Query
-from fastapi.responses import JSONResponse
+import pydantic
+from fastapi import Depends, FastAPI, Header, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import fixtures as fx
-from .channel.approvals import check_approver
-from .channel.authorization import AuthorizationError, verify as verify_authorization
+from . import db, errors, fixtures as fx
+from .channel import approvals, audit as audit_store, checkpoints, identity, orders, protocols, quotes, reports, seed, signing
+from .internal import Audience
 from .schemas import *  # noqa: F401,F403
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    db.init()
+    if db.one("SELECT 1 FROM buyers") is None:
+        seed.reset()
+    yield
+
 
 app = FastAPI(
     title="The Pass · Valio Aimo open procurement channel",
     version="0.1.0",
-    description="Open, verifiable gateway for AI purchasing agents. Mock server (M1).",
+    description="Open, verifiable gateway for AI purchasing agents.",
     responses={400: {"model": ErrorBody}, 403: {"model": ErrorBody}, 404: {"model": ErrorBody},
                409: {"model": ErrorBody}, 429: {"model": ErrorBody}, 502: {"model": ErrorBody}},
+    lifespan=lifespan,
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 AgentKey = Header(default=None, alias="X-Agent-Key")
 DemoUser = Header(default=None, alias="X-Demo-User",
                   description="usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio")
-USERS = {  # 演示用户；正式版换成登录
-    "usr_chef": "REQUESTER", "usr_manager": "APPROVER", "usr_owner": "OWNER", "usr_valio": "VALIO_REVIEWER",
-}
 
 
-def _err(status: int, code: str, message: str, **details) -> JSONResponse:
-    return JSONResponse(status_code=status, content=ErrorBody(error=ErrorDetail(code=code, message=message, details=details)).model_dump())
+# ───── Unified errors, identity (BE1) ─────
 
-# ───── 协议（BE1）─────
+@app.exception_handler(errors.ApiError)
+def _api_error(request: Request, e: errors.ApiError):
+    agent_key = request.headers.get("X-Agent-Key")
+    if agent_key and e.code in checkpoints.BLOCK_CODES:          # the channel refused an agent: goes into the hold report
+        checkpoints.record_block(agent_key, f"{request.method} {request.scope['route'].path}", e.code, e.message)
+    return errors.response(e.code, e.message, e.details)
+
+@app.exception_handler(RequestValidationError)
+@app.exception_handler(pydantic.ValidationError)
+def _bad_request(_, e):
+    problems = [{"loc": list(x["loc"]), "msg": x["msg"], "type": x["type"]} for x in e.errors()]
+    return errors.response("VALIDATION_ERROR", "Request does not match the contract", {"errors": problems})
+
+
+def _caller(x_agent_key: Optional[str] = AgentKey, x_demo_user: Optional[str] = DemoUser) -> Audience:
+    return identity.caller(x_agent_key, x_demo_user)
+
+Caller = Depends(_caller)
+
+
+def _out(who: Audience, model) -> dict:
+    """Every response passes the outbound check (disclosure.filter from BE2) before it is returned. No exceptions."""
+    return checkpoints.check_response(who, model.model_dump(mode="json"))
+
+# ───── Protocols (BE1) ─────
 
 @app.post("/v1/protocols/draft", response_model=Protocol, tags=["BE1 · protocols"])
-def draft_protocol(body: ProtocolDraftRequest, x_demo_user: Optional[str] = DemoUser):
-    """agent 根据一句话起草协议（内部调用 BE3 parser.draft_protocol），返回 DRAFT + 待确认问题。"""
-    return fx.PROTOCOL_DRAFT
+def draft_protocol(body: ProtocolDraftRequest, who: Audience = Caller):
+    """The agent drafts a protocol from one sentence (calls parser.draft_protocol from BE3); returns a DRAFT plus open questions."""
+    return _out(who, protocols.draft(body, who))
 
 @app.get("/v1/protocols/{protocol_id}", response_model=Protocol, tags=["BE1 · protocols"])
-def get_protocol(protocol_id: str):
-    return fx.PROTOCOL_EXTERNAL if protocol_id == fx.PROTOCOL_EXTERNAL.id else fx.PROTOCOL
+def get_protocol(protocol_id: str, who: Audience = Caller):
+    return _out(who, protocols.get_for(protocol_id, who))
 
 @app.put("/v1/protocols/{protocol_id}", response_model=Protocol, tags=["BE1 · protocols"])
-def update_protocol(protocol_id: str, body: ProtocolUpdateRequest):
-    """只能改 DRAFT 状态的协议。"""
-    return fx.PROTOCOL_DRAFT
+def update_protocol(protocol_id: str, body: ProtocolUpdateRequest, who: Audience = Caller):
+    """Only a DRAFT protocol can be edited."""
+    return _out(who, protocols.update(protocol_id, body.body, who))
 
 @app.post("/v1/protocols/{protocol_id}/sign", response_model=Protocol, tags=["BE1 · protocols"])
-def sign_protocol(protocol_id: str, x_demo_user: Optional[str] = DemoUser):
-    """采购经理签字：DRAFT → PENDING_VALIO_CONFIRMATION。"""
-    return fx.PROTOCOL_DRAFT.model_copy(update={"status": "PENDING_VALIO_CONFIRMATION"})
+def sign_protocol(protocol_id: str, who: Audience = Caller):
+    """The approver named in the protocol signs: DRAFT / PENDING_BUYER_SIGNATURE → PENDING_VALIO_CONFIRMATION. Agents cannot sign."""
+    return _out(who, protocols.buyer_sign(protocol_id, who))
 
 @app.post("/v1/protocols/{protocol_id}/confirm", response_model=Protocol, tags=["BE1 · protocols"])
-def confirm_protocol(protocol_id: str, x_demo_user: Optional[str] = DemoUser):
-    """Valio 确认：→ ACTIVE，生成 jws；旧版本 → SUPERSEDED。"""
-    return fx.PROTOCOL
+def confirm_protocol(protocol_id: str, who: Audience = Caller):
+    """Valio confirms: → ACTIVE with a jws; the previous version → SUPERSEDED."""
+    return _out(who, protocols.confirm(protocol_id, who))
 
 @app.post("/v1/protocols/{protocol_id}/amend", response_model=ProtocolDiff, tags=["BE1 · protocols"])
-def amend_protocol(protocol_id: str, body: ProtocolAmendRequest):
-    """收紧直接生效；扩大生成新版本并要求重新签字；越权的列入 forbidden 并拒绝。"""
-    return fx.PROTOCOL_DIFF
+def amend_protocol(protocol_id: str, body: ProtocolAmendRequest, who: Audience = Caller):
+    """Tightening takes effect at once; expansion creates a new version that must be signed again; changes the caller may not make are listed in forbidden and refused."""
+    return _out(who, protocols.amend(protocol_id, body.changes, who))
 
 @app.post("/v1/protocols/{protocol_id}/revoke", response_model=Protocol, tags=["BE1 · protocols"])
-def revoke_protocol(protocol_id: str):
-    return fx.PROTOCOL.model_copy(update={"status": "REVOKED"})
+def revoke_protocol(protocol_id: str, who: Audience = Caller):
+    """The approver named in the protocol or Valio can revoke it at any time."""
+    return _out(who, protocols.revoke(protocol_id, who))
 
 @app.get("/v1/.well-known/jwks.json", response_model=Jwks, tags=["BE1 · protocols"])
 def jwks():
-    """Valio 的签名公钥，任何人都能用它验证协议和报价。"""
-    return fx.JWKS
+    """The public signing key of Valio; anyone can use it to verify protocols and quotes."""
+    return signing.jwks()
 
 # ───── Profile（BE3）─────
 
@@ -143,97 +178,94 @@ def select_candidate(request_id: str, body: SelectRequest):
 # ───── 报价、订单（BE1）─────
 
 @app.get("/v1/quotes/{quote_id}", response_model=Quote, tags=["BE1 · orders"])
-def get_quote(quote_id: str):
-    return fx.QUOTE
+def get_quote(quote_id: str, who: Audience = Caller):
+    if who.kind != "VALIO_USER" and quotes.buyer_of(quote_id) != who.buyer_id:
+        raise errors.ApiError("NOT_FOUND", f"Quote {quote_id} does not exist")
+    return _out(who, quotes.get(quote_id))
 
 @app.get("/v1/quotes/{quote_id}/verify", response_model=QuoteVerifyResult, tags=["BE1 · orders"])
 def verify_quote(quote_id: str):
-    return fx.QUOTE_VERIFY
-
-_IDEMPOTENCY: dict[str, Order] = {}
+    """Checks the Valio signature and expiry. Anyone may verify."""
+    return quotes.verify(quote_id)
 
 @app.post("/v1/orders", response_model=Order, tags=["BE1 · orders"], responses={403: {"model": ErrorBody}})
-def create_order(body: CreateOrderRequest, idempotency_key: str = Header(alias="Idempotency-Key"),
-                 x_agent_key: Optional[str] = AgentKey):
-    """复核报价（签名、有效期、价格库存是否变化）→ 闸门 → PLACED / PENDING_* / BUYER_AUTHORIZATION_REQUIRED /
-    REQUOTE_REQUIRED / REJECTED。同一个 Idempotency-Key 返回同一张订单。
-    协议是外部审批（EXTERNAL）且超额时：没带凭证 → BUYER_AUTHORIZATION_REQUIRED（附 authorization_request）；
-    带了有效凭证 → PLACED；凭证无效 → 403 AUTHORIZATION_INVALID。
-    假服务器里 prot_hotel_ext_v1 走外部审批，其余协议返回 fx.ORDER。"""
-    if idempotency_key in _IDEMPOTENCY:
-        return _IDEMPOTENCY[idempotency_key]
-    if body.protocol_id == fx.PROTOCOL_EXTERNAL.id:
-        if not body.buyer_authorization:
-            order = fx.ORDER_AUTH_REQUIRED
-        else:
-            res = _authorize(fx.ORDER_AUTH_REQUIRED, body.buyer_authorization)
-            if isinstance(res, JSONResponse):
-                return res
-            order = res
-    else:
-        order = fx.ORDER
-    return _IDEMPOTENCY.setdefault(idempotency_key, order)
-
-
-def _authorize(order: Order, token: str):
-    try:
-        c = verify_authorization(token, fx.QUOTE_EXT, fx.PROTOCOL_EXTERNAL.id, fx.PROTOCOL_EXTERNAL.body)
-    except AuthorizationError as e:
-        return _err(403, "AUTHORIZATION_INVALID", e.message, reason=e.reason, quote_id=order.quote_id)
-    return order.model_copy(update={"status": "PLACED", "authorization_request": None, "authorized_by": c.approver,
-                                    "placed_at": fx.NOW})
-
+def create_order(body: CreateOrderRequest, idempotency_key: str = Header(alias="Idempotency-Key"), who: Audience = Caller):
+    """Recheck the quote (signature, expiry, price and stock) → gate → PLACED / PENDING_* /
+    BUYER_AUTHORIZATION_REQUIRED / REQUOTE_REQUIRED / REJECTED. The same Idempotency-Key returns the same order.
+    With an EXTERNAL-approval protocol and an over-limit order: no token → BUYER_AUTHORIZATION_REQUIRED (with
+    authorization_request); a valid token → PLACED; an invalid token → 403 AUTHORIZATION_INVALID."""
+    return _out(who, orders.submit(body.quote_id, body.protocol_id, idempotency_key, who, body.buyer_authorization))
 
 @app.post("/v1/orders/{order_id}/authorization", response_model=Order, tags=["BE1 · orders"],
           responses={403: {"model": ErrorBody}})
-def authorize_order(order_id: str, body: AuthorizeOrderRequest, x_agent_key: Optional[str] = AgentKey):
-    """外部审批：agent 带着买方系统签的凭证回来，同一张订单继续走。
-    先验凭证（签名、报价、金额、审批人、有效期），再复核报价；价格变了 → REQUOTE_REQUIRED，新报价要新凭证。"""
-    return _authorize(fx.ORDER_AUTH_REQUIRED, body.buyer_authorization)
+def authorize_order(order_id: str, body: AuthorizeOrderRequest, who: Audience = Caller):
+    """External approval: the agent returns with the token signed by the buyer system and the same order continues.
+    The token is verified first (signature, quote, amount, approver, expiry), then the quote is rechecked;
+    if the price moved → REQUOTE_REQUIRED, and the new quote needs a new token."""
+    return _out(who, orders.authorize(order_id, body.buyer_authorization, who))
 
 @app.get("/v1/orders/{order_id}", response_model=Order, tags=["BE1 · orders"])
-def get_order(order_id: str):
-    return fx.ORDER
+def get_order(order_id: str, who: Audience = Caller):
+    return _out(who, orders.get(order_id, who))
 
-# ───── 审批（BE1）─────
+# ───── Approvals (BE1) ─────
 
 @app.get("/v1/approvals", response_model=list[ApprovalCard], tags=["BE1 · approvals"])
 def list_approvals(kind: Optional[Literal["BUYER", "VALIO"]] = None,
-                   status: Optional[Literal["PENDING", "APPROVED", "APPROVED_WITH_CHANGES", "REJECTED", "ROUTED"]] = None):
-    return [fx.APPROVAL_BUYER, fx.APPROVAL_VALIO]
+                   status: Optional[Literal["PENDING", "APPROVED", "APPROVED_WITH_CHANGES", "REJECTED", "ROUTED"]] = None,
+                   who: Audience = Caller):
+    """The buyer side sees only its own buyer approvals; Valio sees both queues."""
+    return [_out(who, c) for c in approvals.list_cards(kind, status, who)]
 
 @app.get("/v1/approvals/{approval_id}", response_model=ApprovalCard, tags=["BE1 · approvals"])
-def get_approval(approval_id: str):
-    return fx.APPROVAL_BUYER
+def get_approval(approval_id: str, who: Audience = Caller):
+    return _out(who, approvals.get_card(approval_id, who))
 
 @app.post("/v1/approvals/{approval_id}/decision", response_model=ApprovalDecisionResult, tags=["BE1 · approvals"],
           responses={403: {"model": ErrorBody}})
-def decide(approval_id: str, body: ApprovalDecision, x_demo_user: Optional[str] = DemoUser):
-    """先校验审批人，再复核报价：没变 → 下单；变了 → REQUOTE_REQUIRED（附新报价，超阈值则生成新审批）。
-    审批人校验（BUYER 审批）：
-      - 决定人必须是协议里的 approver，否则 403 NOT_APPROVER；
-      - SEPARATE 模式下，决定人不能是提需求的人，否则 403 SELF_APPROVAL_FORBIDDEN；
-      - SELF 模式下允许自批，但审计日志记为 "self-approved"。"""
-    a = fx.APPROVAL_BUYER
-    if a.kind == "BUYER" and x_demo_user:
-        code = check_approver(a.approval_mode, a.approver, a.requested_by, x_demo_user)
-        if code:
-            msg = {"SELF_APPROVAL_FORBIDDEN": "In SEPARATE mode the requester cannot approve their own order",
-                   "NOT_APPROVER": "Only the approver named in the protocol can decide"}[code]
-            return _err(403, code, msg, requested_by=a.requested_by, approver=a.approver)
-    return ApprovalDecisionResult(approval=fx.APPROVAL_BUYER.model_copy(update={"status": "APPROVED"}),
-                                  order=fx.ORDER.model_copy(update={"quote_id": "quo_3"}))
+def decide(approval_id: str, body: ApprovalDecision, who: Audience = Caller):
+    """Checks the approver, then rechecks the quote: unchanged → order placed; changed → REQUOTE_REQUIRED (with a new
+    quote, which goes through the gate as usual when it is ordered).
+    Approver check (BUYER approvals):
+      - the decider must be the approver in the protocol, else 403 NOT_APPROVER;
+      - in SEPARATE mode the decider cannot be the requester, else 403 SELF_APPROVAL_FORBIDDEN;
+      - in SELF mode self-approval is allowed and logged as "self-approved".
+    APPROVE_WITH_CHANGES: the approver changes proposal parameters only (`changes`) and must give a reason (`note`);
+    the changed proposal goes back through the gateway and gets a newly signed quote.
+      - Changeable: `candidate_id` (a substitute from the candidates), `delivery_date`, `lines[].sales_units`
+        (down only); Valio may also change `lines[].unit_price_cents` (within the reviewer band, beyond it the
+        approval is ROUTED), `conditions` and `valid_minutes`; data requests take `disclose_fields`, a per-field
+        switch. Everything else is read-only.
+      - A Valio change is a new quote round: the order becomes REQUOTE_REQUIRED and the buyer orders again with
+        the new quote within the confirmation window."""
+    return _out(who, approvals.decide(approval_id, body, who))
 
-# ───── 审计（BE1）─────
+# ───── Audit (BE1) ─────
 
 @app.get("/v1/audit", response_model=list[AuditEntry], tags=["BE1 · audit"])
-def audit(request_id: Optional[str] = None, x_demo_user: Optional[str] = DemoUser):
-    """按角色过滤：买家只看到 visibility 为 BUYER / BOTH 的条目。"""
-    return fx.AUDIT
+def audit(request_id: Optional[str] = None, who: Audience = Caller):
+    """Filtered by role: a buyer sees only its own entries with visibility BUYER / BOTH; Valio sees everything."""
+    checkpoints.flush_blocks()
+    return [checkpoints.check_response(who, e) for e in checkpoints.check_log(who, audit_store.entries(request_id))]
 
 @app.get("/v1/audit/verify", response_model=AuditVerifyResult, tags=["BE1 · audit"])
 def audit_verify():
-    return fx.AUDIT_VERIFY
+    """Recomputes the whole hash chain and compares the buyer_id / agent_id / reason_code columns with their hashed
+    copies in the payload; the first tampered entry is reported in first_bad_seq."""
+    return audit_store.verify()
+
+@app.get("/v1/reports/holds", response_model=reports.HoldsReport, tags=["BE1 · audit"],
+         responses={403: {"model": ErrorBody}, 422: {"model": ErrorBody}})
+def holds_report(since: Optional[datetime] = None, until: Optional[datetime] = None,
+                 buyer_id: Optional[str] = None, agent_id: Optional[str] = None,
+                 x_demo_user: Optional[str] = DemoUser, x_agent_key: Optional[str] = AgentKey):
+    """Held / blocked events. Buyers see their own items; Valio sees counts only. Agents cannot read reports.
+    since defaults to 7 days before until, until to now; a range above 90 days is refused.
+    buyer_id is ignored in the buyer view (always the caller's buyer) and filters the Valio view."""
+    if not x_demo_user:
+        raise errors.ApiError("OUT_OF_SCOPE", "Hold reports are read by people: send X-Demo-User")
+    who = identity.caller(None, x_demo_user)
+    return _out(who, reports.holds(who, since, until, buyer_id, agent_id))
 
 # ───── 管理（BE2 / BE1）─────
 
@@ -247,5 +279,6 @@ def set_fault(name: Literal["PRICE_CHANGE", "PARTIAL_STOCK", "TIMEOUT", "RATE_LI
 
 @app.post("/v1/admin/reset", tags=["BE1 · admin"])
 def reset():
-    """清空业务表并写入演示种子数据。"""
+    """Clears the BE1 tables (buyers, users, agents, protocols, quotes, orders, approvals, audit) and writes the demo seed data."""
+    seed.reset()
     return {"ok": True}

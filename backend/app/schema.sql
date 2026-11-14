@@ -204,8 +204,13 @@ CREATE TABLE audit_log (
   visibility TEXT NOT NULL CHECK (visibility IN ('BUYER','VALIO','BOTH')),
   payload_json TEXT NOT NULL,
   prev_hash  TEXT NOT NULL,
-  hash       TEXT NOT NULL
+  hash       TEXT NOT NULL,
+  buyer_id    TEXT,                                -- whose data this is; NULL for events with no buyer
+  agent_id    TEXT,                                -- which agent triggered it, if any
+  reason_code TEXT                                 -- why it was held (gate rule id, Violation.rule or error code)
 );
+
+CREATE INDEX idx_audit_holds ON audit_log(event, buyer_id, at);
 
 -- BE2
 CREATE TABLE disclosures (

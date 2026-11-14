@@ -3744,6 +3744,200 @@
           }
         }
       }
+    },
+    "/v1/reports/holds": {
+      "get": {
+        "tags": [
+          "BE1 · audit"
+        ],
+        "summary": "Holds Report",
+        "description": "Held / blocked events. Buyers see their own items; Valio sees counts only. Agents cannot read reports.\nsince defaults to 7 days before until, until to now; a range above 90 days is refused.\nbuyer_id is ignored in the buyer view (always the caller's buyer) and filters the Valio view.",
+        "operationId": "holds_report_v1_reports_holds_get",
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "name": "buyer_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Buyer Id"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agent Id"
+            }
+          },
+          {
+            "name": "X-Demo-User",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio",
+              "title": "X-Demo-User"
+            },
+            "description": "usr_chef | usr_manager (SEPARATE mode) · usr_owner (SELF mode) · usr_valio"
+          },
+          {
+            "name": "X-Agent-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldsReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6901,6 +7095,237 @@
           "detail"
         ],
         "title": "Violation"
+      },
+      "AgentHolds": {
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "by_reason": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonCount"
+            },
+            "type": "array",
+            "title": "By Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agent_id",
+          "total",
+          "by_reason"
+        ],
+        "title": "AgentHolds"
+      },
+      "AttributeCount": {
+        "properties": {
+          "attribute": {
+            "type": "string",
+            "title": "Attribute"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attribute",
+          "count"
+        ],
+        "title": "AttributeCount"
+      },
+      "HoldItem": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "event": {
+            "type": "string",
+            "enum": [
+              "REQUEST_NEEDS_INPUT",
+              "ATTRIBUTE_NOT_IN_CATALOG",
+              "CANDIDATES_BLOCKED",
+              "ORDER_HELD",
+              "AGENT_BLOCKED"
+            ],
+            "title": "Event"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "at",
+          "event",
+          "reason_code",
+          "summary"
+        ],
+        "title": "HoldItem",
+        "description": "One held event, buyer view only."
+      },
+      "HoldsReport": {
+        "properties": {
+          "audience": {
+            "type": "string",
+            "enum": [
+              "BUYER",
+              "VALIO"
+            ],
+            "title": "Audience"
+          },
+          "buyer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buyer Id"
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Since"
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Until"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "by_event": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "REQUEST_NEEDS_INPUT",
+                "ATTRIBUTE_NOT_IN_CATALOG",
+                "CANDIDATES_BLOCKED",
+                "ORDER_HELD",
+                "AGENT_BLOCKED"
+              ]
+            },
+            "type": "object",
+            "title": "By Event"
+          },
+          "by_reason": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonCount"
+            },
+            "type": "array",
+            "title": "By Reason"
+          },
+          "by_agent": {
+            "items": {
+              "$ref": "#/components/schemas/AgentHolds"
+            },
+            "type": "array",
+            "title": "By Agent"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HoldItem"
+            },
+            "type": "array",
+            "title": "Items",
+            "default": []
+          },
+          "missing_attributes": {
+            "items": {
+              "$ref": "#/components/schemas/AttributeCount"
+            },
+            "type": "array",
+            "title": "Missing Attributes",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "audience",
+          "since",
+          "until",
+          "total",
+          "by_event",
+          "by_reason",
+          "by_agent"
+        ],
+        "title": "HoldsReport"
+      },
+      "ReasonCount": {
+        "properties": {
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_code",
+          "count"
+        ],
+        "title": "ReasonCount"
       }
     }
   }

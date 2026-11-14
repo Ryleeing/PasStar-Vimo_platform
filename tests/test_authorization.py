@@ -1,14 +1,12 @@
-"""外部审批：买方系统签的授权凭证。"""
+"""External approval: the authorization token signed by the buyer's system. HTTP flow tests are in test_channel.py."""
 import time
 
 import pytest
-from fastapi.testclient import TestClient
 from joserfc.jwk import OKPKey
 
 from app import demo_keys, fixtures as fx
 from app.channel.authorization import AuthorizationError, resolve_buyer_gate, sign, verify
 from app.channel.protocol_rules import classify_changes
-from app.main import app
 from app.schemas import BuyerAuthorizationClaims, ProtocolBody
 
 BODY = fx.PROTOCOL_EXTERNAL.body
@@ -81,13 +79,3 @@ def test_changing_channel_or_key_needs_new_signature():
     r = classify_changes(fx.PROTOCOL.body, {"approval_channel": "EXTERNAL"}, "buyer", fx.MONDAY)
     assert [c.field for c in r["expanded"]] == ["approval_channel"]
 
-
-def test_agent_flow_over_http():
-    c = TestClient(app)
-    h = {"X-Agent-Key": "demo"}
-    o = c.post("/v1/orders", json={"quote_id": Q.id, "protocol_id": PID}, headers={**h, "Idempotency-Key": "ext-1"}).json()
-    assert o["status"] == "BUYER_AUTHORIZATION_REQUIRED" and o["authorization_request"]["quote_id"] == Q.id
-    bad = c.post(f"/v1/orders/{o['id']}/authorization", json={"buyer_authorization": token(amount_gross_cents=1)}, headers=h)
-    assert bad.status_code == 403 and bad.json()["error"]["details"]["reason"] == "AMOUNT_MISMATCH"
-    ok = c.post(f"/v1/orders/{o['id']}/authorization", json={"buyer_authorization": token()}, headers=h).json()
-    assert ok["status"] == "PLACED" and ok["authorized_by"] == "usr_manager"

@@ -1,0 +1,74 @@
+{
+  "audience": "VALIO",
+  "buyer_id": null,
+  "since": "2026-11-07T00:00:00+02:00",
+  "until": "2026-11-14T12:00:00+02:00",
+  "total": 61,
+  "by_event": {
+    "ORDER_HELD": 14,
+    "AGENT_BLOCKED": 47
+  },
+  "by_reason": [
+    {
+      "reason_code": "RATE_LIMITED",
+      "count": 31
+    },
+    {
+      "reason_code": "PROBE_LIMIT",
+      "count": 12
+    },
+    {
+      "reason_code": "OUT_OF_SCOPE",
+      "count": 4
+    },
+    {
+      "reason_code": "R-SPEND-APPROVAL",
+      "count": 9
+    },
+    {
+      "reason_code": "R-OUT-OF-API",
+      "count": 5
+    }
+  ],
+  "by_agent": [
+    {
+      "agent_id": "agt_rogue",
+      "total": 47,
+      "by_reason": [
+        {
+          "reason_code": "RATE_LIMITED",
+          "count": 31
+        },
+        {
+          "reason_code": "PROBE_LIMIT",
+          "count": 12
+        },
+        {
+          "reason_code": "OUT_OF_SCOPE",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "agent_id": "agt_hotel",
+      "total": 14,
+      "by_reason": [
+        {
+          "reason_code": "R-SPEND-APPROVAL",
+          "count": 9
+        },
+        {
+          "reason_code": "R-OUT-OF-API",
+          "count": 5
+        }
+      ]
+    }
+  ],
+  "items": [],
+  "missing_attributes": [
+    {
+      "attribute": "keto",
+      "count": 5
+    }
+  ]
+}

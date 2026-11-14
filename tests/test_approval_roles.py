@@ -1,27 +1,4 @@
-"""审批人校验（M1 假服务器）：SEPARATE 模式下提需求的人不能批自己的单。"""
-from fastapi.testclient import TestClient
-
-from app.main import app
-
-c = TestClient(app)
-BODY = {"decision": "APPROVE"}
-
-
-def test_requester_cannot_approve_own_order():
-    r = c.post("/v1/approvals/apr_1/decision", json=BODY, headers={"X-Demo-User": "usr_chef"})
-    assert r.status_code == 403 and r.json()["error"]["code"] == "SELF_APPROVAL_FORBIDDEN"
-
-
-def test_other_user_is_not_approver():
-    r = c.post("/v1/approvals/apr_1/decision", json=BODY, headers={"X-Demo-User": "usr_owner"})
-    assert r.status_code == 403 and r.json()["error"]["code"] == "NOT_APPROVER"
-
-
-def test_manager_can_approve():
-    r = c.post("/v1/approvals/apr_1/decision", json=BODY, headers={"X-Demo-User": "usr_manager"})
-    assert r.status_code == 200 and r.json()["approval"]["status"] == "APPROVED"
-
-
+"""Approver check: in SEPARATE mode the requester cannot approve their own order. HTTP flow tests are in test_channel.py."""
 from app.channel.approvals import check_approver
 
 
