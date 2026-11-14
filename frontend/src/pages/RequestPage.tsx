@@ -5,7 +5,7 @@
 // and the chosen answer visibly flies into that slot: the question exists to complete the form.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowUp, Check, ChevronDown, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowUp, Check, ChevronDown, Sparkles, WandSparkles } from 'lucide-react';
 import { createRequest, getFacets, listProfiles, parseRequest, rejectNode } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Ambiguity, Facets, Requirement, StructuredRequest } from '../api/types';
@@ -194,7 +194,7 @@ export function RequestPage() {
                 </label>
               )}
               <Button variant="primary" size="sm" className="ml-auto" loading={parsing} disabled={!flow.rawText.trim()} onClick={understand} aria-label="Fill in the form from my message">
-                {!parsing && <ArrowUp size={16} />} Fill in
+                {!parsing && <WandSparkles size={16} />} Fill in form
               </Button>
             </div>
           </div>
@@ -235,7 +235,7 @@ function AiReply({ question, answer, inFlight, onPick, highlight }: {
 }) {
   const answered = !!question && !!answer && !inFlight;
   return (
-    <div className="ai-reply" aria-live="polite">
+    <div className={`ai-reply ${question && !answered ? 'asking' : ''}`} aria-live="polite">
       <span className="ai-avatar" aria-hidden><Sparkles size={15} /></span>
       <div className="stack sm grow">
         {!question && <p>I’ve filled in the details below. Check them, then find options.</p>}
@@ -244,13 +244,13 @@ function AiReply({ question, answer, inFlight, onPick, highlight }: {
             <Check size={16} className="ok-ink" aria-hidden /> Got it. <b>{answer}</b> is in the form. Check the details, then find options.
           </p>
         ) : (
-          <p>I’ve filled in the details below. One thing is missing:</p>
+          <p>I’ve filled in the form below. Choose one more thing to finish it:</p>
         ))}
         {question && (
           // Stays mounted so it can fold away smoothly once the answer has landed in the form.
           <div className={`fold ${answered ? 'closed' : ''}`} aria-hidden={answered}>
             <div className={`stack sm ${highlight ? 'needs-answer' : ''}`}>
-              <p className="strong">{question.question}</p>
+              <p className="ai-question">{question.question}</p>
               <div className="chips" role="radiogroup" aria-label={question.question}>
                 {question.options?.map((o) => (
                   <button key={o} type="button" className="chip" role="radio" aria-checked={false} disabled={inFlight || answered}

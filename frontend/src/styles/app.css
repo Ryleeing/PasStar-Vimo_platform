@@ -27,30 +27,31 @@
   --t-slow: 420ms;
   --rise: 10px;            /* travel distance for arrivals; 0 under reduced motion */
 
-  /* color · dark */
-  --bg: #08121f;
-  --bg-glow: rgba(255, 122, 26, 0.07);
-  --sidebar: #0b1626;
-  --surface: #0f1c30;
-  --surface-2: #15243b;
-  --surface-3: #1c2e49;
-  --border: rgba(160, 182, 214, 0.13);
-  --border-strong: rgba(160, 182, 214, 0.24);
-  --text: #edf2fa;
-  --text-2: #bcc8db;
-  --muted: #8d9db8;
+  /* color · dark — Valio Aimo petrol, lifted for a dark room */
+  --bg: #061a1f;
+  --bg-glow: rgba(38, 170, 190, 0.08);
+  --sidebar: #082027;
+  --surface: #0b2830;
+  --surface-2: #10333d;
+  --surface-3: #163f4a;
+  --border: rgba(150, 205, 215, 0.13);
+  --border-strong: rgba(150, 205, 215, 0.24);
+  --text: #eaf5f6;
+  --text-2: #b4cfd4;
+  --muted: #86a6ad;
 
-  --accent: #ff7a1a;
-  --accent-ink: #ff9447;           /* accent used as text on dark */
-  --accent-grad: linear-gradient(135deg, #ffa133 0%, #ff6a1f 100%);
-  --accent-soft: rgba(255, 122, 26, 0.13);
-  --accent-shadow: 0 10px 26px -10px rgba(255, 106, 31, 0.6);
+  --accent: #45bccc;               /* lines, rings, selection on dark */
+  --accent-ink: #74d3df;           /* accent used as text on dark */
+  --accent-strong: #00566e;        /* the brand petrol: filled surfaces with white text */
+  --accent-grad: linear-gradient(135deg, #13849d 0%, #005c75 100%);
+  --accent-soft: rgba(69, 188, 204, 0.14);
+  --accent-shadow: 0 10px 26px -10px rgba(0, 120, 150, 0.65);
 
-  --ok: #3ddba2;   --ok-soft: rgba(61, 219, 162, 0.12);
+  --ok: #56d385;   --ok-soft: rgba(86, 211, 133, 0.12);
   --warn: #fcc23f; --warn-soft: rgba(252, 194, 63, 0.12);
   --bad: #ff8080;  --bad-soft: rgba(255, 128, 128, 0.12);
-  --info: #6fb0ff; --info-soft: rgba(111, 176, 255, 0.13);
-  --neutral: #9aa8bf; --neutral-soft: rgba(154, 168, 191, 0.13);
+  --info: #7fb4ff; --info-soft: rgba(127, 180, 255, 0.13);
+  --neutral: #98b0b6; --neutral-soft: rgba(152, 176, 182, 0.13);
 
   --radius-sm: 10px;
   --radius: 14px;
@@ -63,21 +64,23 @@
 }
 
 [data-theme='light'] {
-  --bg: #f5f4f1;
-  --bg-glow: rgba(255, 122, 26, 0.06);
-  --sidebar: #fbfaf8;
+  --bg: #f1f5f6;
+  --bg-glow: rgba(0, 86, 110, 0.06);
+  --sidebar: #f8fbfb;
   --surface: #ffffff;
-  --surface-2: #f4f3f0;
-  --surface-3: #eae8e3;
-  --border: rgba(28, 25, 23, 0.09);
-  --border-strong: rgba(28, 25, 23, 0.18);
-  --text: #16130f;
-  --text-2: #3d3833;
-  --muted: #6b645c;
-  --accent: #e8600c;
-  --accent-ink: #c4500a;
-  --accent-soft: rgba(232, 96, 12, 0.10);
-  --accent-shadow: 0 10px 22px -10px rgba(232, 96, 12, 0.55);
+  --surface-2: #edf3f4;
+  --surface-3: #e0e9eb;
+  --border: rgba(8, 52, 62, 0.10);
+  --border-strong: rgba(8, 52, 62, 0.20);
+  --text: #0c2229;
+  --text-2: #2c4850;
+  --muted: #587179;
+  --accent: #00566e;
+  --accent-ink: #00566e;
+  --accent-strong: #00566e;
+  --accent-grad: linear-gradient(135deg, #0a6f89 0%, #00566e 100%);
+  --accent-soft: rgba(0, 86, 110, 0.09);
+  --accent-shadow: 0 10px 22px -10px rgba(0, 86, 110, 0.5);
   --ok: #0c8a5e;   --ok-soft: rgba(12, 138, 94, 0.10);
   --warn: #9a6200; --warn-soft: rgba(214, 150, 20, 0.14);
   --bad: #c62a1f;  --bad-soft: rgba(198, 42, 31, 0.08);
@@ -178,7 +181,7 @@ b, strong { font-weight: 650; }
 .nav a:hover { background: var(--surface-2); color: var(--text); }
 .nav a.active { background: var(--accent-soft); color: var(--text); font-weight: 620; }
 .nav a.active svg { color: var(--accent); }
-.nav .count { margin-left: auto; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: var(--accent); color: #fff; font-size: var(--fs-meta); font-weight: 700; display: grid; place-items: center; font-variant-numeric: tabular-nums; animation: pop var(--t) var(--ease); }
+.nav .count { margin-left: auto; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: var(--accent-strong); color: #fff; font-size: var(--fs-meta); font-weight: 700; display: grid; place-items: center; font-variant-numeric: tabular-nums; animation: pop var(--t) var(--ease); }
 
 /* account switcher */
 .account-btn {
@@ -269,7 +272,7 @@ b, strong { font-weight: 650; }
 .btn:hover { background: var(--surface-3); }
 .btn:active { transform: scale(0.97); }
 .btn.primary { background: var(--accent-grad); border-color: transparent; color: #fff; box-shadow: var(--accent-shadow); }
-.btn.primary:hover { filter: brightness(1.07) saturate(1.05); box-shadow: 0 14px 30px -10px rgba(255, 106, 31, 0.7); }
+.btn.primary:hover { filter: brightness(1.07) saturate(1.05); box-shadow: 0 14px 30px -10px rgba(0, 110, 140, 0.7); }
 .btn.primary:hover svg:last-child { transform: translateX(3px); }
 .btn.ghost { background: transparent; border-color: transparent; color: var(--text-2); }
 .btn.ghost:hover { background: var(--surface-2); color: var(--text); }
@@ -446,6 +449,20 @@ input[type='range'] { min-height: 0; padding: 0; border: 0; background: none; ac
   position: fixed; z-index: 60; pointer-events: none; box-shadow: var(--shadow-pop);
   animation: fly 560ms cubic-bezier(0.5, 0, 0.2, 1) forwards;
 }
+.ai-reply { transition: border-color var(--t-slow) var(--ease), background var(--t-slow) var(--ease), box-shadow var(--t-slow) var(--ease); }
+/* waiting for an answer: the one place on the page that needs the user */
+.ai-reply.asking {
+  border: 1.5px solid var(--accent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 11%, var(--surface-2)), var(--surface-2) 75%);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+  animation: arrive var(--t-slow) var(--ease), ask-glow 2.2s ease-in-out 600ms 3;
+}
+.ai-reply.asking .ai-avatar { animation: ring 2s ease-out infinite; }
+.ai-reply .ai-question { font-size: var(--fs-h2); font-weight: 700; letter-spacing: -0.015em; line-height: 1.25; margin-top: 2px; }
+.ai-reply.asking .chips { gap: var(--s3); margin-top: var(--s1); }
+.ai-reply.asking .chip { min-height: 46px; padding: 0 var(--s5); font-size: 1rem; font-weight: 600; color: var(--text); background: var(--surface); border-color: color-mix(in srgb, var(--accent) 45%, transparent); box-shadow: var(--shadow); }
+.ai-reply.asking .chip:hover { background: var(--accent-soft); border-color: var(--accent); }
+.ai-reply.asking .needs-answer .chip { border-color: var(--bad); }
 .fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--t-slow) var(--ease) 260ms, opacity var(--t) var(--ease) 200ms; }
 .fold > div { overflow: hidden; min-height: 0; }
 .fold.closed { grid-template-rows: 0fr; opacity: 0; }
@@ -611,6 +628,8 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
 @keyframes landed { 0% { box-shadow: 0 0 0 0 var(--accent-soft); border-color: var(--accent); } 30% { box-shadow: 0 0 0 8px var(--accent-soft); border-color: var(--accent); } 100% { box-shadow: 0 0 0 0 transparent; } }
 @keyframes settle { 0% { transform: scale(1.05); } 100% { transform: none; } }
 @keyframes point { 0%, 100% { transform: none; } 50% { transform: translateY(-3px); } }
+@keyframes ask-glow { 0%, 100% { box-shadow: 0 0 0 4px var(--accent-soft); } 50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 8%, transparent); } }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
 @keyframes regen { from { box-shadow: 0 0 0 6px var(--accent-soft); } to { box-shadow: 0 0 0 0 transparent; } }
 @keyframes backdrop-in { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
 @keyframes lines { 0% { stroke-dashoffset: 40; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 1; } }
@@ -622,6 +641,7 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
   :root { --rise: 0px; }
   .illo-box, .illo-badge, .illo-backdrop, .nav .count, .chip[aria-pressed='true'] svg, .cand .btn[aria-pressed='true'] svg { animation-name: fade !important; }
   .meter .bar i { animation: none; }
+  .ai-reply.asking, .ai-reply.asking .ai-avatar { animation: fade var(--t) var(--ease); }
   .needs-answer .chip, .slot.needed, .slot-empty svg, .slot.landed .slot-value { animation: none; }
   .spin { animation-duration: 2.4s; }
   .btn:active, .chip:active { transform: none; }
