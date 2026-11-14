@@ -21,7 +21,7 @@ from pass_client import ApiError, Outcome, PassClient, finish_order, print_outco
 
 MAX_REQUERIES = 1
 # Questions the agent must not answer by itself: guessing these would order the wrong thing.
-BLOCKING_FIELDS = {"quantity", "category", "requirements"}
+BLOCKING_FIELDS = {"quantity", "category", "requirements", "delivery_date"}
 
 
 def choose(candidates: list[dict]) -> Optional[dict]:

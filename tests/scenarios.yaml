@@ -54,7 +54,7 @@ scenarios:
       - We need fifty kilos of quark delivered tomorrow; it has to be free from nuts because of patient allergies
     expect:
       category: "10430"
-      requirements: [AN]
+      requirements: [AN, AP]          # "nut-free" covers tree nuts and peanuts: the stricter reading
       quantity: {value: 50, unit: kg}
       delivery: tomorrow
       final: [PLACED, PENDING_BUYER_APPROVAL, NO_CANDIDATES]

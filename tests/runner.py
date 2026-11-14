@@ -69,6 +69,7 @@ class RunResult:
     silent_wrong: bool = False
     false_block: bool = False
     expects_placed: bool = False      # the scenario's allowed outcomes include PLACED
+    questions: list[str] = field(default_factory=list)   # what the agent stopped to ask, if anything
     seconds: float = 0.0
 
 
@@ -137,11 +138,13 @@ def run_all(client: PassClient, scenarios: list[dict], faults: list[Optional[str
                         t0 = time.perf_counter()
                         out = buyer_agent.run(client, text, s["protocol"], s.get("profile"),
                                               poll_every_s=poll_every_s, max_polls=3)
-                        r = RunResult(s["id"], i, text, fault, n, out.status, seconds=time.perf_counter() - t0)
+                        r = RunResult(s["id"], i, text, fault, n, out.status, seconds=time.perf_counter() - t0,
+                                      questions=[st.detail for st in out.steps if st.what == "Needs an answer before ordering"])
                         results.append(judge(r, s["expect"], check_understanding(s["expect"], out.structured, today)))
                         if not quiet:
                             mark = "ok " if r.passed else "SILENT WRONG" if r.silent_wrong else "FAIL"
-                            why = f"  ({'; '.join(r.mismatches)})" if r.mismatches else ""
+                            notes = r.mismatches + ([f"asked: {' | '.join(r.questions)}"] if r.questions and not r.passed else [])
+                            why = f"  ({'; '.join(notes)})" if notes else ""
                             print(f"  {mark:<4} {s['id']:<26} p{i} {fault or '-':<13} {r.status:<28}{why}")
         finally:
             if fault:
