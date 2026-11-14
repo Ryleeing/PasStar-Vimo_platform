@@ -305,21 +305,50 @@ export function RequestPage() {
 }
 
 /** Step 0 at a glance: the signed protocol every request below is checked against. */
+/** Step 0 at a glance: the signed protocol every request is checked against. Shown open the first time a protocol
+ *  version is seen (right after signing it); once hidden it folds into a small pill, per version, so a new version
+ *  (e.g. a raised limit) opens it again. */
 function MandateStrip() {
   const { protocol } = useActiveProtocol();
   const { account } = useSession();
+  const key = protocol ? `passtar.mandate.hidden.${protocol.id}.v${protocol.version}` : null;
+  const [hidden, setHidden] = useState(() => {
+    try { return !!key && localStorage.getItem(key) === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { setHidden(!!key && localStorage.getItem(key) === '1'); } catch { /* private mode */ }
+  }, [key]);
   if (!protocol) return null;
+  const toggle = (h: boolean) => {
+    setHidden(h);
+    try { if (key) localStorage.setItem(key, h ? '1' : '0'); } catch { /* private mode */ }
+  };
   const b = protocol.body;
   const approver = ACCOUNTS.find((a) => a.userId === b.approver);
   const approves = !approver ? `${b.approver} approves` : approver.userId === account.userId ? 'you approve' : `${approver.name} approves`;
   const canView = PAGES_BY_ROLE[account.key].some((p) => p.key === 'protocol');
+
+  if (hidden) {
+    return (
+      <div className="mandate-pill-row">
+        <button type="button" className="mandate-pill" onClick={() => toggle(false)} aria-expanded={false}
+          title="Show your authorisation">
+          <ShieldCheck size={14} aria-hidden /> Authorised · v{protocol.version} · auto up to {eur(b.auto_approve_limit_cents)}
+          <ChevronDown size={14} aria-hidden />
+        </button>
+      </div>
+    );
+  }
   return (
     <div className="mandate-strip" role="note" aria-label="Your authorisation">
       <span className="mandate-step"><ShieldCheck size={16} aria-hidden /> Step 0 done · protocol v{protocol.version}, signed and confirmed by Valio</span>
       <span className="mandate-terms">
         Up to {eur(b.auto_approve_limit_cents)} orders straight away · {eur(b.auto_approve_limit_cents)}–{eur(b.max_order_cents)} {approves} · over {eur(b.max_order_cents)} not allowed
       </span>
-      {canView && <a href="#/protocol">View or change</a>}
+      <span className="mandate-actions">
+        {canView && <a href="#/protocol">View or change</a>}
+        <button type="button" className="btn ghost sm" onClick={() => toggle(true)} aria-expanded>Hide</button>
+      </span>
     </div>
   );
 }

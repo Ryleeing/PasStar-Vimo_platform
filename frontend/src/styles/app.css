@@ -1326,7 +1326,17 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
 .mandate-strip .mandate-step { display: inline-flex; align-items: center; gap: var(--s2); font-weight: 700; color: var(--text); }
 .mandate-strip .mandate-step svg { color: var(--ok); }
 .mandate-strip .mandate-terms { color: var(--text-2); font-variant-numeric: tabular-nums; }
-.mandate-strip a { margin-left: auto; font-weight: 600; color: var(--accent-ink); }
+.mandate-strip .mandate-actions { margin-left: auto; display: inline-flex; align-items: center; gap: var(--s3); }
+.mandate-strip a { font-weight: 600; color: var(--accent-ink); }
+.mandate-pill-row { display: flex; justify-content: flex-end; margin-bottom: var(--s3); }
+.mandate-pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2);
+  font: inherit; font-size: var(--fs-meta); font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.mandate-pill svg:first-child { color: var(--ok); }
+.mandate-pill:hover { border-color: var(--border-strong); color: var(--text); }
+.mandate-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── Trust in traffic-light language (TrustMark.tsx) ── */
 .tl { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
