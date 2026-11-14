@@ -1,15 +1,15 @@
 // Buying profile, laid out the way the agent uses it:
-//   1. Never include  → filters products out before anything else.
-//   2. How options are ranked → one place for everything that changes the order (priorities + tie-breakers).
-//   3. Request defaults → pre-filled on new requests.
-// Alongside: the approval rules from the signed protocol, read-only, so the whole rule set is visible here.
-import { useEffect, useMemo, useState } from 'react';
+//   left:  How options are ranked (priorities + shortlist preferences) and the read-only approval rules,
+//   right: Your buying rules (filtered out first; can be written in plain words) and Request defaults.
+// On narrow screens the cards stack in funnel order: buying rules → ranking → defaults → approval rules.
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, Lock, Plus, RotateCcw, Save, Search, X } from 'lucide-react';
+import { Check, Info, Lock, Plus, RotateCcw, Save, Search, WandSparkles, X } from 'lucide-react';
+import { interpretRules, type Interpretation, type RuleSuggestion } from '../lib/ruleText';
 import { WeightDonut } from '../components/WeightDonut';
-import { getProtocol, listProfiles, updateProfile } from '../api/endpoints';
+import { getFacets, getProtocol, listProfiles, updateProfile } from '../api/endpoints';
 import { describeError } from '../api/client';
-import type { Profile, ProfileBody, Protocol } from '../api/types';
+import type { Facets, Profile, ProfileBody, Protocol, Requirement } from '../api/types';
 import { accountByUserId, PAGES_BY_ROLE } from '../config/accounts';
 import { eur } from '../lib/format';
 import { useFlow } from '../state/flow';
@@ -19,10 +19,10 @@ import { Banner, Button, ErrorState, PageHead, Skeleton, Switch, useAsync, useTo
 type Weights = NonNullable<ProfileBody['weights']>;
 type WKey = keyof Weights;
 const PRIORITIES: { key: WKey; label: string; help: string; color: string }[] = [
-  { key: 'fulfilment', label: 'On-time delivery', help: 'Deliverable in full on your date', color: 'var(--seg-1)' },
-  { key: 'price', label: 'Price', help: 'Lower total, VAT included', color: 'var(--seg-2)' },
-  { key: 'local', label: 'Local origin', help: 'Made in the countries you choose below', color: 'var(--seg-3)' },
-  { key: 'carbon', label: 'Low carbon', help: 'Lower CO₂ footprint per kg', color: 'var(--seg-4)' },
+  { key: 'fulfilment', label: 'On-time delivery', help: 'In full, on your date', color: 'var(--seg-1)' },
+  { key: 'price', label: 'Price', help: 'Total incl. VAT', color: 'var(--seg-2)' },
+  { key: 'local', label: 'Local origin', help: 'From the countries below', color: 'var(--seg-3)' },
+  { key: 'carbon', label: 'Low carbon', help: 'Less CO₂ per kg', color: 'var(--seg-4)' },
 ];
 const PRESETS: { label: string; w: Record<WKey, number> }[] = [
   { label: 'Balanced', w: { fulfilment: 40, price: 40, local: 10, carbon: 10 } },
@@ -57,30 +57,25 @@ export function ProfilePage() {
 
   return (
     <>
-      <PageHead title="Buying profile"
-        desc="How the assistant picks products for you. A request uses the profile chosen when you make it."
-        actions={profiles.data && profiles.data.length > 1 && (
-          <label className="profile-pick">
-            <span>Profile</span>
-            <select aria-label="Profile" value={current?.id} onChange={(e) => setId(e.target.value)}>
-              {profiles.data.map((p) => <option key={p.id} value={p.id}>{p.body.name}</option>)}
-            </select>
-          </label>
-        )} />
+      <PageHead title="Buying profile" desc="How the assistant picks products for you. A request uses the profile chosen when you make it." />
       {profiles.loading ? <Skeleton h={420} /> : profiles.error ? <ErrorState error={profiles.error} onRetry={profiles.reload} /> : current && (
-        <ProfileForm key={current.id} profile={current} protocol={protocol.data ?? null} canSeeProtocol={canSeeProtocol}
+        <ProfileForm key={current.id} profile={current} profiles={profiles.data ?? []} onPick={setId}
+          protocol={protocol.data ?? null} canSeeProtocol={canSeeProtocol}
           onSaved={(p) => profiles.setData(profiles.data!.map((x) => (x.id === p.id ? p : x)))} />
       )}
     </>
   );
 }
 
-function ProfileForm({ profile, protocol, canSeeProtocol, onSaved }: {
-  profile: Profile; protocol: Protocol | null; canSeeProtocol: boolean; onSaved: (p: Profile) => void;
+const savedAt = (iso: string) => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+function ProfileForm({ profile, profiles, onPick, protocol, canSeeProtocol, onSaved }: {
+  profile: Profile; profiles: Profile[]; onPick: (id: string) => void; protocol: Protocol | null; canSeeProtocol: boolean; onSaved: (p: Profile) => void;
 }) {
   const toast = useToast();
   const navigate = useNavigate();
   const { flow } = useFlow();
+  const facets = useAsync(getFacets, []);
   const [b, setB] = useState<ProfileBody>(profile.body);
   const [saving, setSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
@@ -97,7 +92,13 @@ function ProfileForm({ profile, protocol, canSeeProtocol, onSaved }: {
     const sum = Object.values(p).reduce((a, x) => a + x, 0) || 1;
     set({ weights: Object.fromEntries((Object.keys(p) as WKey[]).map((k) => [k, +(p[k] / sum).toFixed(4)])) as Weights });
   };
-  const preset = PRESETS.find((p) => (Object.keys(p.w) as WKey[]).every((k) => p.w[k] === points[k]));
+  const keys = Object.keys(points) as WKey[];
+  const top = (w: Record<WKey, number>) => keys.reduce((m, k) => (w[k] > w[m] ? k : m), keys[0]);
+  const preset = PRESETS.find((p) => keys.every((k) => p.w[k] === points[k]));
+  // When the mix matches no preset, say so ("Custom") and name the closest one.
+  const closest = preset ? null : PRESETS
+    .map((p) => ({ p, d: keys.reduce((a, k) => a + Math.abs(p.w[k] - points[k]), 0), lead: top(p.w) === top(points) ? 0 : 1 }))
+    .sort((a, z) => a.d - z.d || a.lead - z.lead)[0].p;
 
   const countries = b.soft_preferences?.countries ?? [];
   const setCountries = (c: string[]) => set({ soft_preferences: { ...b.soft_preferences, countries: c } });
@@ -124,15 +125,44 @@ function ProfileForm({ profile, protocol, canSeeProtocol, onSaved }: {
     }
   };
   const discard = () => { setB(profile.body); setPoints(toPoints(profile.body.weights)); };
+  const canSave = !!b.name && used === 100;
+  // The floating save bar only appears once the toolbar (with its own Save) has scrolled out of view.
+  const barRef = useRef<HTMLDivElement>(null);
+  const [barInView, setBarInView] = useState(true);
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => setBarInView(e.isIntersecting), { threshold: 0.5 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   const pb = protocol?.body;
-  const brands = b.hard_exclusions?.brands ?? [];
-  const productIds = b.hard_exclusions?.product_ids ?? [];
   const sub = b.defaults?.substitution ?? 'SAME_CATEGORY';
   const prefs = b.soft_preferences ?? {};
 
   return (
     <div className="prof">
+      {/* which profile, and whether it's saved: next to each other, above the fold */}
+      <div className="prof-bar" ref={barRef}>
+        <label className="profile-pick">
+          <span>Profile</span>
+          <select aria-label="Profile" value={profile.id} onChange={(e) => onPick(e.target.value)} disabled={dirty}
+            title={dirty ? 'Save or discard your changes first' : undefined}>
+            {profiles.map((p) => <option key={p.id} value={p.id}>{p.body.name}</option>)}
+          </select>
+        </label>
+        <span className={`prof-status ${dirty ? 'dirty' : ''}`} role="status">
+          {dirty ? 'Unsaved changes' : <><Check size={15} aria-hidden /> All changes saved · {savedAt(profile.updated_at)}</>}
+        </span>
+        {dirty && (
+          <span className="row" style={{ gap: 8 }}>
+            <Button variant="ghost" size="sm" onClick={discard}><RotateCcw size={14} /> Discard</Button>
+            <Button variant="primary" size="sm" disabled={!canSave} loading={saving} onClick={save}><Save size={14} /> Save</Button>
+          </span>
+        )}
+      </div>
+
       {justSaved && flow.request && (
         <Banner tone="info" title="Saved. Your current options still use the old settings."
           action={<Button size="sm" onClick={() => navigate('/request')}>Search again</Button>}>
@@ -141,46 +171,25 @@ function ProfileForm({ profile, protocol, canSeeProtocol, onSaved }: {
       )}
 
       <div className="prof-grid">
+        {/* left: what decides the order, and the rules around it */}
         <div className="prof-main">
-          {/* 1 · exclusions */}
-          <section className="card prof-card">
-            <header className="prof-head">
-              <h2>Never include</h2>
-              <p>Filtered out before anything is ranked. Shown as “left out” in your options.</p>
-            </header>
-
-            <div className="field">
-              <span className="label">Brands</span>
-              <Picker placeholder="Search brands" values={brands} display={(x) => x}
-                suggestions={known.brands} allowFree={(q) => q.length >= 2} freeHint="Add brand, not seen in your searches yet:"
-                onChange={(v) => set({ hard_exclusions: { ...b.hard_exclusions, brands: v } })} />
-            </div>
-
-            <div className="field">
-              <span className="label">Products</span>
-              <Picker placeholder="Search by product name or number" values={productIds}
-                display={(pid) => known.products.get(pid) ?? `Product ${pid}`} sub={(pid) => `No. ${pid}`}
-                suggestions={[...known.products.keys()]} match={(pid, q) => `${known.products.get(pid) ?? ''} ${pid}`.toLowerCase().includes(q)}
-                allowFree={(q) => /^\d{4,}$/.test(q)} freeHint="Add product number"
-                onChange={(v) => set({ hard_exclusions: { ...b.hard_exclusions, product_ids: v } })} />
-            </div>
-
-            <p className="prof-note">Need an exception once? While reviewing options, open “How these options were found”, choose <b>Adjust</b> on “Filter products”, then <b>Allow a brand this time</b>. This profile stays as it is.</p>
-          </section>
-
-          {/* 2 · ranking */}
-          <section className="card prof-card">
+          <section className="card prof-card c-rank">
             <header className="prof-head">
               <h2>How options are ranked</h2>
               <p>Share 100 points between what matters. Options are ordered by this score.</p>
             </header>
 
-            <div className="presets" role="group" aria-label="Quick presets">
+            <div className="presets" role="group" aria-label="Presets">
               {PRESETS.map((p) => (
                 <button key={p.label} type="button" className="chip" aria-pressed={preset?.label === p.label} onClick={() => applyPoints({ ...p.w })}>
                   {preset?.label === p.label && <Check size={14} aria-hidden />}{p.label}
                 </button>
               ))}
+              {!preset && (
+                <span className="chip custom" aria-current="true" title="Your own mix">
+                  <Check size={14} aria-hidden />Custom{closest && <small>closest: {closest.label}</small>}
+                </span>
+              )}
             </div>
 
             <WeightDonut segs={PRIORITIES} values={PRIORITIES.map((p) => points[p.key])}
@@ -204,8 +213,8 @@ function ProfileForm({ profile, protocol, canSeeProtocol, onSaved }: {
 
             <div className="tiebreak">
               <div className="tiebreak-head">
-                <span className="label">Tie-breakers</span>
-                <span className="help">Only used when two products are otherwise equal</span>
+                <span className="label">Shortlist preferences</span>
+                <span className="help">When more products match than can be priced (up to 8 per request), these decide which are checked first. They also settle ties in the ranking.</span>
               </div>
               <div className="tb-row">
                 <span>Prefer larger packs</span>
@@ -219,11 +228,28 @@ function ProfileForm({ profile, protocol, canSeeProtocol, onSaved }: {
               </div>
             </div>
           </section>
+
+          <section className="card prof-card rules c-rules">
+            <header className="prof-head">
+              <h2><Lock size={16} aria-hidden /> Approval rules</h2>
+              <p>From the purchasing rules signed with Valio. Not changed here.</p>
+            </header>
+            {pb ? (
+              <dl className="rule-list">
+                <div><dt>Orders automatically up to</dt><dd>{eur(pb.auto_approve_limit_cents)} <span>per order</span></dd></div>
+                <div><dt>Above that, approved by</dt><dd>{pb.approval_mode === 'SELF' ? <>You <span>(logged)</span></> : <>{accountByUserId(pb.approver)?.name ?? pb.approver} <span>({accountByUserId(pb.approver)?.title.toLowerCase()})</span></>}</dd></div>
+                <div><dt>Never more than</dt><dd>{eur(pb.max_order_cents)} <span>per order</span></dd></div>
+              </dl>
+            ) : <Skeleton h={90} />}
+            <p className="prof-note">If this profile asks for something the rules don’t allow, the rules win.{canSeeProtocol && <> <Link to="/protocol">View purchasing rules</Link></>}</p>
+          </section>
         </div>
 
-        <aside className="prof-side">
-          {/* 3 · defaults */}
-          <section className="card prof-card">
+        {/* right: what goes in, and what's pre-filled */}
+        <div className="prof-side">
+          <BuyingRules b={b} set={set} known={known} facets={facets.data ?? null} />
+
+          <section className="card prof-card c-defaults">
             <header className="prof-head">
               <h2>Request defaults</h2>
               <p>Pre-filled on new requests. You can change them each time.</p>
@@ -250,35 +276,152 @@ function ProfileForm({ profile, protocol, canSeeProtocol, onSaved }: {
               ))}
             </fieldset>
           </section>
-
-          {/* read-only: approval rules */}
-          <section className="card prof-card rules">
-            <header className="prof-head">
-              <h2><Lock size={16} aria-hidden /> Approval rules</h2>
-              <p>From the purchasing rules signed with Valio. Not changed here.</p>
-            </header>
-            {pb ? (
-              <dl className="rule-list">
-                <div><dt>Orders automatically up to</dt><dd>{eur(pb.auto_approve_limit_cents)} <span>per order</span></dd></div>
-                <div><dt>Above that, approved by</dt><dd>{pb.approval_mode === 'SELF' ? <>You <span>(logged)</span></> : <>{accountByUserId(pb.approver)?.name ?? pb.approver} <span>({accountByUserId(pb.approver)?.title.toLowerCase()})</span></>}</dd></div>
-                <div><dt>Never more than</dt><dd>{eur(pb.max_order_cents)} <span>per order</span></dd></div>
-              </dl>
-            ) : <Skeleton h={90} />}
-            <p className="prof-note">If this profile asks for something the rules don’t allow, the rules win.{canSeeProtocol && <> <Link to="/protocol">View purchasing rules</Link></>}</p>
-          </section>
-        </aside>
+        </div>
       </div>
 
-      {dirty ? (
+      {dirty && !barInView && (
         <div className="savebar" role="status">
-          <span className="savebar-state">Unsaved changes</span>
+          <span className="savebar-state">Unsaved changes{used !== 100 && ' · points must add up to 100'}</span>
           <Button variant="ghost" onClick={discard}><RotateCcw size={15} /> Discard</Button>
-          <Button variant="primary" disabled={!b.name || used !== 100} title={used !== 100 ? 'Points must add up to 100' : undefined} loading={saving} onClick={save}><Save size={15} /> Save profile</Button>
+          <Button variant="primary" disabled={!canSave} loading={saving} onClick={save}><Save size={15} /> Save profile</Button>
         </div>
-      ) : (
-        <p className="saved-state" role="status"><Check size={15} aria-hidden /> All changes saved · {new Date(profile.updated_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
       )}
     </div>
+  );
+}
+
+/** Buying rules: what every option must respect. Written in plain words or set directly. */
+function BuyingRules({ b, set, known, facets }: {
+  b: ProfileBody; set: (patch: Partial<ProfileBody>) => void;
+  known: { products: Map<string, string>; brands: string[] }; facets: Facets | null;
+}) {
+  const [text, setText] = useState('');
+  const [result, setResult] = useState<Interpretation | null>(null);
+  const [picked, setPicked] = useState<Set<number>>(new Set());
+  const ex = b.hard_exclusions ?? {};
+  const brands = ex.brands ?? [];
+  const productIds = ex.product_ids ?? [];
+  const reqs = ex.requirements ?? [];
+  const hasReq = (kind: string, code: string) => reqs.some((r) => r.kind === kind && r.code === code);
+  const already = (r: RuleSuggestion) => r.kind === 'brand' ? brands.some((x) => x.toLowerCase() === r.value.toLowerCase())
+    : r.kind === 'product' ? productIds.includes(r.value) : hasReq(r.value.kind, r.value.code);
+  const setEx = (patch: Partial<NonNullable<ProfileBody['hard_exclusions']>>) => set({ hard_exclusions: { ...ex, ...patch } });
+
+  const understand = () => {
+    const res = interpretRules(text, { facets, knownBrands: [...new Set([...known.brands, ...brands])], knownProducts: known.products });
+    setResult(res);
+    setPicked(new Set(res.rules.map((r, i) => (already(r) ? -1 : i)).filter((i) => i >= 0)));
+  };
+  const apply = () => {
+    if (!result) return;
+    const chosen = result.rules.filter((_, i) => picked.has(i));
+    setEx({
+      brands: [...brands, ...chosen.filter((r) => r.kind === 'brand').map((r) => r.value as string)],
+      product_ids: [...productIds, ...chosen.filter((r) => r.kind === 'product').map((r) => r.value as string)],
+      requirements: [...reqs, ...chosen.filter((r): r is Extract<RuleSuggestion, { kind: 'requirement' }> => r.kind === 'requirement').map((r) => r.value)],
+    });
+    setResult(null);
+    setText('');
+  };
+  const toggleReq = (kind: Requirement['kind'], code: string, label: string) => setEx({
+    requirements: hasReq(kind, code) ? reqs.filter((r) => !(r.kind === kind && r.code === code)) : [...reqs, { kind, code, label }],
+  });
+  const KIND: Record<RuleSuggestion['kind'], string> = { brand: 'Never brand', product: 'Never product', requirement: 'Always' };
+
+  return (
+    <section className="card prof-card c-never">
+      <header className="prof-head">
+        <h2>Your buying rules</h2>
+        <p>Rules every option must follow. Anything that breaks one is left out before ranking.</p>
+      </header>
+
+      <div className="rule-compose">
+        <label htmlFor="rule-text" className="label">Describe a rule in your own words</label>
+        <div className="rule-input">
+          <textarea id="rule-text" rows={2} value={text} placeholder="e.g. No Arla. Everything must be nut-free. Skip product 464179."
+            onChange={(e) => { setText(e.target.value); setResult(null); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && text.trim()) { e.preventDefault(); understand(); } }} />
+          <Button variant="primary" size="sm" disabled={!text.trim()} onClick={understand}><WandSparkles size={15} /> Turn into rules</Button>
+        </div>
+
+        {result && (
+          <div className="rule-preview" role="status">
+            {result.rules.length ? (
+              <>
+                <p className="rp-title">Understood as {result.rules.length} rule{result.rules.length > 1 ? 's' : ''}. Untick any you don’t want:</p>
+                <ul className="rp-list">
+                  {result.rules.map((r, i) => {
+                    const dup = already(r);
+                    return (
+                      <li key={i}>
+                        <label className={`rp-item ${dup ? 'dup' : ''}`}>
+                          <input type="checkbox" checked={!dup && picked.has(i)} disabled={dup}
+                            onChange={(e) => setPicked((s) => { const n = new Set(s); if (e.target.checked) n.add(i); else n.delete(i); return n; })} />
+                          <span className={`rp-kind k-${r.kind}`}>{KIND[r.kind]}</span>
+                          <span className="rp-label">{r.label}</span>
+                          {dup ? <small>already a rule</small> : r.kind === 'brand' && r.isNew ? <small>not seen in your searches yet, check the spelling</small> : null}
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="row" style={{ gap: 8 }}>
+                  <Button variant="primary" size="sm" disabled={!picked.size} onClick={apply}><Plus size={14} /> Add {picked.size} rule{picked.size === 1 ? '' : 's'}</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setResult(null)}>Cancel</Button>
+                </div>
+              </>
+            ) : (
+              <p className="rp-title">Couldn’t turn that into a rule. Try a brand, a product number, or something like “nut-free”.</p>
+            )}
+            {result.priorityHints.length > 0 && (
+              <p className="rp-hint"><Info size={14} aria-hidden />“{result.priorityHints.join('”, “')}” sound{result.priorityHints.length === 1 ? 's' : ''} like a priority, not a rule. Set it under How options are ranked.</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="field">
+        <span className="label">Never these brands</span>
+        <Picker placeholder="Search brands" values={brands} display={(x) => x}
+          suggestions={known.brands} allowFree={(q) => q.length >= 2} freeHint="Add brand, not seen in your searches yet:"
+          onChange={(v) => setEx({ brands: v })} />
+      </div>
+      <div className="field">
+        <span className="label">Never these products</span>
+        <Picker placeholder="Search by product name or number" values={productIds}
+          display={(pid) => known.products.get(pid) ?? `Product ${pid}`} sub={(pid) => `No. ${pid}`}
+          suggestions={[...known.products.keys()]} match={(pid, q) => `${known.products.get(pid) ?? ''} ${pid}`.toLowerCase().includes(q)}
+          allowFree={(q) => /^\d{4,}$/.test(q)} freeHint="Add product number"
+          onChange={(v) => setEx({ product_ids: v })} />
+      </div>
+      {facets && (
+        <div className="field">
+          <span className="label">Every product must be</span>
+          <div className="chips">
+            {[...facets.claims.map((f) => ['CLAIM', f] as const), ...facets.labels.map((f) => ['LABEL', f] as const)].map(([kind, f]) => {
+              const on = hasReq(kind, f.code);
+              return (
+                <button key={f.code} type="button" className="chip" aria-pressed={on} onClick={() => toggleReq(kind, f.code, f.label)}>
+                  {on && <Check size={14} aria-hidden />}{f.label}
+                </button>
+              );
+            })}
+          </div>
+          <span className="label" style={{ marginTop: 6 }}>Every product must be free from</span>
+          <div className="chips">
+            {facets.allergens.map((f) => {
+              const on = hasReq('ALLERGEN_FREE', f.code);
+              return (
+                <button key={f.code} type="button" className="chip" aria-pressed={on} onClick={() => toggleReq('ALLERGEN_FREE', f.code, f.label)}>
+                  {on && <Check size={14} aria-hidden />}{f.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      <p className="prof-note">Need a one-time exception? You can allow an excluded brand for a single request while reviewing its options.</p>
+    </section>
   );
 }
 
