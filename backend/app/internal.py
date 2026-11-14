@@ -180,3 +180,6 @@ class PipelineApi(Iface):
 class ExplainApi(Iface):
     def node_summary(self, node: int, pack: DisclosablePack) -> str: ...
     def candidate_explanation(self, pack: DisclosablePack) -> str: ...
+    def explain_attempt(self, nodes: dict[int, DisclosablePack],
+                        candidates: list[DisclosablePack]) -> tuple[dict[int, str], list[str]]:
+        """All texts of one attempt in one go (one LLM call): node summaries and candidate explanations."""

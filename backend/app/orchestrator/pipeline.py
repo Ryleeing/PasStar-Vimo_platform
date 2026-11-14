@@ -15,13 +15,14 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
 from ..internal import (
-    Audience, CardsApi, CatalogApi, DisclosureApi, EffectiveRules, ExplainApi, GateApi, ProductRecord,
+    AuditApi, Audience, CardsApi, CatalogApi, DisclosureApi, EffectiveRules, ExplainApi, GateApi, ProductRecord,
     ProtocolsApi, UnitsApi, ValioApi,
 )
 from ..schemas import (
     Candidate, CandidateLine, ChainEvent, ChainNode, ChainTimeline, CreateRequest, EvidenceRef, GateDecision,
     RejectNodeRequest, RequestResult, RuleHit, StructuredRequest, Totals, Violation,
 )
+from .holds import record_blocked
 from .profiles import ProfileRepo
 from .ranking import Draft, rank
 
@@ -57,6 +58,7 @@ class Deps:
     protocols: ProtocolsApi
     gate: GateApi
     explain: ExplainApi
+    audit: Optional[AuditApi] = None    # hold events (CANDIDATES_BLOCKED); skipped when not wired
 
 
 def reliability_level(value: Optional[float]) -> str:
@@ -117,8 +119,12 @@ class Pipeline:
         structured = self._node1(out, structured, constraints, profile.body.name if profile else None,
                                  agent_of(req["created_by"]))
         kept, blocked = self._node2(out, structured, rules, constraints)
+        if self.d.audit and from_node <= 2:     # a rerun from node 3 or 4 re-uses node 2, nothing new was blocked
+            record_blocked(self.d.audit, request_id, attempt, blocked, protocol.body.buyer_id,
+                           agent_of(req["created_by"]), _actor(req["created_by"]))
         drafts = self._node3(out, structured, rules, kept, constraints, protocol.body.buyer_id, protocol.body.agent_id)
         self._node4(out, structured, rules, drafts, blocked, constraints)
+        out.flush()
 
         self.conn.execute(
             "UPDATE chain_nodes SET status = 'SUPERSEDED' WHERE request_id = ? AND attempt = ? AND status = 'OK'",
@@ -271,7 +277,7 @@ class Pipeline:
                              totals=d.totals, delivery_date=structured.delivery_date,
                              reliability_level=d.reliability_level, outcome_preview=outcome,
                              outcome_reasons=reasons, cards=cards, explanation="")
-            candidates.append(self._explained(cand))
+            candidates.append(cand)
 
         for p, violations in blocked:
             conv = self.d.units.convert(p, structured.quantity)
@@ -283,7 +289,7 @@ class Pipeline:
                              reliability_level="UNKNOWN", outcome_preview="REJECT",
                              cards=self.d.cards.build([line], structured, rules, gate), violations=violations,
                              explanation="")
-            candidates.append(self._explained(cand))
+            candidates.append(cand)
 
         top = candidates[0] if candidates and candidates[0].selectable else None
         facts = {"top_outcome": top.outcome_preview if top else None,
@@ -294,10 +300,6 @@ class Pipeline:
         out.candidates(candidates)
 
     # ───────────── helpers ─────────────
-
-    def _explained(self, cand: Candidate) -> Candidate:
-        pack = self.d.disclosure.pack_for_llm(cand.model_dump(mode="json", exclude={"explanation"}), LLM)
-        return cand.model_copy(update={"explanation": self.d.explain.candidate_explanation(pack)})
 
     def _event(self, title: str, logic: str, evidence: list[EvidenceRef]) -> ChainEvent:
         return ChainEvent(at=self.clock(), title=title, logic=logic, evidence=evidence)
@@ -340,31 +342,51 @@ class Pipeline:
 
 
 class _Attempt:
-    """Writes one attempt's rows. Nodes before from_node are copied from the previous attempt."""
+    """Collects one attempt's rows, then writes them in flush().
+
+    Nodes before from_node are copied from the previous attempt. All new texts (node summaries and
+    candidate explanations) are written in one ExplainApi.explain_attempt call, i.e. one LLM call."""
 
     def __init__(self, p: Pipeline, request_id: str, attempt: int, from_node: int, prev_attempt: int) -> None:
         self.p, self.request_id, self.attempt, self.from_node, self.prev = p, request_id, attempt, from_node, prev_attempt
+        self._nodes: list[tuple[int, dict, list[ChainEvent]]] = []
+        self._cands: list[Candidate] = []
 
     def node(self, n: int, facts: dict, events: list[ChainEvent]) -> None:
-        conn = self.p.conn
-        if n < self.from_node:
-            conn.execute(
-                "INSERT INTO chain_nodes (id, request_id, node, attempt, status, summary, timeline_json, created_at)"
-                " SELECT ?, request_id, node, ?, 'OK', summary, timeline_json, created_at FROM chain_nodes"
-                " WHERE request_id = ? AND attempt = ? AND node = ?",
-                (_new_id("node"), self.attempt, self.request_id, self.prev, n))
-            return
-        summary = self.p.d.explain.node_summary(n, self.p.d.disclosure.pack_for_llm(facts, LLM))
-        conn.execute(
-            "INSERT INTO chain_nodes (id, request_id, node, attempt, status, summary, timeline_json, created_at)"
-            " VALUES (?, ?, ?, ?, 'OK', ?, ?, ?)",
-            (_new_id("node"), self.request_id, n, self.attempt, summary,
-             json.dumps([e.model_dump(mode="json") for e in events]), self.p.clock().isoformat()))
+        self._nodes.append((n, facts, events))
 
     def candidates(self, cands: list[Candidate]) -> None:
-        self.p.conn.executemany(
+        self._cands = list(cands)
+
+    def flush(self) -> None:
+        pack = self.p.d.disclosure.pack_for_llm
+        fresh = [(n, facts, events) for n, facts, events in self._nodes if n >= self.from_node]
+        summaries, explanations = self.p.d.explain.explain_attempt(
+            {n: pack(facts, LLM) for n, facts, _ in fresh},
+            [pack(c.model_dump(mode="json", exclude={"explanation"}), LLM) for c in self._cands])
+
+        conn = self.p.conn
+        for n, _, _ in self._nodes:
+            if n < self.from_node:
+                conn.execute(
+                    "INSERT INTO chain_nodes (id, request_id, node, attempt, status, summary, timeline_json, created_at)"
+                    " SELECT ?, request_id, node, ?, 'OK', summary, timeline_json, created_at FROM chain_nodes"
+                    " WHERE request_id = ? AND attempt = ? AND node = ?",
+                    (_new_id("node"), self.attempt, self.request_id, self.prev, n))
+        for n, _, events in fresh:
+            conn.execute(
+                "INSERT INTO chain_nodes (id, request_id, node, attempt, status, summary, timeline_json, created_at)"
+                " VALUES (?, ?, ?, ?, 'OK', ?, ?, ?)",
+                (_new_id("node"), self.request_id, n, self.attempt, summaries[n],
+                 json.dumps([e.model_dump(mode="json") for e in events]), self.p.clock().isoformat()))
+        cands = [c.model_copy(update={"explanation": text}) for c, text in zip(self._cands, explanations)]
+        conn.executemany(
             "INSERT INTO candidates (id, request_id, attempt, rank, badge, selectable, body_json) VALUES (?,?,?,?,?,?,?)",
             [(c.id, self.request_id, self.attempt, c.rank, c.badge, int(c.selectable), c.model_dump_json()) for c in cands])
+
+
+def _actor(created_by: str) -> str:
+    return created_by if created_by.startswith(AGENT_PREFIX) else f"user:{created_by}"
 
 
 def _for_node(constraints: list[dict], node: int) -> list[dict]:

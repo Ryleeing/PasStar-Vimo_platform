@@ -50,3 +50,8 @@ class FakeExplain:
 
     def candidate_explanation(self, pack: DisclosablePack) -> str:
         return fx.CAND_1.explanation
+
+    def explain_attempt(self, nodes: dict[int, DisclosablePack],
+                        candidates: list[DisclosablePack]) -> tuple[dict[int, str], list[str]]:
+        return ({n: self.node_summary(n, p) for n, p in nodes.items()},
+                [self.candidate_explanation(p) for p in candidates])

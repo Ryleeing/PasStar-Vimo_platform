@@ -153,6 +153,25 @@ class StubProtocols:
         return merge_with_protocol(protocol.body, profile.body if profile else None)
 
 
+class StubAudit:
+    """In-memory AuditApi with the signature agreed in the holds-report spec (buyer_id, agent_id,
+    reason_code added). No hash chain: BE1 owns that. Replace with BE1's AuditApi when it lands."""
+
+    def __init__(self) -> None:
+        self.entries: list[dict] = []
+
+    def append(self, event: str, actor: str, payload: dict, request_id: Optional[str] = None,
+               visibility: str = "BOTH", summary: str = "", buyer_id: Optional[str] = None,
+               agent_id: Optional[str] = None, reason_code: Optional[str] = None) -> int:
+        self.entries.append(dict(seq=len(self.entries) + 1, event=event, actor=actor, payload=payload,
+                                 request_id=request_id, visibility=visibility, summary=summary,
+                                 buyer_id=buyer_id, agent_id=agent_id, reason_code=reason_code))
+        return len(self.entries)
+
+    def of(self, event: str) -> list[dict]:
+        return [e for e in self.entries if e["event"] == event]
+
+
 _OUTCOME_ORDER = ["AUTO", "BUYER_APPROVAL", "VALIO_REVIEW", "REJECT"]
 
 

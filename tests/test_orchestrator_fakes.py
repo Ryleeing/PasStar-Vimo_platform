@@ -1,11 +1,12 @@
 """BE3 fake interfaces return values that match the internal.py signatures."""
 from app import fixtures as fx
 from app.internal import DisclosablePack
-from app.orchestrator import explain_api, pipeline_api
-from app.orchestrator.fakes import FakeParser
+from app.orchestrator import pipeline_api
+from app.orchestrator.fakes import FakeExplain, FakeParser
 from app.schemas import Ambiguity, OpenQuestion, ProtocolBody, StructuredRequest
 
 parser_api = FakeParser()
+explain_api = FakeExplain()
 
 
 def test_parse_returns_structured_ambiguities_and_profile_items():

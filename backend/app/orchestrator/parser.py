@@ -9,6 +9,7 @@ vocabulary, and anything it was unsure about becomes an ambiguity for the person
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Callable, Literal, Optional
 
@@ -225,6 +226,15 @@ Use null for anything not stated rather than guessing."""
 
 # ───────────── the parser ─────────────
 
+@dataclass
+class ParseOutcome:
+    structured: StructuredRequest
+    ambiguities: list[dict]
+    profile_applied: list[str]
+    unknown_attributes: list[str]       # conditions the catalogue cannot check, as written
+    source: str                         # "llm:<model>" or "rules"
+
+
 class Parser:
     def __init__(self, llm: Optional[LlmClient] = None, vocabulary: Facets = fx.FACETS,
                  today: Callable[[], date] = date.today) -> None:
@@ -233,12 +243,19 @@ class Parser:
         self.last_source = "rules"        # "llm:<model>" or "rules", for logs and the chain timeline
 
     def parse(self, text: str, profile: Optional[Profile]) -> tuple[StructuredRequest, list[dict], list[str]]:
+        o = self.parse_detailed(text, profile)
+        return o.structured, o.ambiguities, o.profile_applied
+
+    def parse_detailed(self, text: str, profile: Optional[Profile]) -> ParseOutcome:
+        """parse() plus what the hold events need: unknown attributes and which parser answered."""
         today = self.today()
         need = self.llm.structured(PARSE_SYSTEM.format(vocabulary=_vocabulary(self.vocabulary)),
                                    f"Today is {today.isoformat()} ({today:%A}).\nRequest: {text}", ParsedNeed, "parsed_need")
-        self.last_source = f"llm:{self.llm.model}" if need else "rules"
+        source = f"llm:{self.llm.model}" if need else "rules"
+        self.last_source = source
         rules = rule_parse(text, today)
-        return self._finish(cross_check(need, rules) if need else rules, profile, today)
+        structured, ambiguities, applied, unknown = self._finish(cross_check(need, rules) if need else rules, profile, today)
+        return ParseOutcome(structured, ambiguities, applied, unknown, source)
 
     def draft_protocol(self, buyer_id: str, agent_id: str, description: str) -> tuple[ProtocolBody, list[dict]]:
         today = self.today()
@@ -267,9 +284,11 @@ class Parser:
                 out.append(known)
         return out
 
-    def _finish(self, n: ParsedNeed, profile: Optional[Profile], today: date) -> tuple[StructuredRequest, list[dict], list[str]]:
+    def _finish(self, n: ParsedNeed, profile: Optional[Profile],
+                today: date) -> tuple[StructuredRequest, list[dict], list[str], list[str]]:
         questions = [Ambiguity(field=q.field, question=q.question, options=q.options) for q in n.ambiguities]
         applied: list[str] = []
+        unknown: list[str] = []
         cats = {c.code: c.label for c in self.vocabulary.categories}
 
         category = n.category if n.category in cats else None
@@ -314,6 +333,7 @@ class Parser:
                 continue
             if m.role == "condition" and _only_product_words(m.text):
                 continue
+            unknown.append(m.text)
             questions.append(Ambiguity(field="requirements", question=f"'{m.text}' is not something the catalogue "
                                            "can check; order without it, or name another attribute?"))
 
@@ -330,7 +350,7 @@ class Parser:
             quantity=quantity, delivery_date=delivery,
             budget_cents=round(n.budget_eur * 100) if n.budget_eur else None,
             substitution=substitution, notes=n.notes)
-        return structured, [q.model_dump() for q in _dedupe(questions)], applied
+        return structured, [q.model_dump() for q in _dedupe(questions)], applied, unknown
 
     def _finish_draft(self, d: DraftedProtocol, buyer_id: str, agent_id: str, today: date) -> tuple[ProtocolBody, list[dict]]:
         qs = [OpenQuestion(field=q.field, question=q.question) for q in d.open_questions]
