@@ -1,196 +1,256 @@
 # PasStar · Yes We Cooked
 
-Valio Aimo open procurement channel for AI purchasing agents.
+**PasStar 是 Valio Aimo 向 AI 采购 agent 开放的下单通道。**
 
-## 快速开始（M1 假数据服务器）
+酒店、医院、餐厅可以让 AI 助手（ChatGPT、Claude，或自己的 ERP）替它们向 Valio 采购。但每个 agent 都必须拿着买家签发的 key，在买家和 Valio 共同签署的**授权协议**范围内办事：能买什么、自己最多能花多少、超出的由谁审批。每次调用都要经过同一个闸门，越权的会被拦下并上报 Valio，所有操作都记在防篡改的审计日志里。
 
+- 商品数据：Valio 真实目录，17,546 个商品
+- 价格和能否送达：Valio 实时接口
+- 需求解析：LLM（通过 OpenRouter）加规则交叉核对
+- 下单：Valio 签名报价（Ed25519），按协议走闸门
+
+---
+
+## 快速开始
+
+需要 **Python 3.11+** 和 **Node.js 18+**。
+
+### 1. 后端
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
 ```
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-# 打开 http://localhost:8000/docs
+
+在仓库根目录建一个 `.env`（已被 git 忽略，**不要提交**），参考 `.env.example`：
+
+```bash
+VALIO_API_BASE_URL=https://junction26.valioaimo.fi/
+VALIO_API_KEY=…
+VALIO_BUYER_ID=buy_hotel
+VALIO_CUSTOMER_ID=…
+OPENROUTER_API_KEY=…
 ```
 
-前端生成类型：`npx openapi-typescript ../openapi.json -o src/api/types.ts`
-假数据：`fixtures/*.json`（运行 `python scripts/export_contract.py` 可重新导出）
-
-## 演示用户和审批模式
-
-界面请求带 `X-Demo-User` 头（演示用，不做登录）：
-
-| 模式（协议里的 `approval_mode`） | 用户 | 能做什么 |
-|---|---|---|
-| SEPARATE 组织模式（主展示） | `usr_chef` | 提需求、选方案；不能批自己的单（403 `SELF_APPROVAL_FORBIDDEN`） |
-| | `usr_manager` | 审批超出协议的单、签协议 |
-| SELF 单人模式 | `usr_owner` | 提需求，也能批自己的单（日志记为 self-approved） |
-| 两种模式都有 | `usr_valio` | Valio 审批台、agent 管理、完整审计 |
-
-审批人校验在 `backend/app/channel/approvals.py`。
-
-## Agent 客户与外部审批
-
-外部采购 agent 直接调接口：`POST /v1/requests`（结构化需求）→ `POST /v1/requests/{id}/select`（签名报价）→ `POST /v1/orders`。
-
-协议的 `approval_channel` 决定超额时怎么批：
-- `HOSTED`：在 PasStar 的审批页上批，订单进 `PENDING_BUYER_APPROVAL`，agent 轮询结果；
-- `EXTERNAL`：在买方自己的系统里批。订单返回 `BUYER_AUTHORIZATION_REQUIRED` 和 `authorization_request`；买方系统用审批人的私钥签一张只对这张报价有效的凭证；agent 调 `POST /v1/orders/{id}/authorization` 带回凭证，验过就下单。
-
-本地演示（假服务器里 `prot_hotel_ext_v1` 走外部审批）：
+启动（程序不会自动读取 `.env`，所以先加载它）：
 
 ```bash
 cd backend
-# 1. agent 下单，拿到 BUYER_AUTHORIZATION_REQUIRED
-curl -s -X POST localhost:8000/v1/orders -H 'Content-Type: application/json' -H 'X-Agent-Key: demo' \
-  -H 'Idempotency-Key: demo-1' -d '{"quote_id":"quo_7","protocol_id":"prot_hotel_ext_v1"}' > order.json
-# 2. “酒店系统”里经理批准，签出凭证
-TOKEN=$(python scripts/buyer_erp.py approve order.json --yes)
-# 3. agent 带凭证回来
-curl -s -X POST localhost:8000/v1/orders/ord_7/authorization -H 'Content-Type: application/json' \
-  -H 'X-Agent-Key: demo' -d "{\"buyer_authorization\":\"$TOKEN\"}"
+set -a; source ../.env; set +a
+python -m uvicorn app.main:app --port 8000 --reload
 ```
 
-演示用的酒店系统密钥第一次用到时生成在 `data/demo/`（不进仓库）。凭证校验在 `backend/app/channel/authorization.py`。
+打开 http://localhost:8000/docs 可以看接口文档。
 
-## 目录
+> 改了 `.env` 之后要手动重启后端：`--reload` 只在代码变动时重启，不会重新读取环境变量。
 
-- `backend/app/schemas.py`  接口契约（所有 HTTP 请求和响应）
-- `backend/app/internal.py` 后端模块之间的内部接口
-- `backend/app/schema.sql`  数据库建表
-- `backend/app/main.py`     路由（M1 返回假数据，逐个替换成真实实现）
-- `backend/app/channel/`    BE1 通道与交易
-- `backend/app/catalog/`    BE2 目录与数据
-- `backend/app/orchestrator/` BE3 编排与 AI
-- `backend/app/config/`     rules.yaml（闸门规则）、field_policy.yaml（字段敏感等级）
-- `agent/`  买方 agent、独立脚本、不守规矩的 agent（BE3）
-- `tests/`  测试 runner（BE3）；`test_protocol_rules.py` 协议修改判定的测试（`PYTHONPATH=backend pytest tests`）
-- `frontend/` 前端（FE）
-- `openapi.json`、`fixtures/` 由 scripts/export_contract.py 生成
+### 2. 商品目录（可选，用真实数据时需要）
 
-商品数据文件不在仓库里：从 Valio 资源门户下载后放到 `data/`，再运行 BE2 的 `scripts/preprocess.py`。
-
-## BE2 静态目录链路
-
-`catalog/repository.py` 只读查询预处理 SQLite，按类别和结构化证据过滤；
-`units.py` 按订购步长向上取整；`cards.py` 生成证据、可信度与提示；
-`service.py` 把这些模块组合成最多 8 个单 SKU 候选。运行示例（仓库根目录）：
+从 Valio 资源门户下载 3 个数据文件，生成本地商品库 `backend/data/products.sqlite`：
 
 ```bash
-PYTHONPATH=backend .venv/bin/python - <<'PY'
-from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
-from app.catalog.service import CatalogService, effective_rules
-from app.schemas import ProtocolBody, Quantity, Requirement, StructuredRequest
-
-today = datetime.now(ZoneInfo("Europe/Helsinki")).date()
-lactose_free = Requirement(kind="CLAIM", code="FREE_FROM_LACTOSE")
-protocol = ProtocolBody(
-    buyer_id="buyer", agent_id="agent", approver="manager",
-    auto_approve_limit_cents=100_000, max_order_cents=300_000,
-    allowed_categories=["10400"], hard_requirements=[lactose_free],
-    valid_until=today + timedelta(days=30),
-)
-request = StructuredRequest(
-    category="10400", requirements=[lactose_free],
-    quantity=Quantity(value=1000, unit="L"), delivery_date=today + timedelta(days=2),
-)
-result = CatalogService(today=today).generate(request, effective_rules(protocol))
-print([(c.lines[0].product_id, c.outcome_preview) for c in result.candidates])
-print("unconvertible:", result.unconvertible_product_ids)
-PY
+python backend/scripts/preprocess.py --source-dir <数据文件所在目录>
 ```
 
-`effective_rules(protocol, profile)` 是不写库的合并函数：保留协议要求并加入
-profile 硬排除；profile 不能扩展协议类别或额度。传入的协议应由 BE1 验证过。
-商品的更新时间在读取时重新计算可信等级，空声明与缺失过敏原保持未验证。
-名称数量换算保留 `NAME_PARSE`，因此即使数量刚好覆盖也需要复核；无法换算时
-`Conversion.qty_covered=None`，服务通过 `unconvertible_product_ids` 报告原因。
-如果该商品同时违反硬约束，`blocked` 保留违规详情，其 `lines` 为空。
+**没有商品库或没有 Valio key 时，后端会自动改用演示数据**，所有流程照样能跑。演示数据在界面和 agent 的回答里都会标成 `DEMO_DATA`，不会冒充 Valio 的数据。
 
-真实价格/库存通过 `CatalogService(valio=...)` 注入 `ValioApi` 实现，BE1 闸门通过
-`gate=...` 注入 `GateApi`。动态查询仅覆盖缩小后的最多 8 个 SKU；未注入时
-返回未知库存、空总价和复核预览。缺价格、缺押金报价、缺库存或名称推算不能
-被一个 `AUTO` 闸门预览绕过。金额按整数分、half-up 计算；客户端提供已验证的
-含税单价时，按该单价汇总总额并反算税额，避免丢失上游的单位税额取整。
-旧适配器未提供含税单价时按行计算税额。押金视为已计税的独立收费；
-正式报价仍由 BE1 复核并签名。
+### 3. 前端
 
-排序默认使用保守的稳定顺序（可信度、履约状态、总价、软偏好、商品 ID）。
-`RankingPolicy(mode="weighted")` 可显式启用 profile 权重：价格/碳因子在候选内
-min-max 归一化，未知值记中性 0.5；权重必须有限、非负且总和大于 0。
-可靠性 HIGH/MEDIUM/LOW 阈值尚未冻结，因此默认显示 UNKNOWN；可向
-`CardsBuilder` 提供审核后的 `reliability_high` 与 `reliability_medium`。
-卡片与候选不会包含可靠性原始值；公开商品投影只输出结构化声明。
-
-## BE2 动态数据与出口披露
-
-`catalog/disclosure.py` 已实现基于 `field_policy.yaml` 的逐字段过滤。
-`product`、`price`、`availability`、`candidate/candidates/blocked` 等使用明确的
-数据包结构；父对象获准披露时，仍只保留已知模型中的字段。未知字段默认拒绝，
-不会因嵌套在 `quote`、`order`、`profile` 或 `totals` 中而获得放行。
-LLM、agent 和买方默认最高 L1；Valio 内部 L2 需要显式启用，L3 始终不外放。
-
-`CatalogService.get_product/search` 现在经过披露过滤；`generate` 返回内部结果，
-交给 LLM 前调用 `service.pack_for_llm(result, request, audience)`。
-调用方仍须先验证买方、协议和资源归属；允许披露的自由文本应作为提示词中的数据，
-而不是系统指令。过滤会自动记录披露路径、等级和商品 ID，日志不存字段值；
-审计写入失败时不返回数据。默认日志存放在被 Git 忽略的
-`backend/data/runtime.sqlite`，测试可注入临时 SQLite connection。
-
-`valio/client.py` 使用 `httpx`，每个实例绑定一个已授权的 buyer/customer 映射。
-配置项见 `.env.example`；密钥从环境变量 `VALIO_API_KEY` 读取。设置环境变量后，
-可通过以下方式注入已有候选链路：
-
-```python
-from app.catalog.repository import CatalogRepository
-from app.catalog.service import CatalogService
-from app.internal import Audience
-from app.valio.client import ValioClient
-from app.valio.faults import FaultProxy, FaultStore
-
-catalog = CatalogRepository()
-with ValioClient.from_env(
-    sales_unit_resolver=lambda product_id: catalog.get(product_id).sales_unit,
-) as client, FaultStore() as faults:
-    service = CatalogService(catalog, valio=FaultProxy(client, faults))
-    # Use the already-confirmed request and effective rules from the example above.
-    result = service.generate(request, effective_rules(protocol))
-    pack = service.pack_for_llm(
-        result, request, Audience("LLM", protocol.buyer_id, protocol.agent_id, "L1"),
-    )
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
-客户端只接收最多 8 个缩小后的商品，价格查询显式使用需求交货日，金额转为整数分，
-API 的税率百分数转为内部比例（例如 `13.5 → 0.135`）。缺价、错误价或缺税率
-不会被替换为零，价税矛盾也不作为确认价格。保留 API 的单位含税价进行汇总。
-押金材料报价尚未接入，因此目录标有押金且金额未知时仍不生成
-完整总价。库存按截单时间、最早交付日和销售单位检查；Terminal 或 `999999`
-保留 UNKNOWN，部分交付数量最多返回本次请求量。接入时应提供上例中的销售单位
-resolver，避免目录与动态响应的单位变化造成误算。
+打开 http://localhost:5173 。
 
-短缓存按买方、客户、日期和数量隔离；`client.clear_cache()` 可用于正式报价前的
-重新查询。429、5xx、超时和网络错误采用有限重试，长 `Retry-After` 交回调用方。
-默认本地限流 30 次 HTTP 尝试/分钟、每 agent/product/Helsinki 日最多 3 次库存探测；
-探测预算持久化到运行时 SQLite，缓存命中也计次，HTTP 重试不重复计探测。
-这些参数应在集成时按已验证协议和官方允许量配置；常规测试全部使用 MockTransport。
+---
 
-`FaultStore` 默认禁用所有故障，可使用 `set(name, enabled=True, params=...)` 配置：
+## 演示账号
 
-| 故障 | 参数与效果 |
+网页上没有登录，左侧栏顶部可以切换账号（请求头 `X-Demo-User`，**只在本机有效**）：
+
+| 账号 | 角色 | 工作区 | 能做什么 |
+|---|---|---|---|
+| Aino | 厨师 | Hotel Helsinki Central | 提需求、选方案、看订单；不能批自己的单 |
+| Mikko | 采购经理 | Hotel Helsinki Central | 审批超额订单、签协议、给 agent 发 key |
+| Sanna | 老板 | Bistro Kallio | 一个人模式：自己采购、自己审批（单独记录一步） |
+| Elina | Valio 审核员 | Valio | 确认协议、审核订单、查看所有 agent、封禁 agent |
+
+**两种审批模式**
+- **酒店（两个人模式）**：厨师提需求，经理审批，提需求的人不能批自己的单。
+- **小餐厅（一个人模式）**：老板可以批自己的单，但审批仍是单独的一步，日志里记为"自己批准"。
+
+**小餐厅一开始没有协议**：点 **Reset demo** 后切到 Sanna，会先进入"第 0 步"，引导签协议。
+
+---
+
+## 演示流程
+
+**主线（网页）**
+1. **Reset demo** → 切到 **Sanna**，走第 0 步：用一句话描述规则 → AI 起草协议 → 检查（可以直接在草稿上改）→ 签名
+2. 切到 **Elina**，在 Review queue 里确认协议
+3. 切回 **Sanna** 提需求：左边和 A.I.mo 聊天，或者右边填表单，都能直接找方案
+4. 看方案：红绿灯可信度（✓ Reliable / ? Reliable? / ✗ Risky）、分数、数据来源，以及选了之后会怎样
+5. 下单：€1,000 以内直接下单；€1,000–3,000 等审批；超过 €3,000 拒绝
+
+**AI agent（Agents 页）**
+1. 切到 **Mikko** → **Agents** → **Connect an agent**：选 ChatGPT / Claude / ERP → 签发 key（只显示一次）→ 照着生成的步骤接入 → **Try it in the console**
+2. **Console**：左边是用户看到的对话，右边是 PasStar 在幕后做的每一步：验 key、处理链 4 步、闸门、Valio 签名、审计记录
+3. 点 **Try to break the rules**：agent 会真的尝试 4 种越权，每一种都会被拦下
+4. 切到 **Aino** → **My orders**：agent 下的单会自动出现，并标明是哪个 agent 下的
+
+---
+
+## AI agent 接入
+
+agent 的唯一入口是 **MCP 服务 `POST /mcp`**，请求头带 `X-Agent-Key`。服务一共提供 6 个工具，**没有审批工具**：
+
+| 工具 | 作用 |
 |---|---|
-| `PRICE_CHANGE` | `multiplier`（默认 1.1）或 `delta_cents`，修改价格副本 |
-| `PARTIAL_STOCK` | `ratio`（默认 0.5），降低可交付数量 |
-| `TIMEOUT` | 直接抛出可重试的模拟超时，不等待网络 |
-| `RATE_LIMIT` | 抛出 429 类错误，可配置 `retry_after` |
-| `EMPTY_RESULT` | 移除匹配商品的响应 |
+| `get_mandate` | 我代表谁、能买什么、额度多少、审批人是谁、结果怎么读、必须遵守的规则 |
+| `find_options` | 用户原话加上追问的回答 → 追问，或者排好序的方案（每个都有卡片） |
+| `get_options` | 重新读取某个需求的方案 |
+| `adjust_options` | 换品牌、排除商品或方案、按价格/可靠性排序、只要单一商品、强制走审批 |
+| `place_order` | 下单。同一个方案重复调用，返回的是同一张单 |
+| `order_status` | 查订单状态，以及下一步该怎么跟用户说 |
 
-通用参数为 `product_ids`、`endpoint`（`prices/availability/both`）和有限触发次数
-`times`。短路优先级为 TIMEOUT → RATE_LIMIT → EMPTY_RESULT；
-`reset()` 关闭全部故障，`FaultStore(db_path=...)` 可持久化演示配置。
-故障控制只应交给受信任的演示或测试工具。
-
-模块链路现可独立验证；`main.py` 仍使用 M1 fixtures。HTTP 路由接入、正式报价签名、
-订单与审批状态持久化属于后续集成步骤。本轮未调用真实 Valio 服务。
+**ChatGPT 插件**：插件包在 `plugin/passtar/`，包括 `plugin.json`、`mcp.json` 和 Skill。用公网地址和 key 打包：
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=backend .venv/bin/python -m pytest -q tests
+cloudflared tunnel --url http://localhost:8000          # 另开一个窗口，一直开着
+read -s "THE_PASS_AGENT_KEY?Agent key: "; export THE_PASS_AGENT_KEY
+plugin/build.sh https://xxxx.trycloudflare.com          # 生成 plugin/passtar.zip（不进 git）
 ```
+
+然后在 ChatGPT 桌面应用里上传 `passtar.zip`。详见 `plugin/README.md`。
+
+**Claude Code**：
+
+```bash
+claude mcp add --transport http passtar https://xxxx.trycloudflare.com/mcp --header "X-Agent-Key: <key>"
+```
+
+**key 从哪来**
+- 网页：Agents → Connect an agent → Issue the key（只有协议审批人能签发）
+- 命令行：`python backend/scripts/new_agent_keys.py agt_hotel`
+- 演示自带：`demo-hotel`、`demo-bistro` 等，公开写在代码里，**只能在本机用**
+
+---
+
+## 安全设计
+
+- **人只能在本机登录**：经过隧道或代理来的 `X-Demo-User` 请求一律拒绝。外网只能用 agent key 访问。
+- **管理接口只在本机**：重置、故障开关等接口，经过隧道的请求一律拒绝。
+- **key 只存哈希**：签发时只显示一次；可以断开（吊销），Valio 也可以封禁 agent，封禁后拿着有效的 key 也会被拒。
+- **敏感度分级**：agent 最多只能看到 L1（自家价格、能不能送）。L2（库存数量、供应商表现）和 L3（成本、毛利、其他客户）不给。
+- **防探测**：同一个 agent 对同一个商品，每天最多查 3 种不同的数量。超过会返回 `PROBE_LIMIT` 并上报 Valio。
+- **Agent console 只给买家用**，而且只在本机能启动，外人不能通过隧道消耗我们的 LLM 额度。
+
+---
+
+## 常见问题
+
+| 现象 | 处理 |
+|---|---|
+| `Address already in use` | `lsof -i :8000` 找到进程号，再 `kill <进程号>` |
+| agent 报 `PROBE_LIMIT` | 今天对这些商品换过太多次数量。点 **Reset demo** 会清空计数；演示时尽量固定用同一个数量 |
+| ChatGPT 报 "Unknown or blocked agent key" | key 被重置或换掉了。重新签发 key，再重新打包上传插件 |
+| ChatGPT 连不上 | cloudflared 重开后地址会变，要用新地址重新打包 |
+| 重置之后 agent 用不了 | Reset demo 会把 key 换回公开的演示 key，你签发过的 key 都会失效 |
+| Console 的 Live model 报没有 key | `.env` 里加上 `OPENROUTER_API_KEY` 后**重启后端** |
+| 前端报找不到字体 | 拉代码后在 `frontend` 里运行 `npm install`，再重启 `npm run dev` |
+
+---
+
+## 目录结构
+
+```
+backend/app/
+  main.py            路由（所有 HTTP 接口都在这里）
+  schemas.py         接口契约（Pydantic）
+  internal.py        后端模块之间的内部接口
+  schema.sql         数据库建表
+  channel/           BE1：协议、报价、闸门、订单、审批、审计、agent 与 key
+  catalog/           BE2：商品目录、单位换算、可信等级、证据卡片、披露过滤
+  valio/             BE2：Valio 接口客户端、探测额度、故障模拟
+  orchestrator/      BE3：需求解析、处理链、排序、解释、MCP 服务、agent 接口、agent console
+  config/            rules.yaml（闸门规则）、field_policy.yaml（字段敏感等级）
+backend/scripts/     preprocess.py（生成商品库）、new_agent_keys.py、buyer_erp.py、export_contract.py
+frontend/            React 前端
+plugin/              ChatGPT / Claude 插件包和打包脚本
+agent/               脚本式 agent：正常采购、不用 AI 的脚本、越权的 agent
+tests/               后端测试和评测 runner
+openapi.json, fixtures/   由 backend/scripts/export_contract.py 生成
+```
+
+**不进仓库的文件**：`.env`、`backend/data/*.sqlite`（商品库、运行时数据）、`plugin/*.zip`、Valio 原始数据。
+
+---
+
+## 测试
+
+```bash
+.venv/bin/python -m pytest -q                       # 后端全部测试
+cd frontend && npx tsc -b --noEmit && npm run build  # 前端类型检查和构建
+```
+
+测试不会调用真实的 LLM 和 Valio 接口，每个测试都用独立的临时数据库。
+
+评测 runner（真实模型、多种说法、多次重复、故障注入）：
+
+```bash
+python tests/runner.py --help
+```
+
+---
+
+## 技术说明
+
+### 处理链（每个需求 4 步）
+
+1. **理解**：LLM 解析原话，再和规则解析交叉核对；缺品类、数量、日期就先追问
+2. **筛选**：按协议的硬性要求和厨房档案过滤，每项要求给出 A–D 可信等级
+3. **排序**：一次批量查 Valio 的价格和能否送达，换算包装规格，最多 8 个方案
+4. **闸门预判**：每个方案标明选了之后会怎样（直接下单 / 等审批 / Valio 审核 / 不允许）
+
+任何一步觉得不对都可以 **Retry**，只从那一步重新生成。每步最多 3 次，而且不会放宽协议。
+
+### 可信等级和分数
+
+| 等级 | 含义 |
+|---|---|
+| A | 制造商结构化数据，24 个月内更新过 |
+| B | 制造商数据，但超过 24 个月未更新 |
+| C | 只有商品名这么写，未经验证 |
+| D | 没有数据，或者数据互相矛盾 |
+
+可靠性分 4 项：数据证据、匹配度、送达、合规。**总评取 4 项中最低的一项**。分数是这一项各个检查的平均分，并且一定落在等级对应的区间里：Reliable 80–100，Reliable? 50–79，Risky 0–49。
+
+### 授权协议
+
+- 买家起草（可以用一句话让 AI 起草）→ 买家审批人签名 → Valio 确认并用 Ed25519 签名后生效
+- **收紧**（调低额度等）立即生效；**放宽**会生成新版本，要重新签名、Valio 重新确认
+- agent 可以帮忙起草，但不能让协议生效，也不能扩大自己的权限
+- 超额订单可以在 PasStar 里审批（`HOSTED`），也可以由买家自己的系统签名授权（`EXTERNAL`），详见 `backend/app/channel/authorization.py`
+
+### Valio 数据
+
+- 比赛只提供一个 Valio 客户账号，三家演示买家都用它查价格（`VALIO_SHARED_BUYERS`）
+- 比赛环境没有提交订单的接口：订单到 `PLACED` 表示 PasStar 已放行，正式上线时会转交 Valio 的订单系统
+- 价格和库存只查缩小后的最多 8 个商品；缺价格、缺税率、缺押金时不会算成零
+- 本地限流每分钟 30 次；429、5xx、超时会有限次重试
+- 故障模拟（Valio 的 Agents & faults 页面）：`PRICE_CHANGE`、`PARTIAL_STOCK`、`TIMEOUT`、`RATE_LIMIT`、`EMPTY_RESULT`
+
+### 环境变量
+
+| 变量 | 作用 |
+|---|---|
+| `VALIO_API_BASE_URL`、`VALIO_API_KEY`、`VALIO_BUYER_ID`、`VALIO_CUSTOMER_ID` | Valio 接口 |
+| `OPENROUTER_API_KEY` | LLM。没有时，解析改用规则，解释改用模板，Console 只能用 Script 模式 |
+| `THE_PASS_LLM_STRONG`、`THE_PASS_LLM_LIGHT`、`THE_PASS_LLM_AGENT` | 换模型（默认：解析用 Opus 5.5，解释用 Gemini Flash Lite） |
+| `THE_PASS_BE2` | `auto`（默认）/ `live` / `stub`，强制用真实或演示数据 |
+| `VALIO_SHARED_BUYERS` | 哪些买家共用那一个 Valio 账号查价格 |
+| `THE_PASS_DB` | 数据库路径（默认 `data/the_pass.db`） |
+| `PASSTAR_SELF_URL` | Console 里的 agent 连回 PasStar 的地址（默认 `http://127.0.0.1:8000`） |
