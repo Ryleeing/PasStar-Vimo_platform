@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local database (built by scripts, never committed)
+*.db
+*.db-journal
+
+# Secrets
+.env
+
+# Per-user Claude Code settings
+.claude/settings.local.json
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Frontend
+node_modules/
+dist/
