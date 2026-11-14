@@ -5,7 +5,7 @@
 // shows an empty slot for it, A.I.mo asks in the chat, and the chosen answer visibly flies into that slot.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowUp, Check, ChevronDown, MessageCircle } from 'lucide-react';
+import { ArrowRight, ArrowUp, Check, ChevronDown, CornerDownLeft, MessageCircle } from 'lucide-react';
 import { Mascot, MascotFace, type MascotMood } from '../components/Mascot';
 import { createRequest, getFacets, listProfiles, parseRequest, rejectNode } from '../api/endpoints';
 import { describeError } from '../api/client';
@@ -252,24 +252,27 @@ export function RequestPage() {
           <aside className="chat" aria-label="Describe your order to A.I.mo">
            <div className="chat-inner">
             <header className="chat-head">
-              <span className="chat-mascot" aria-hidden><Mascot mood={mood} size={64} /></span>
-              <div>
+              <div className="chat-title">
                 <h2>Ask A.I.mo</h2>
-                <p>Describe it in your own words. It goes straight into the form.</p>
+                <p>Describe it in your own words.</p>
               </div>
             </header>
             <Thread turns={turns} question={question} answer={answer} inFlight={!!flight} onPick={pick}
               highlight={tried && !!question && !answer} onExample={(ex) => { setDraft(ex); }} />
             <div className="chat-compose">
-              <textarea aria-label="Message to A.I.mo" rows={2} value={draft}
-                placeholder={turns.length ? 'Change something, e.g. “make it 800 litres”' : 'e.g. 1000 litres of lactose-free milk by Monday'}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} />
-              <button type="button" className="send" onClick={() => send()} disabled={!draft.trim() || parsing} aria-label="Send to A.I.mo">
-                <ArrowUp size={18} />
-              </button>
+              <div className="compose-box">
+                <textarea aria-label="Message to A.I.mo" rows={1} value={draft}
+                  placeholder={turns.length ? 'e.g. “make it 800 litres”' : 'Message A.I.mo…'}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} />
+                <button type="button" className="send" onClick={() => send()} disabled={!draft.trim() || parsing} aria-label="Send to A.I.mo">
+                  <ArrowUp size={18} />
+                </button>
+              </div>
             </div>
            </div>
+           {/* outside the clipped inner box so it can stand on the card's edge */}
+           <span className="chat-mascot" aria-hidden><Mascot mood={mood} size={128} /></span>
           </aside>
         )}
       </div>
@@ -301,8 +304,14 @@ function Thread({ turns, question, answer, inFlight, onPick, highlight, onExampl
         <div className="bubble-text">
           <p>Hi! Tell me what you need and when. I’ll put it into the order for you to check.</p>
           {!turns.length && (
-            <div className="chat-examples">
-              {EXAMPLES.map((ex) => <button key={ex} type="button" className="chip example" onClick={() => onExample(ex)}>{ex}</button>)}
+            <div className="chat-examples" role="group" aria-labelledby="ex-label">
+              <span id="ex-label" className="ex-label">For example:</span>
+              {EXAMPLES.map((ex) => (
+                <button key={ex} type="button" className="ex" onClick={() => onExample(ex)} aria-label={`Use example: ${ex}`}>
+                  <span className="ex-quote">“{ex}”</span>
+                  <span className="ex-use" aria-hidden>Use <CornerDownLeft size={13} /></span>
+                </button>
+              ))}
             </div>
           )}
         </div>
