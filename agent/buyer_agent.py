@@ -20,6 +20,8 @@ from typing import Optional
 from pass_client import ApiError, Outcome, PassClient, finish_order, print_outcome
 
 MAX_REQUERIES = 1
+# Questions the agent must not answer by itself: guessing these would order the wrong thing.
+BLOCKING_FIELDS = {"quantity", "category", "requirements"}
 
 
 def choose(candidates: list[dict]) -> Optional[dict]:
@@ -41,12 +43,19 @@ def run(client: PassClient, text: str, protocol_id: str, profile_id: Optional[st
     out = Outcome()
     try:
         parsed = client.parse(text, profile_id)
-        structured = parsed["structured"]
+        structured = out.structured = parsed["structured"]
         out.log("Understood the need", f"{structured.get('category_label') or structured['category']}, "
                                        f"{structured['quantity']['value']:g} {structured['quantity']['unit']}, "
                                        f"by {structured['delivery_date']}")
+        blocking = [a for a in parsed.get("ambiguities", []) if a["field"] in BLOCKING_FIELDS]
         for a in parsed.get("ambiguities", []):
-            out.log("Open question, keeping the default", a["question"])
+            if a not in blocking:
+                out.log("Open question, keeping the default", a["question"])
+        if blocking:
+            for a in blocking:
+                out.log("Needs an answer before ordering", a["question"])
+            out.stopped = "NEEDS_INPUT"
+            return out
 
         for attempt in range(MAX_REQUERIES + 1):
             result = client.create_request(protocol_id, structured, profile_id, raw_text=text)
@@ -58,6 +67,7 @@ def run(client: PassClient, text: str, protocol_id: str, profile_id: Optional[st
             change = relax_for_requery(structured) if attempt < MAX_REQUERIES else None
             if not change:
                 out.log("Gave up", result.get("no_candidate_reason") or "no candidates")
+                out.stopped = "NO_CANDIDATES"
                 return out
             structured, why = change
             out.log("No candidates, asking again", why)

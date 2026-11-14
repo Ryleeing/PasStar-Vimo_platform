@@ -47,6 +47,15 @@ def test_buyer_agent_prefers_auto_candidate(client):
     assert out.status == "PLACED"
 
 
+def test_buyer_agent_stops_instead_of_guessing_quantity(client, monkeypatch):
+    from app.orchestrator import parser_api
+    from app.orchestrator.llm import LlmClient
+    monkeypatch.setattr(parser_api, "llm", LlmClient(api_key="", model="m"))
+    out = buyer_agent.run(client, "lactose-free milk for Monday", "prot_hotel_v1", **FAST)
+    assert out.status == "NEEDS_INPUT" and out.order is None
+    assert any(s.what == "Needs an answer before ordering" for s in out.steps)
+
+
 def test_choose_falls_back_to_top_rank_when_nothing_is_auto():
     cands = [{"id": "b", "rank": 2, "selectable": True, "outcome_preview": "BUYER_APPROVAL"},
              {"id": "a", "rank": 1, "selectable": True, "outcome_preview": "BUYER_APPROVAL"},

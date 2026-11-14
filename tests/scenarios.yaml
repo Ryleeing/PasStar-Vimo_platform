@@ -1,0 +1,88 @@
+# Scenarios for tests/runner.py. Each scenario is said five different ways; the runner
+# checks what the parser understood and how the purchase ended.
+#
+# expect:
+#   category / requirements / quantity / delivery   what the request must be understood as
+#                                                   (omit a key to skip that check)
+#     requirements is the exact set of codes: an extra code is as wrong as a missing one
+#     delivery: tomorrow | next_<weekday> | in_<n>_days
+#   final: allowed end states of the purchase, any of
+#     PLACED, PENDING_BUYER_APPROVAL, PENDING_VALIO_REVIEW, BUYER_AUTHORIZATION_REQUIRED,
+#     REQUOTE_REQUIRED, REJECTED, NEEDS_INPUT, NO_CANDIDATES
+
+scenarios:
+  - id: S1-milk-auto
+    description: Main demo flow. Hotel orders lactose-free milk within the automatic limit.
+    protocol: prot_hotel_v1
+    phrasings:
+      - 1000 litres of lactose-free milk by Monday
+      - need 1000 l lactose free milk, monday delivery pls
+      - Tarvitsen 1000 litraa laktoositonta maitoa maanantaiksi
+      - Vi behöver 1000 liter laktosfri mjölk till måndag
+      - For the banquet we have to get one thousand litres of milk, it must be lactose-free, delivered Monday at the latest
+    expect:
+      category: "10400"
+      requirements: [FREE_FROM_LACTOSE]
+      quantity: {value: 1000, unit: L}
+      delivery: next_monday
+      final: [PLACED]
+
+  - id: S2-milk-external-approval
+    description: Agent customer whose protocol sends over-limit orders to its own ERP for a signed approval.
+    protocol: prot_hotel_ext_v1
+    phrasings:
+      - 1000 litres of lactose-free milk by Monday
+      - lactose-free milk, 1000 L, deliver Monday
+      - 1000 litraa laktoositonta maitoa, toimitus maanantaina
+      - 1000 l laktosfri mjölk, leverans på måndag
+      - Please arrange 1000 litres of milk without lactose so it arrives on Monday
+    expect:
+      category: "10400"
+      requirements: [FREE_FROM_LACTOSE]
+      quantity: {value: 1000, unit: L}
+      delivery: next_monday
+      final: [PLACED]
+
+  - id: S3-quark-nut-free
+    description: Hospital kitchen with an allergen requirement and a relative date.
+    protocol: prot_hotel_v1
+    phrasings:
+      - 50 kg of nut-free quark for tomorrow
+      - quark 50kg tomorrow, must be nut free
+      - 50 kiloa pähkinätöntä rahkaa huomiseksi
+      - 50 kg nötfri kvarg till i morgon
+      - We need fifty kilos of quark delivered tomorrow; it has to be free from nuts because of patient allergies
+    expect:
+      category: "10430"
+      requirements: [AN]
+      quantity: {value: 50, unit: kg}
+      delivery: tomorrow
+      final: [PLACED, PENDING_BUYER_APPROVAL, NO_CANDIDATES]
+
+  - id: S4-missing-quantity
+    description: The amount is missing. The agent must ask, never order a guessed quantity.
+    protocol: prot_hotel_v1
+    phrasings:
+      - lactose-free milk for Monday
+      - some lactose free milk monday
+      - laktoositonta maitoa maanantaiksi
+      - laktosfri mjölk till måndag
+      - Could you get us lactose-free milk for the Monday lunch service?
+    expect:
+      category: "10400"
+      requirements: [FREE_FROM_LACTOSE]
+      final: [NEEDS_INPUT]
+
+  - id: S5-unknown-attribute
+    description: Asks for an attribute the catalogue does not know. It must not be dropped silently.
+    protocol: prot_hotel_v1
+    phrasings:
+      - 200 litres of keto milk by Monday
+      - keto milk 200 l monday
+      - 200 litraa keto-maitoa maanantaiksi
+      - 200 liter keto-mjölk till måndag
+      - We are switching the menu to keto, so 200 litres of keto milk for Monday please
+    expect:
+      category: "10400"
+      quantity: {value: 200, unit: L}
+      final: [NEEDS_INPUT]

@@ -9,6 +9,9 @@ venv/
 *.db
 *.db-journal
 
+# Runner reports (tests/runner.py)
+tests/reports/
+
 # Secrets (data/ holds generated demo keys, see app/demo_keys.py)
 .env
 data/

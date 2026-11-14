@@ -40,10 +40,15 @@ class Step:
 
 @dataclass
 class Outcome:
-    """What happened in one purchase run, in order. `order` is the last order seen."""
+    """What happened in one purchase run, in order. `order` is the last order seen.
+
+    `stopped` is set when the agent deliberately stopped before ordering, e.g. NEEDS_INPUT
+    when a person must answer a question first. `structured` is the request it worked from."""
     steps: list[Step] = field(default_factory=list)
     order: Optional[dict] = None
     error: Optional[ApiError] = None
+    stopped: Optional[str] = None
+    structured: Optional[dict] = None
 
     def log(self, what: str, detail: str = "") -> None:
         self.steps.append(Step(what, detail))
@@ -52,6 +57,8 @@ class Outcome:
     def status(self) -> str:
         if self.error:
             return f"ERROR {self.error.code}"
+        if self.stopped:
+            return self.stopped
         return self.order["status"] if self.order else "NO_ORDER"
 
 

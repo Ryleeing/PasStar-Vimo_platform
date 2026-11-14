@@ -40,6 +40,7 @@ def run(client: PassClient, protocol_id: str, structured: dict, profile_id: Opti
     selectable = [c for c in result["candidates"] if c["selectable"]]
     if not selectable:
         out.log("No candidate to choose", result.get("no_candidate_reason") or "")
+        out.stopped = "NO_CANDIDATES"
         return out
     top = selectable[0]
     out.log("Chose the top-ranked candidate", f"{top['id']} ({top['lines'][0]['name']}), "
