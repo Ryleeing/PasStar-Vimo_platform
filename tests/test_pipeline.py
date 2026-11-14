@@ -189,6 +189,45 @@ def test_unknown_request_is_not_found(env):
     assert e.value.code == "NOT_FOUND"
 
 
+# ───── external agent requests ─────
+
+def new_agent_request(p: Pipeline) -> str:
+    body = CreateRequest(protocol_id="prot_hotel_ext_v1", input_mode="PANEL", structured=fx.STRUCTURED)
+    return p.create_request("buy_hotel", "agent:agt_hotel_ext", body)
+
+
+def test_agent_request_skips_node_1(env):
+    p, _ = env
+    r = p.result(new_agent_request(p))
+    n1 = r.chain[0]
+    assert n1.can_reject is False and n1.retries_left == 0 and n1.reject_options == []
+    assert "agt_hotel_ext" in n1.summary and "not interpreted" in n1.summary
+    assert "skipped" in n1.events[0].logic
+    assert r.candidates and r.chain[1].can_reject is True
+
+
+def test_agent_cannot_reject_node_1(env):
+    p, _ = env
+    rid = new_agent_request(p)
+    with pytest.raises(PipelineError) as e:
+        p.reject(rid, 1, RejectNodeRequest(reason="WRONG_QUANTITY"))
+    assert e.value.code == "VALIDATION_ERROR"
+    assert p.result(rid).attempt == 1
+
+
+def test_agent_skipped_node_stays_skipped_after_rerun(env):
+    p, _ = env
+    rid = new_agent_request(p)
+    r = reject(p, rid, 3, "PREFER_SINGLE_SKU")
+    assert r.attempt == 2 and r.chain[0].can_reject is False
+
+
+def test_human_request_node_1_is_still_rejectable(env):
+    p, _ = env
+    n1 = p.result(new_request(p)).chain[0]
+    assert n1.can_reject is True and n1.summary.startswith("You need:")
+
+
 def test_timeline_events_are_in_time_order(env):
     p, _ = env
     rid = new_request(p)

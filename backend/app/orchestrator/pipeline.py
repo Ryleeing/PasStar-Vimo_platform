@@ -69,6 +69,17 @@ def _new_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:8]}"
 
 
+AGENT_PREFIX = "agent:"   # created_by for requests submitted by an external agent, e.g. "agent:agt_hotel_ext"
+
+
+def agent_of(created_by: str) -> Optional[str]:
+    """The agent ID if an external agent submitted the request, else None.
+
+    Agents understand the request themselves and send structured data, so node 1 is skipped
+    for them: nothing was interpreted, so there is nothing to reject. They re-query instead."""
+    return created_by[len(AGENT_PREFIX):] if created_by.startswith(AGENT_PREFIX) else None
+
+
 class Pipeline:
     def __init__(self, conn: sqlite3.Connection, deps: Deps,
                  clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc)) -> None:
@@ -103,7 +114,8 @@ class Pipeline:
         structured = StructuredRequest.model_validate_json(req["structured_json"])
 
         out = _Attempt(self, request_id, attempt, from_node, prev_attempt)
-        structured = self._node1(out, structured, constraints, profile.body.name if profile else None)
+        structured = self._node1(out, structured, constraints, profile.body.name if profile else None,
+                                 agent_of(req["created_by"]))
         kept, blocked = self._node2(out, structured, rules, constraints)
         drafts = self._node3(out, structured, rules, kept, constraints, protocol.body.buyer_id, protocol.body.agent_id)
         self._node4(out, structured, rules, drafts, blocked, constraints)
@@ -120,6 +132,9 @@ class Pipeline:
         req = self._request_row(request_id)
         if node not in NODE_NAMES:
             raise PipelineError("NOT_FOUND", f"Node {node} does not exist")
+        if node == 1 and agent_of(req["created_by"]):
+            raise PipelineError("VALIDATION_ERROR", "Node 1 was skipped for this agent request; "
+                                "submit a new request with the corrected conditions instead")
         if body.reason not in REJECT_OPTIONS[node]:
             raise PipelineError("VALIDATION_ERROR", f"{body.reason} is not a reject reason for node {node}",
                                 allowed=REJECT_OPTIONS[node])
@@ -156,7 +171,7 @@ class Pipeline:
         return RequestResult(
             request_id=request_id, status=req["status"], attempt=attempt,
             structured=StructuredRequest.model_validate_json(req["structured_json"]),
-            chain=[self._chain_node(n) for n in nodes], candidates=ranked,
+            chain=[self._chain_node(n, agent_of(req["created_by"])) for n in nodes], candidates=ranked,
             blocked=[c for c in cands if c.rank is None],
             no_candidate_reason=None if ranked else nodes[-1]["summary"],
         )
@@ -169,16 +184,23 @@ class Pipeline:
     # ───────────── nodes ─────────────
 
     def _node1(self, out: "_Attempt", structured: StructuredRequest, constraints: list[dict],
-               profile_name: Optional[str]) -> StructuredRequest:
+               profile_name: Optional[str], agent_id: Optional[str]) -> StructuredRequest:
         for c in _for_node(constraints, 1):
             if "structured" in c["params"]:
                 structured = StructuredRequest.model_validate(c["params"]["structured"])
         facts = {"category": structured.category_label or structured.category,
                  "requirements": [r.label or r.code for r in structured.requirements],
                  "quantity": f"{structured.quantity.value:g} {structured.quantity.unit}",
-                 "delivery_date": structured.delivery_date.isoformat(), "profile": profile_name}
-        out.node(1, facts, [self._event("Understood the request", "Used the confirmed structured request as is",
-                                        [EvidenceRef(source="BUYER_INPUT", detail=json.dumps(facts))])])
+                 "delivery_date": structured.delivery_date.isoformat(), "profile": profile_name,
+                 "submitted_by_agent": agent_id}
+        if agent_id:
+            event = self._event(f"Received a structured request from agent {agent_id}",
+                                "The agent understood the request itself; this node was skipped",
+                                [EvidenceRef(source="BUYER_INPUT", detail=json.dumps(facts))])
+        else:
+            event = self._event("Understood the request", "Used the confirmed structured request as is",
+                                [EvidenceRef(source="BUYER_INPUT", detail=json.dumps(facts))])
+        out.node(1, facts, [event])
         return structured
 
     def _node2(self, out: "_Attempt", structured: StructuredRequest, rules: EffectiveRules,
@@ -308,10 +330,12 @@ class Pipeline:
                 out.update(l.product_id for l in Candidate.model_validate_json(row["body_json"]).lines)
         return out
 
-    def _chain_node(self, row: sqlite3.Row) -> ChainNode:
+    def _chain_node(self, row: sqlite3.Row, agent_id: Optional[str]) -> ChainNode:
         n, left = row["node"], self._retries_left(row["request_id"], row["node"])
+        skipped = n == 1 and agent_id is not None
         return ChainNode(node=n, name=NODE_NAMES[n], attempt=row["attempt"], status=row["status"], summary=row["summary"],
-                         can_reject=left > 0, retries_left=left, reject_options=REJECT_OPTIONS[n],
+                         can_reject=left > 0 and not skipped, retries_left=0 if skipped else left,
+                         reject_options=[] if skipped else REJECT_OPTIONS[n],
                          events=[ChainEvent.model_validate(e) for e in json.loads(row["timeline_json"])])
 
 

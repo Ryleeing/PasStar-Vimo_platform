@@ -19,7 +19,10 @@ class TemplateExplain:
         if node == 1:
             reqs = ", ".join(d["requirements"]) or "no extra requirements"
             profile = f"; profile '{d['profile']}' applied" if d.get("profile") else ""
-            return f"You need: {d['category']}, {reqs}, {d['quantity']}, delivered by {d['delivery_date']}{profile}."
+            what = f"{d['category']}, {reqs}, {d['quantity']}, delivered by {d['delivery_date']}{profile}"
+            if d.get("submitted_by_agent"):
+                return f"Agent {d['submitted_by_agent']} sent a structured request (not interpreted here): {what}."
+            return f"You need: {what}."
         if node == 2:
             return (f"Kept {d['kept']} products that meet every hard requirement; "
                     f"{d['blocked']} flagged red, {d['dropped']} not relevant.")
