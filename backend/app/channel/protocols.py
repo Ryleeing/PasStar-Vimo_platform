@@ -74,6 +74,21 @@ def get_active(protocol_id: str, agent_id: Optional[str]) -> Protocol:
     return p
 
 
+def active_for_agent(agent_id: str, who: Caller) -> Protocol:
+    """The protocol an agent acts under now: its latest ACTIVE version. A raised limit creates a new version, so
+    callers look the protocol up through the agent instead of keeping a fixed protocol id."""
+    a = db.one("SELECT buyer_id FROM agents WHERE id = ?", (agent_id,))
+    visible = a is not None and (who.kind == "VALIO_USER" or (who.kind == "AGENT" and who.agent_id == agent_id)
+                                 or (who.kind == "BUYER_USER" and who.buyer_id == a["buyer_id"]))
+    if not visible:
+        raise ApiError("NOT_FOUND", f"Agent {agent_id} does not exist")
+    r = db.one("SELECT id FROM protocols WHERE agent_id = ? AND status = 'ACTIVE' ORDER BY version DESC LIMIT 1",
+               (agent_id,))
+    if r is None:
+        raise ApiError("PROTOCOL_INVALID", f"Agent {agent_id} has no active protocol; the buyer must sign one first")
+    return get_active(r["id"], None)
+
+
 def effective_rules(protocol: Protocol, profile: Optional[Profile]) -> EffectiveRules:
     """Protocol ∩ profile: hard requirements are unioned, substitution takes the stricter side.
     A profile can never make anything wider than the protocol."""

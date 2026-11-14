@@ -18,7 +18,7 @@ from datetime import date, timedelta
 from typing import Any, Optional
 
 from .. import db, deps, fixtures
-from ..channel import checkpoints, identity, orders, quotes
+from ..channel import checkpoints, identity, orders, protocols, quotes
 from ..channel import audit as audit_store
 from ..errors import ApiError
 from ..internal import Audience
@@ -119,11 +119,7 @@ def _agent_only(who: Audience) -> None:
 
 def _protocol_id(who: Audience) -> str:
     """The agent's active protocol: one agent acts under one protocol at a time."""
-    row = db.one("SELECT id FROM protocols WHERE agent_id = ? AND status = 'ACTIVE' ORDER BY version DESC LIMIT 1",
-                 (who.agent_id,))
-    if row is None:
-        raise ApiError("PROTOCOL_INVALID", f"Agent {who.agent_id} has no active protocol; the buyer must sign one first")
-    return row["id"]
+    return protocols.active_for_agent(who.agent_id, who).id
 
 
 # ───── get_mandate ─────

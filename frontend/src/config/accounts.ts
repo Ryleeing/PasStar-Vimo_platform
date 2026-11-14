@@ -24,14 +24,13 @@ export interface Workspace {
   mode?: 'SEPARATE' | 'SELF';
   modeLabel: string;
   buyerId?: string;
-  protocolId?: string;
   /** The agent named in this workspace's protocol (backend seed: app/channel/seed.py). */
   agentId?: string;
 }
 
 export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
-  hotel: { key: 'hotel', name: 'Hotel Helsinki Central', kind: 'buyer', mode: 'SEPARATE', modeLabel: 'Organisation · separate approver', buyerId: 'buy_hotel', protocolId: 'prot_hotel_v1', agentId: 'agt_hotel' },
-  bistro: { key: 'bistro', name: 'Bistro Kallio', kind: 'buyer', mode: 'SELF', modeLabel: 'Single owner · self-approval logged', buyerId: 'buy_bistro', protocolId: 'prot_bistro_v1', agentId: 'agt_bistro' },
+  hotel: { key: 'hotel', name: 'Hotel Helsinki Central', kind: 'buyer', mode: 'SEPARATE', modeLabel: 'Organisation · separate approver', buyerId: 'buy_hotel', agentId: 'agt_hotel' },
+  bistro: { key: 'bistro', name: 'Bistro Kallio', kind: 'buyer', mode: 'SELF', modeLabel: 'Single owner · self-approval logged', buyerId: 'buy_bistro', agentId: 'agt_bistro' },
   valio: { key: 'valio', name: 'Valio Aimo', kind: 'seller', modeLabel: 'Channel owner' },
 };
 

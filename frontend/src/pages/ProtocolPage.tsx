@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ShieldAlert, ShieldCheck, ShieldPlus, Sparkles } from 'lucide-react';
-import { amendProtocol, decideApproval, draftProtocol, getProtocol, signProtocol } from '../api/endpoints';
+import { amendProtocol, decideApproval, draftProtocol, getActiveProtocol, signProtocol } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Protocol, ProtocolBody, ProtocolDiff } from '../api/types';
 import { displayUser } from '../config/accounts';
@@ -80,7 +80,7 @@ export function DiffList({ d }: { d: ProtocolDiff }) {
 
 export function ProtocolPage() {
   const { workspace } = useSession();
-  const p = useAsync(() => getProtocol(workspace.protocolId!), [workspace.protocolId]);
+  const p = useAsync(() => getActiveProtocol(workspace.agentId!), [workspace.agentId]);
 
   return (
     <>

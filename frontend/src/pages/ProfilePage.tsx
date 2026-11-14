@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Save, X } from 'lucide-react';
-import { getProtocol, listProfiles, updateProfile } from '../api/endpoints';
+import { getActiveProtocol, listProfiles, updateProfile } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Profile, ProfileBody } from '../api/types';
 import { eur } from '../lib/format';
@@ -13,7 +13,7 @@ const W_LABEL: Record<keyof Weights, string> = { price: 'Price', fulfilment: 'On
 export function ProfilePage() {
   const { workspace } = useSession();
   const profiles = useAsync(() => listProfiles(workspace.buyerId!), [workspace.buyerId]);
-  const protocol = useAsync(() => getProtocol(workspace.protocolId!), [workspace.protocolId]);
+  const protocol = useAsync(() => getActiveProtocol(workspace.agentId!), [workspace.agentId]);
   const [id, setId] = useState<string | null>(null);
   const current = profiles.data?.find((p) => p.id === id) ?? profiles.data?.[0];
 

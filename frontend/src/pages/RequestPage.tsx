@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, ArrowUp, Check, ChevronDown, RotateCcw } from 'lucide-react';
 import { Mascot, MascotFace, type MascotMood } from '../components/Mascot';
-import { createRequest, getFacets, listProfiles, parseRequest, rejectNode } from '../api/endpoints';
+import { createRequest, getActiveProtocol, getFacets, listProfiles, parseRequest, rejectNode } from '../api/endpoints';
 import { describeError } from '../api/client';
 import type { Ambiguity, Facets, Requirement, StructuredRequest } from '../api/types';
 import { useSession } from '../state/session';
@@ -102,8 +102,9 @@ export function RequestPage() {
 
   /** Run the four steps on a request and go to the options. */
   const find = async (structured: StructuredRequest, rawText: string | null) => {
+    const protocol = await getActiveProtocol(workspace.agentId!);
     const request = await createRequest({
-      protocol_id: workspace.protocolId!,
+      protocol_id: protocol.id,
       profile_id: profile?.id ?? null,
       input_mode: rawText ? 'NATURAL_LANGUAGE' : 'PANEL',
       raw_text: rawText,

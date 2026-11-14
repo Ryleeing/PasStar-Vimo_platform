@@ -35,7 +35,7 @@ function Review() {
     setPlacing(true);
     try {
       // Same Idempotency-Key on every retry of this quote → never two orders.
-      const o = await placeOrder(quote.id, quote.protocol_id ?? workspace.protocolId!, sel.idempotencyKey);
+      const o = await placeOrder(quote.id, quote.protocol_id, sel.idempotencyKey);
       patch({ order: o });
       if (o.status === 'PLACED') navigate('/ordered');
       else if (o.status === 'PENDING_BUYER_APPROVAL') {

@@ -97,6 +97,12 @@ def _out(who: Audience, model) -> dict:
 
 # ───── Protocols (BE1) ─────
 
+@app.get("/v1/agents/{agent_id}/protocol", response_model=Protocol, tags=["BE1 · protocols"])
+def active_protocol(agent_id: str, who: Audience = Caller):
+    """The protocol this agent acts under now (its latest ACTIVE version). Use it instead of a fixed protocol id:
+    raising a limit creates a new version and retires the old one."""
+    return _out(who, protocols.active_for_agent(agent_id, who))
+
 @app.post("/v1/protocols/draft", response_model=Protocol, tags=["BE1 · protocols"])
 def draft_protocol(body: ProtocolDraftRequest, who: Audience = Caller):
     """The agent drafts a protocol from one sentence (calls parser.draft_protocol from BE3); returns a DRAFT plus open questions."""
@@ -307,15 +313,30 @@ def holds_report(since: Optional[datetime] = None, until: Optional[datetime] = N
 
 # ───── 管理（BE2 / BE1）─────
 
-@app.get("/v1/admin/faults", response_model=list[Fault], tags=["BE2 · admin"])
+PROXY_HEADERS = ("cf-connecting-ip", "x-forwarded-for", "forwarded")
+LOCAL_HOSTS = {"127.0.0.1", "::1", "localhost", "testclient"}
+
+
+def _local_only(request: Request) -> None:
+    """Admin routes (reset, faults) answer only on the machine running the backend. A request that came through a
+    tunnel or proxy (e.g. cloudflared, which adds Cf-Connecting-Ip) is refused, so a public demo URL cannot wipe the
+    data or bring back the public demo agent keys."""
+    client = request.client.host if request.client else None
+    if client not in LOCAL_HOSTS or any(h in request.headers for h in PROXY_HEADERS):
+        raise errors.ApiError("OUT_OF_SCOPE", "Admin endpoints are only available on the machine running PasStar")
+
+LocalOnly = Depends(_local_only)
+
+
+@app.get("/v1/admin/faults", response_model=list[Fault], tags=["BE2 · admin"], dependencies=[LocalOnly])
 def list_faults():
     return fx.FAULTS
 
-@app.put("/v1/admin/faults/{name}", response_model=Fault, tags=["BE2 · admin"])
+@app.put("/v1/admin/faults/{name}", response_model=Fault, tags=["BE2 · admin"], dependencies=[LocalOnly])
 def set_fault(name: Literal["PRICE_CHANGE", "PARTIAL_STOCK", "TIMEOUT", "RATE_LIMIT", "EMPTY_RESULT"], body: FaultUpdate):
     return Fault(name=name, enabled=body.enabled, params=body.params)
 
-@app.post("/v1/admin/reset", tags=["BE1 · admin"])
+@app.post("/v1/admin/reset", tags=["BE1 · admin"], dependencies=[LocalOnly])
 @_atomic
 def reset():
     """Clears the BE1 tables (buyers, users, agents, protocols, quotes, orders, approvals, audit) and writes the demo seed data;

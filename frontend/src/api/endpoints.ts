@@ -12,6 +12,8 @@ const enc = encodeURIComponent;
 export const draftProtocol = (buyer_id: string, agent_id: string, description: string) =>
   api<Protocol>('POST', '/v1/protocols/draft', { body: { buyer_id, agent_id, description } });
 export const getProtocol = (id: string) => api<Protocol>('GET', `/v1/protocols/${enc(id)}`);
+/** The protocol the workspace's agent acts under now. Never keep a protocol id: raising a limit makes a new version. */
+export const getActiveProtocol = (agentId: string) => api<Protocol>('GET', `/v1/agents/${enc(agentId)}/protocol`);
 export const updateProtocol = (id: string, body: ProtocolBody) =>
   api<Protocol>('PUT', `/v1/protocols/${enc(id)}`, { body: { body } });
 export const signProtocol = (id: string) => api<Protocol>('POST', `/v1/protocols/${enc(id)}/sign`);

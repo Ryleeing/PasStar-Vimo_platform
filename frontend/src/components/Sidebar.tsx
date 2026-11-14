@@ -6,6 +6,7 @@ import { ACCOUNTS, PAGES_BY_ROLE, WORKSPACES, type RoleKey } from '../config/acc
 import { useSession } from '../state/session';
 import { progressSteps, useFlow } from '../state/flow';
 import { listApprovals, resetDemo } from '../api/endpoints';
+import { describeError } from '../api/client';
 import { API_BASE, type ApiMode } from '../api/client';
 import { Avatar, Button, useAsync, useDismiss, useToast } from './ui';
 
@@ -176,9 +177,15 @@ function SideFooter() {
           size="sm"
           className="ml-auto"
           onClick={async () => {
-            await resetDemo().catch(() => undefined);
+            try {
+              await resetDemo();
+            } catch (e) {
+              toast(describeError(e), 'bad');
+              return;
+            }
             reset();
-            toast('Demo data reset', 'info');
+            // Every page reads fresh data (protocol, approvals, audit) instead of what it loaded before the reset.
+            window.location.reload();
           }}
         >
           <RotateCcw size={15} /> Reset demo
