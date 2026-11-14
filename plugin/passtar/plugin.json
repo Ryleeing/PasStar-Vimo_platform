@@ -1,0 +1,8 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "passtar",
+  "version": "0.1.0",
+  "description": "PasStar: order from Valio Aimo as a buyer's purchasing agent, within the protocol the buyer signed.",
+  "author": {"name": "Yes We Cooked"},
+  "keywords": ["valio", "aimo", "purchasing", "food service"]
+}

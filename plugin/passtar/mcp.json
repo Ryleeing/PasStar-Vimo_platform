@@ -3,16 +3,7 @@
   "mcpServers": {
     "passtar": {
       "type": "streamable-http",
-      "url": "https://YOUR-DOMAIN/mcp",
-      "extensions": {
-        "com.openai": {
-          "auth": {
-            "type": "api_key",
-            "headerScheme": "custom_header",
-            "headerName": "X-Agent-Key"
-          }
-        }
-      }
+      "url": "https://YOUR-DOMAIN/mcp"
     }
   }
 }

@@ -5,7 +5,8 @@ and orders within the buyer's signed protocol. The server is `backend/app/orches
 
 ```
 passtar/
-  mcp.json                          ChatGPT: MCP server, API key in the X-Agent-Key header
+  plugin.json                       Agent Plugins manifest (required at the package root)
+  mcp.json                          MCP server (Agent Plugins schema: type and url only; the key is given when connecting)
   .mcp.json                         Claude: the same server; URL and key from environment variables
   .claude-plugin/plugin.json        Claude plugin manifest
   skills/valio-purchasing/SKILL.md  How to buy through PasStar: workflow, presenting options, honesty rules
