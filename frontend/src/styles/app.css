@@ -1602,7 +1602,26 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 .opt-badge { background: rgba(23, 182, 196, 0.11); color: var(--accent-ink); }
 .pill.tone-ok, .opt-save { background: rgba(26, 138, 62, 0.10); }
 /* the reference's hatched bars: a fine diagonal sheen on filled bars */
-.tl-fill, .prio-bar i { background-image: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.28) 0 3px, transparent 3px 7px); }
-.tl-bar, .prio-bar { background: rgba(255, 255, 255, 0.8); box-shadow: inset 0 0 0 1px var(--border); }
+.prio-bar i { background-image: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.28) 0 3px, transparent 3px 7px); }
+.prio-bar { background: rgba(255, 255, 255, 0.8); box-shadow: inset 0 0 0 1px var(--border); }
 
 .nav a.active { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), var(--accent-shadow); }
+
+/* evidence tags in "How these options were found": the steps sit in narrow columns, so each tag takes the
+   column's full width with generous padding and line height instead of a squeezed pill. */
+.run-evidence { gap: 10px; padding-left: 10px; }
+.run-evidence .evidence { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.src { display: block; padding: 9px 12px; line-height: 1.55; border-radius: 12px; }
+.src b { margin-right: 2px; }
+
+/* Reliability score bars: thick rounded pills on a tinted track of the same hue, a soft fill that is a touch
+   lighter at the top, rounded at the end. Colours keep their meaning (green reliable, yellow unsure, red risky). */
+.tl-bar { height: 14px; border-radius: 999px; overflow: hidden; background: var(--surface-3); box-shadow: none; }
+.tl-bar:has(.tl-go) { background: rgba(31, 164, 90, 0.12); }
+.tl-bar:has(.tl-caution) { background: rgba(240, 190, 30, 0.16); }
+.tl-bar:has(.tl-stop) { background: rgba(217, 45, 32, 0.10); }
+.tl-fill { min-width: 14px; border-radius: 999px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 1px 3px -1px rgba(0, 0, 0, 0.12); }
+.tl-fill.tl-go { background: linear-gradient(180deg, #4cc785 0%, #27a862 100%); }
+.tl-fill.tl-caution { background: linear-gradient(180deg, #f8d659 0%, #efbe1f 100%); }
+.tl-fill.tl-stop { background: linear-gradient(180deg, #f27a6e 0%, #df4334 100%); }
+.trust-line { grid-template-columns: 128px minmax(80px, 1fr) 56px; }
