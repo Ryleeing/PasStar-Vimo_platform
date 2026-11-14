@@ -37,6 +37,8 @@ export function Sidebar({ open, collapsed, onToggle, onNavigate }: { open: boole
 
       <AccountSwitcher />
 
+      {/* Only the middle scrolls: the logo and account switcher stay on top, the status and actions at the bottom. */}
+      <div className="side-scroll">
       <nav className="nav" aria-label="Pages">
         {pages.filter((p) => !p.hidden).map((p) => (
           <NavLink key={p.key} to={p.path} onClick={onNavigate} className={({ isActive }) => (isActive ? 'active' : '')}
@@ -49,6 +51,7 @@ export function Sidebar({ open, collapsed, onToggle, onNavigate }: { open: boole
       </nav>
 
       {workspace.kind === 'buyer' ? <ProgressTracker mode={mode} onNavigate={onNavigate} /> : <ValioSummary pending={pendingCount} />}
+      </div>
 
       <SideFooter collapsed={collapsed} />
     </aside>
