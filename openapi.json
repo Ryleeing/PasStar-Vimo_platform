@@ -3026,7 +3026,7 @@
           "BE2 · catalog"
         ],
         "summary": "Facets",
-        "description": "勾选面板的选项。",
+        "description": "Options for the checkbox panel.",
         "operationId": "facets_v1_catalog_facets_get",
         "responses": {
           "200": {
@@ -3108,7 +3108,7 @@
           "BE2 · catalog"
         ],
         "summary": "Search Products",
-        "description": "只返回 L0 字段，不含价格和库存。",
+        "description": "Returns L0 fields only, no prices or stock.",
         "operationId": "search_products_v1_products_search_post",
         "parameters": [
           {
@@ -3334,7 +3334,7 @@
           "BE3 · requests"
         ],
         "summary": "Parse Request",
-        "description": "自然语言 → 预填面板。没有副作用，不建 request。",
+        "description": "Natural language → prefilled panel. No side effects; does not create a request.",
         "operationId": "parse_request_v1_requests_parse_post",
         "parameters": [
           {
@@ -3472,7 +3472,7 @@
           "BE3 · requests"
         ],
         "summary": "Create Request",
-        "description": "提交确认后的需求，跑完四个节点，返回最多 8 个候选 + 标红列表 + 处理链。",
+        "description": "Submit the confirmed request, run all four nodes, and return up to 8 candidates + the blocked list + the processing chain.",
         "operationId": "create_request_v1_requests_post",
         "parameters": [
           {
@@ -3746,7 +3746,7 @@
           "BE3 · requests"
         ],
         "summary": "Reject Node",
-        "description": "否定第 node 个节点：该节点及之后重新生成，attempt + 1。每个节点最多 3 次（否则 RETRY_LIMIT）。\n第 4 个节点只接受 SEND_TO_APPROVAL 或 PICK_OTHER。",
+        "description": "Reject node number `node`: that node and everything after it is regenerated, attempt + 1. At most 3 attempts per node (otherwise RETRY_LIMIT).\nNode 4 only accepts SEND_TO_APPROVAL or PICK_OTHER.",
         "operationId": "reject_node_v1_requests__request_id__nodes__node__reject_post",
         "parameters": [
           {
@@ -4054,7 +4054,7 @@
           "BE3 · requests"
         ],
         "summary": "Select Candidate",
-        "description": "选中一个候选：调用 BE1 quotes.create + gate.evaluate，返回签名报价和判断结果。不能选标红的。",
+        "description": "Select a candidate: calls BE1 quotes.create + gate.evaluate and returns the signed quote and the decision. Blocked candidates cannot be selected.",
         "operationId": "select_candidate_v1_requests__request_id__select_post",
         "parameters": [
           {
@@ -6841,7 +6841,7 @@
           "x"
         ],
         "title": "ApproverKey",
-        "description": "审批人的 Ed25519 公钥（JWK）。外部审批时，买方系统用对应的私钥签授权凭证。"
+        "description": "The approver's Ed25519 public key (JWK). With external approval, the buyer's system signs the authorisation token with the matching private key."
       },
       "AttributeCount": {
         "properties": {
@@ -7035,7 +7035,7 @@
           "sign_with_kid"
         ],
         "title": "AuthorizationRequest",
-        "description": "BUYER_AUTHORIZATION_REQUIRED 时返回：买方系统要批准、签名的内容。凭证的 payload 是 BuyerAuthorizationClaims。"
+        "description": "Returned with BUYER_AUTHORIZATION_REQUIRED: what the buyer's system must approve and sign. The token's payload is BuyerAuthorizationClaims."
       },
       "AuthorizeOrderRequest": {
         "properties": {
@@ -8636,7 +8636,7 @@
           "has_manufacturer_data"
         ],
         "title": "ProductPublic",
-        "description": "只含 L0 字段。"
+        "description": "L0 fields only."
       },
       "ProductSearchRequest": {
         "properties": {
@@ -9424,7 +9424,7 @@
           "code"
         ],
         "title": "Requirement",
-        "description": "一条硬性要求或属性。CLAIM=结构化声明（如 FREE_FROM_LACTOSE）；\nALLERGEN_FREE=必须明确声明不含某过敏原（GS1 代码，如 AN 坚果）；LABEL=证书标签。"
+        "description": "One hard requirement or attribute. CLAIM = structured claim (e.g. FREE_FROM_LACTOSE);\nALLERGEN_FREE = must explicitly declare free from an allergen (GS1 code, e.g. AN nuts); LABEL = certification label."
       },
       "RiskTag": {
         "properties": {

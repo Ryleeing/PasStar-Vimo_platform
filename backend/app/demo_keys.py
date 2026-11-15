@@ -1,8 +1,8 @@
-"""演示用：模拟“酒店自己的审批系统”的密钥。
+"""Demo only: keys simulating "the hotel's own approval system".
 
-私钥只属于买方系统，正式环境里 PasStar 永远拿不到它。演示时为了一台电脑跑完全程，
-第一次用到时在 data/demo/ 下生成（data/ 不进仓库），scripts/buyer_erp.py 用它签凭证，
-假服务器只读取其中的公钥，写进外部审批协议的 approver_public_key。
+The private key belongs only to the buyer's system; in production PasStar never gets it. So the whole demo can run on one computer,
+it is generated under data/demo/ on first use (data/ is not in the repo); scripts/buyer_erp.py signs tokens with it,
+and the fake server only reads its public key, writing it into the external-approval protocol's approver_public_key.
 """
 from __future__ import annotations
 

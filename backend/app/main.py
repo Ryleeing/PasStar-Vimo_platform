@@ -259,7 +259,7 @@ def jwks():
     """The public signing key of Valio; anyone can use it to verify protocols and quotes."""
     return signing.jwks()
 
-# ───── Profile（BE3）─────
+# ───── Profile (BE3) ─────
 
 @app.get("/v1/buyers/{buyer_id}/profiles", response_model=list[Profile], tags=["BE3 · profiles"])
 def list_profiles(buyer_id: str, who: Audience = Caller):
@@ -277,27 +277,27 @@ def get_profile(profile_id: str, who: Audience = Caller):
 def update_profile(profile_id: str, body: ProfileBody, who: Audience = Caller):
     return be3.update_profile(profile_id, body, who)
 
-# ───── 目录（BE2）─────
+# ───── Catalogue (BE2) ─────
 
 @app.get("/v1/catalog/facets", response_model=Facets, tags=["BE2 · catalog"])
 def facets():
-    """勾选面板的选项。"""
+    """Options for the checkbox panel."""
     return fx.FACETS
 
 @app.post("/v1/products/search", response_model=list[ProductPublic], tags=["BE2 · catalog"])
 def search_products(body: ProductSearchRequest, x_agent_key: Optional[str] = AgentKey):
-    """只返回 L0 字段，不含价格和库存。"""
+    """Returns L0 fields only, no prices or stock."""
     return [fx.PRODUCT]
 
 @app.get("/v1/products/{product_id}", response_model=ProductPublic, tags=["BE2 · catalog"])
 def get_product(product_id: str):
     return fx.PRODUCT
 
-# ───── 需求、候选、处理链（BE3）─────
+# ───── Requests, candidates, processing chain (BE3) ─────
 
 @app.post("/v1/requests/parse", response_model=ParseResult, tags=["BE3 · requests"])
 def parse_request(body: ParseRequest, who: Audience = Caller):
-    """自然语言 → 预填面板。没有副作用，不建 request。"""
+    """Natural language → prefilled panel. No side effects; does not create a request."""
     # LLM via OpenRouter, rule-based without OPENROUTER_API_KEY. Creates no request; only writes hold events.
     outcome = parser_api.parse_detailed(body.text, be3.profile_for(body.profile_id, who))
     record_parse(audit_store, outcome, HoldCaller(buyer_id=who.buyer_id, agent_id=who.agent_id, actor=identity.actor(who)))
@@ -306,7 +306,7 @@ def parse_request(body: ParseRequest, who: Audience = Caller):
 
 @app.post("/v1/requests", response_model=RequestResult, tags=["BE3 · requests"])
 def create_request(body: CreateRequest, who: Audience = Caller):
-    """提交确认后的需求，跑完四个节点，返回最多 8 个候选 + 标红列表 + 处理链。"""
+    """Submit the confirmed request, run all four nodes, and return up to 8 candidates + the blocked list + the processing chain."""
     return be3.create_request(body, who)
 
 @app.get("/v1/requests/{request_id}", response_model=RequestResult, tags=["BE3 · requests"])
@@ -315,8 +315,8 @@ def get_request(request_id: str, who: Audience = Caller):
 
 @app.post("/v1/requests/{request_id}/nodes/{node}/reject", response_model=RequestResult, tags=["BE3 · requests"])
 def reject_node(request_id: str, node: int, body: RejectNodeRequest, who: Audience = Caller):
-    """否定第 node 个节点：该节点及之后重新生成，attempt + 1。每个节点最多 3 次（否则 RETRY_LIMIT）。
-    第 4 个节点只接受 SEND_TO_APPROVAL 或 PICK_OTHER。"""
+    """Reject node number `node`: that node and everything after it is regenerated, attempt + 1. At most 3 attempts per node (otherwise RETRY_LIMIT).
+    Node 4 only accepts SEND_TO_APPROVAL or PICK_OTHER."""
     return be3.reject_node(request_id, node, body, who)
 
 @app.get("/v1/requests/{request_id}/chain", response_model=ChainTimeline, tags=["BE3 · requests"])
@@ -325,10 +325,10 @@ def get_chain(request_id: str, attempt: Optional[int] = None, who: Audience = Ca
 
 @app.post("/v1/requests/{request_id}/select", response_model=SelectResult, tags=["BE3 · requests"])
 def select_candidate(request_id: str, body: SelectRequest, who: Audience = Caller):
-    """选中一个候选：调用 BE1 quotes.create + gate.evaluate，返回签名报价和判断结果。不能选标红的。"""
+    """Select a candidate: calls BE1 quotes.create + gate.evaluate and returns the signed quote and the decision. Blocked candidates cannot be selected."""
     return be3.select(request_id, body, who)
 
-# ───── 报价、订单（BE1）─────
+# ───── Quotes, orders (BE1) ─────
 
 @app.get("/v1/quotes/{quote_id}", response_model=Quote, tags=["BE1 · orders"])
 def get_quote(quote_id: str, who: Audience = Caller):
@@ -428,7 +428,7 @@ def holds_report(since: Optional[datetime] = None, until: Optional[datetime] = N
     who = identity.caller(None, x_demo_user)
     return _out(who, reports.holds(who, since, until, buyer_id, agent_id))
 
-# ───── 管理（BE2 / BE1）─────
+# ───── Admin (BE2 / BE1) ─────
 
 def _local_only(request: Request) -> None:
     """Admin routes (reset, faults) answer only on the machine running the backend. A request that came through a

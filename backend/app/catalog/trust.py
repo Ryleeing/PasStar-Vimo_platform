@@ -1,12 +1,12 @@
-"""第 0 步：可信等级 A–D 的判定（BE2 在预处理和生成卡片时调用）。
+"""Step 0: deciding trust grades A–D (called by BE2 during preprocessing and card generation).
 
-规则（技术设计文档“可信等级 A–D 的判定”）：
-  A 已证实：制造商结构化数据，24 个月内更新，无冲突
-  B 较弱：  结构化但超过 24 个月；或有过敏原列表但对这一项没有“不含”声明
-  C 推断：  只能从商品名称看出来（且没有结构化数据可以对照）
-  D 缺失/冲突：没有任何数据；或名称与结构化数据冲突
-硬性要求只有在“明确满足 + 等级 A”时才算满足；明确含有 / 可能含有 → 违反（标红）；
-有结构化数据但没有这项声明 → 不匹配（不进候选、不标红）；其余 → 未验证（转审批）。
+Rules (technical design document, "Deciding trust grades A–D"):
+  A verified:   manufacturer's structured data, updated within 24 months, no conflicts
+  B weaker:     structured but older than 24 months; or an allergen list with no "free from" declaration for this item
+  C inferred:   only visible from the product name (and no structured data to check against)
+  D missing/conflict: no data at all; or the name conflicts with the structured data
+A hard requirement only counts as met when "explicitly met + grade A"; explicitly contains / may contain → violation (blocked);
+structured data exists but lacks this declaration → no match (not a candidate, not blocked); everything else → unverified (sent to approval).
 """
 from __future__ import annotations
 
@@ -15,9 +15,9 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Literal, Optional
 
-FRESH_DAYS = 730  # 24 个月
+FRESH_DAYS = 730  # 24 months
 
-# 名称里能识别的声明（芬兰语 / 英语 / 瑞典语）。只作提示，最高 C 级。
+# Claims recognisable in the name (Finnish / English / Swedish). Hints only, grade C at best.
 NAME_PATTERNS = {
     "FREE_FROM_LACTOSE": r"laktoositon|lactose[- ]?free|laktosfri",
     "FREE_FROM_GLUTEN": r"gluteeniton|gluten[- ]?free|glutenfri",
@@ -25,7 +25,7 @@ NAME_PATTERNS = {
     "FREE_FROM_MILK": r"maidoton|milk[- ]?free|mjölkfri",
 }
 
-# 声明对应的过敏原代码：声明缺失时，用过敏原数据补充判断
+# Allergen codes for each claim: when the claim is missing, the allergen data fills in
 CLAIM_TO_ALLERGEN = {"FREE_FROM_LACTOSE": "ML", "FREE_FROM_GLUTEN": "AW", "FREE_FROM_MILK": "AM",
                      "FREE_FROM_EGGS": "AE", "FREE_FROM_SOY": "AY"}
 
@@ -39,7 +39,7 @@ class ProductFacts:
     allergen_list_present: bool = False
     allergens: dict[str, str] = field(default_factory=dict)   # GS1 code -> CONTAINS | MAY_CONTAIN | FREE_FROM
     name_claims: set[str] = field(default_factory=set)
-    has_claim_data: bool = False                               # 结构化声明组是否存在
+    has_claim_data: bool = False                               # whether the structured claim group exists
 
 
 @dataclass
@@ -73,7 +73,7 @@ def check_claim(f: ProductFacts, code: str, today: date) -> RequirementCheck:
         return RequirementCheck("CLAIM", code, "FREE_FROM", g, "SATISFIED" if g == "A" else "UNVERIFIED",
                                 f"Manufacturer explicitly declares free from {alg}")
     if code in f.name_claims:
-        if f.has_synkka and f.has_claim_data:   # 有结构化声明却没有这一条：名称与数据冲突
+        if f.has_synkka and f.has_claim_data:   # structured claims exist but not this one: name conflicts with data
             return RequirementCheck("CLAIM", code, "NOT_CLAIMED", "D", "UNVERIFIED",
                                     "Named in the product name, but missing from the manufacturer's structured claims", conflict=True)
         return RequirementCheck("CLAIM", code, "CLAIMED", "C", "UNVERIFIED", "From the product name only")
@@ -86,7 +86,7 @@ def check_claim(f: ProductFacts, code: str, today: date) -> RequirementCheck:
 def check_allergen_free(f: ProductFacts, code: str, today: date) -> RequirementCheck:
     st = f.allergens.get(code)
     if st in ("CONTAINS", "MAY_CONTAIN"):
-        g = "A" if _fresh(f, today) else "B"   # 说“含有”的旧数据也照样排除：宁严勿宽
+        g = "A" if _fresh(f, today) else "B"   # old data saying "contains" still excludes: better too strict than too loose
         return RequirementCheck("ALLERGEN_FREE", code, st, g, "VIOLATED", "Manufacturer allergen declaration")
     if st == "FREE_FROM":
         g = "A" if _fresh(f, today) else "B"
@@ -103,7 +103,7 @@ def check(f: ProductFacts, kind: str, code: str, today: date) -> RequirementChec
 
 
 def facts_from_raw(p: dict) -> ProductFacts:
-    """把 Valio 原始商品 JSON（一条）转成 ProductFacts。preprocess.py 直接用。"""
+    """Turn one raw Valio product JSON into ProductFacts. Used directly by preprocess.py."""
     s = p.get("synkkaData") or {}
     has = bool(s.get("gtin") or s.get("lastUpdated"))
     groups = {c["name"]: c.get("values") or [] for c in s.get("classifications") or []}

@@ -1,16 +1,16 @@
-"""外部审批（BE1）：买方在自己的系统里批准，agent 带着签名的授权凭证回来下单。
+"""External approval (BE1): the buyer approves in their own system, and the agent comes back with a signed authorisation token to place the order.
 
-流程：
-  1. POST /v1/orders 没带凭证，闸门结果是 BUYER_APPROVAL，协议的 approval_channel 是 EXTERNAL
-     → 订单状态 BUYER_AUTHORIZATION_REQUIRED，附 build_request() 生成的 AuthorizationRequest。
-  2. 买方系统（ERP、审批流）里由审批人批准，用审批人的 Ed25519 私钥签 BuyerAuthorizationClaims。
-  3. agent 带着凭证调 POST /v1/orders/{order_id}/authorization（同一张订单继续走，不新建订单）。
-     如果 agent 事先已经拿到凭证，也可以直接放在 POST /v1/orders 的 buyer_authorization 里。
-  4. verify() 通过 → 视为买方已批准，闸门里 BUYER_APPROVAL 这一级放行；
-     VALIO_REVIEW 和 REJECT 不受凭证影响。价格或库存变了照样 REQUOTE_REQUIRED，新报价要新凭证。
+Flow:
+  1. POST /v1/orders without a token, the gate result is BUYER_APPROVAL, and the protocol's approval_channel is EXTERNAL
+     → order status BUYER_AUTHORIZATION_REQUIRED, with the AuthorizationRequest built by build_request().
+  2. The approver approves in the buyer's system (ERP, approval workflow), signing BuyerAuthorizationClaims with the approver's Ed25519 private key.
+  3. The agent calls POST /v1/orders/{order_id}/authorization with the token (the same order continues; no new order is created).
+     If the agent already has a token, it can also put it straight into buyer_authorization on POST /v1/orders.
+  4. verify() passes → treated as approved by the buyer, and the gate releases the BUYER_APPROVAL level;
+     VALIO_REVIEW and REJECT are not affected by the token. A price or stock change still gives REQUOTE_REQUIRED, and a new quote needs a new token.
 
-凭证只核验三件事：签名是不是协议里登记的审批人公钥、内容和这张报价对不对得上、有没有过期。
-“提需求的人不能批自己的单”在外部审批下由买方系统负责；我们只拒绝 agent 自己的密钥签的凭证。
+The token is checked for three things only: that the signature matches the approver public key registered in the protocol, that the content matches this quote, and that it has not expired.
+"Whoever made the request cannot approve it" is the buyer system's job under external approval; we only reject tokens signed with the agent's own key.
 """
 from __future__ import annotations
 
@@ -24,14 +24,14 @@ from joserfc.jwk import OKPKey
 
 from ..schemas import AuthorizationRequest, BuyerAuthorizationClaims, Outcome, ProtocolBody, Quote
 
-ALG = "Ed25519"                      # RFC 9864 的写法（旧写法 EdDSA 已弃用）
+ALG = "Ed25519"                      # RFC 9864 spelling (the old "EdDSA" is deprecated)
 MAX_LIFETIME_S = 15 * 60
 CLOCK_SKEW_S = 30
 
 
 class AuthorizationError(Exception):
-    """reason 取值：NOT_EXTERNAL_CHANNEL、NO_APPROVER_KEY、BAD_SIGNATURE、BAD_CLAIMS、PROTOCOL_MISMATCH、
-    BUYER_MISMATCH、QUOTE_MISMATCH、AMOUNT_MISMATCH、APPROVER_MISMATCH、EXPIRED、LIFETIME_TOO_LONG、SIGNED_BY_AGENT_KEY"""
+    """reason values: NOT_EXTERNAL_CHANNEL, NO_APPROVER_KEY, BAD_SIGNATURE, BAD_CLAIMS, PROTOCOL_MISMATCH,
+    BUYER_MISMATCH, QUOTE_MISMATCH, AMOUNT_MISMATCH, APPROVER_MISMATCH, EXPIRED, LIFETIME_TOO_LONG, SIGNED_BY_AGENT_KEY"""
 
     def __init__(self, reason: str, message: str):
         super().__init__(message)
@@ -52,7 +52,7 @@ def build_request(quote: Quote, protocol_id: str, body: ProtocolBody,
 
 
 def sign(claims: BuyerAuthorizationClaims, private_jwk: dict) -> str:
-    """买方系统一侧用的（演示脚本和测试）。PasStar 自己从不调用。"""
+    """Used on the buyer-system side (demo scripts and tests). PasStar itself never calls it."""
     key = OKPKey.import_key(private_jwk)
     payload = json.dumps(claims.model_dump(), separators=(",", ":")).encode()
     return jws.serialize_compact({"alg": ALG, "kid": private_jwk.get("kid"), "typ": claims.typ}, payload,
@@ -61,7 +61,7 @@ def sign(claims: BuyerAuthorizationClaims, private_jwk: dict) -> str:
 
 def verify(token: str, quote: Quote, protocol_id: str, body: ProtocolBody,
            agent_public_jwk: Optional[dict] = None, now: Optional[float] = None) -> BuyerAuthorizationClaims:
-    """通过则返回凭证内容，否则抛 AuthorizationError。"""
+    """Returns the token contents if valid, otherwise raises AuthorizationError."""
     now = time.time() if now is None else now
     if body.approval_channel != "EXTERNAL":
         raise AuthorizationError("NOT_EXTERNAL_CHANNEL", "This protocol uses hosted approval in PasStar")
@@ -96,7 +96,7 @@ def verify(token: str, quote: Quote, protocol_id: str, body: ProtocolBody,
 
 
 def resolve_buyer_gate(outcome: Outcome, channel: str, authorized: bool) -> str:
-    """把闸门结果换成订单状态（复核报价之后调用）。凭证只能放行 BUYER_APPROVAL 这一级。"""
+    """Turn the gate result into an order status (called after re-checking the quote). A token can only release the BUYER_APPROVAL level."""
     if outcome == "AUTO":
         return "PLACED"
     if outcome == "BUYER_APPROVAL":

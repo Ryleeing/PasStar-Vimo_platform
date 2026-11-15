@@ -28,7 +28,7 @@ PROTOCOL = Protocol(
     valio_confirmed_at=NOW - timedelta(days=1),
 )
 
-# 外部审批：酒店自己的采购 agent（agt_hotel_ext），超额时在酒店自己的系统里批
+# External approval: the hotel's own purchasing agent (agt_hotel_ext); over-limit orders are approved in the hotel's own system
 PROTOCOL_EXTERNAL = Protocol(
     id="prot_hotel_ext_v1", version=1, status="ACTIVE",
     body=PROTOCOL.body.model_copy(update={
@@ -224,7 +224,7 @@ QUOTE_VERIFY = QuoteVerifyResult(quote_id="quo_1", signature_valid=True, expired
 ORDER = Order(id="ord_1", request_id="req_1", quote_id="quo_1", status="PLACED", gate=GATE_AUTO,
               created_at=NOW, placed_at=NOW)
 
-# 外部审批的例子：agent 选了 cand_3（€1,078.25，超出 €1,000 自动额度）
+# External approval example: the agent picked cand_3 (€1,078.25, over the €1,000 automatic limit)
 QUOTE_EXT = QUOTE.model_copy(update={"id": "quo_7", "candidate_id": "cand_3", "protocol_id": "prot_hotel_ext_v1",
                                      "lines": CAND_3.lines, "totals": CAND_3.totals})
 AUTHORIZATION_REQUEST = AuthorizationRequest(

@@ -1,21 +1,21 @@
 # PasStar · Yes We Cooked
 
-**PasStar 是 Valio Aimo 向 AI 采购 agent 开放的下单通道。**
+**PasStar is the ordering channel Valio Aimo opens to AI purchasing agents.**
 
-酒店、医院、餐厅可以让 AI 助手（ChatGPT、Claude，或自己的 ERP）替它们向 Valio 采购。但每个 agent 都必须拿着买家签发的 key，在买家和 Valio 共同签署的**授权协议**范围内办事：能买什么、自己最多能花多少、超出的由谁审批。每次调用都要经过同一个闸门，越权的会被拦下并上报 Valio，所有操作都记在防篡改的审计日志里。
+Hotels, hospitals and restaurants can let an AI assistant (ChatGPT, Claude, or their own ERP) buy from Valio on their behalf. But every agent must carry a key issued by the buyer and act within an **authorisation protocol** signed by both the buyer and Valio: what it may buy, how much it may spend on its own, and who approves anything beyond that. Every call passes through the same gate; anything out of bounds is blocked and reported to Valio, and every action is written to a tamper-evident audit log.
 
-- 商品数据：Valio 真实目录，17,546 个商品
-- 价格和能否送达：Valio 实时接口
-- 需求解析：LLM（通过 OpenRouter）加规则交叉核对
-- 下单：Valio 签名报价（Ed25519），按协议走闸门
+- Product data: Valio's real catalogue, 17,546 products
+- Prices and deliverability: Valio's live API
+- Request parsing: an LLM (via OpenRouter), cross-checked against rules
+- Ordering: Valio-signed quotes (Ed25519), passed through the gate according to the protocol
 
 ---
 
-## 快速开始
+## Quick start
 
-需要 **Python 3.11+** 和 **Node.js 18+**。
+Requires **Python 3.11+** and **Node.js 18+**.
 
-### 1. 后端
+### 1. Backend
 
 ```bash
 python3 -m venv .venv
@@ -23,7 +23,7 @@ source .venv/bin/activate
 pip install -r backend/requirements.txt
 ```
 
-在仓库根目录建一个 `.env`（已被 git 忽略，**不要提交**），参考 `.env.example`：
+Create a `.env` in the repo root (it is git-ignored, **do not commit it**), based on `.env.example`:
 
 ```bash
 VALIO_API_BASE_URL=https://junction26.valioaimo.fi/
@@ -33,7 +33,7 @@ VALIO_CUSTOMER_ID=…
 OPENROUTER_API_KEY=…
 ```
 
-启动（程序不会自动读取 `.env`，所以先加载它）：
+Start it (the app does not read `.env` by itself, so load it first):
 
 ```bash
 cd backend
@@ -41,21 +41,21 @@ set -a; source ../.env; set +a
 python -m uvicorn app.main:app --port 8000 --reload
 ```
 
-打开 http://localhost:8000/docs 可以看接口文档。
+Open http://localhost:8000/docs for the API docs.
 
-> 改了 `.env` 之后要手动重启后端：`--reload` 只在代码变动时重启，不会重新读取环境变量。
+> After changing `.env`, restart the backend by hand: `--reload` only restarts on code changes and does not re-read environment variables.
 
-### 2. 商品目录（可选，用真实数据时需要）
+### 2. Product catalogue (optional, needed for real data)
 
-从 Valio 资源门户下载 3 个数据文件，生成本地商品库 `backend/data/products.sqlite`：
+Download the 3 data files from the Valio resource portal and build the local product database `backend/data/products.sqlite`:
 
 ```bash
-python backend/scripts/preprocess.py --source-dir <数据文件所在目录>
+python backend/scripts/preprocess.py --source-dir <directory with the data files>
 ```
 
-**没有商品库或没有 Valio key 时，后端会自动改用演示数据**，所有流程照样能跑。演示数据在界面和 agent 的回答里都会标成 `DEMO_DATA`，不会冒充 Valio 的数据。
+**Without the product database or a Valio key, the backend falls back to demo data automatically**, and every flow still works. Demo data is marked `DEMO_DATA` in both the UI and the agent's answers, so it never passes itself off as Valio data.
 
-### 3. 前端
+### 3. Frontend
 
 ```bash
 cd frontend
@@ -63,142 +63,142 @@ npm install
 npm run dev
 ```
 
-打开 http://localhost:5173 。
+Open http://localhost:5173 .
 
 ---
 
-## 演示账号
+## Demo accounts
 
-网页上没有登录，左侧栏顶部可以切换账号（请求头 `X-Demo-User`，**只在本机有效**）：
+There is no login on the web app; switch accounts at the top of the left sidebar (request header `X-Demo-User`, **only works on localhost**):
 
-| 账号 | 角色 | 工作区 | 能做什么 |
+| Account | Role | Workspace | What they can do |
 |---|---|---|---|
-| Aino | 厨师 | Hotel Helsinki Central | 提需求、选方案、看订单；不能批自己的单 |
-| Mikko | 采购经理 | Hotel Helsinki Central | 审批超额订单、签协议、给 agent 发 key |
-| Sanna | 老板 | Bistro Kallio | 一个人模式：自己采购、自己审批（单独记录一步） |
-| Elina | Valio 审核员 | Valio | 确认协议、审核订单、查看所有 agent、封禁 agent |
+| Aino | Chef | Hotel Helsinki Central | Make requests, pick options, see orders; cannot approve their own orders |
+| Mikko | Procurement manager | Hotel Helsinki Central | Approve orders over the limit, sign protocols, issue agent keys |
+| Sanna | Owner | Bistro Kallio | One-person mode: buys and approves on their own (approval logged as a separate step) |
+| Elina | Valio reviewer | Valio | Confirm protocols, review orders, see all agents, block agents |
 
-**两种审批模式**
-- **酒店（两个人模式）**：厨师提需求，经理审批，提需求的人不能批自己的单。
-- **小餐厅（一个人模式）**：老板可以批自己的单，但审批仍是单独的一步，日志里记为"自己批准"。
+**Two approval modes**
+- **Hotel (two-person mode)**: the chef makes the request, the manager approves it, and whoever made a request cannot approve it.
+- **Small restaurant (one-person mode)**: the owner may approve their own orders, but approval is still a separate step, logged as "self-approved".
 
-**小餐厅一开始没有协议**：点 **Reset demo** 后切到 Sanna，会先进入"第 0 步"，引导签协议。
-
----
-
-## 演示流程
-
-**主线（网页）**
-1. **Reset demo** → 切到 **Sanna**，走第 0 步：用一句话描述规则 → AI 起草协议 → 检查（可以直接在草稿上改）→ 签名
-2. 切到 **Elina**，在 Review queue 里确认协议
-3. 切回 **Sanna** 提需求：左边和 A.I.mo 聊天，或者右边填表单，都能直接找方案
-4. 看方案：红绿灯可信度（✓ Reliable / ? Reliable? / ✗ Risky）、分数、数据来源，以及选了之后会怎样
-5. 下单：€1,000 以内直接下单；€1,000–3,000 等审批；超过 €3,000 拒绝
-
-**AI agent（Agents 页）**
-1. 切到 **Mikko** → **Agents** → **Connect an agent**：选 ChatGPT / Claude / ERP → 签发 key（只显示一次）→ 照着生成的步骤接入 → **Try it in the console**
-2. **Console**：左边是用户看到的对话，右边是 PasStar 在幕后做的每一步：验 key、处理链 4 步、闸门、Valio 签名、审计记录
-3. 点 **Try to break the rules**：agent 会真的尝试 4 种越权，每一种都会被拦下
-4. 切到 **Aino** → **My orders**：agent 下的单会自动出现，并标明是哪个 agent 下的
+**The small restaurant starts with no protocol**: click **Reset demo** and switch to Sanna to enter "Step 0", which walks you through signing a protocol.
 
 ---
 
-## AI agent 接入
+## Demo flow
 
-agent 的唯一入口是 **MCP 服务 `POST /mcp`**，请求头带 `X-Agent-Key`。服务一共提供 6 个工具，**没有审批工具**：
+**Main path (web)**
+1. **Reset demo** → switch to **Sanna** and do Step 0: describe the rules in one sentence → AI drafts the protocol → review it (you can edit the draft directly) → sign
+2. Switch to **Elina** and confirm the protocol in the Review queue
+3. Switch back to **Sanna** and make a request: chat with A.I.mo on the left or fill in the form on the right; either one finds options directly
+4. Look at the options: traffic-light reliability (✓ Reliable / ? Reliable? / ✗ Risky), scores, data sources, and what happens if you pick each one
+5. Order: up to €1,000 orders straight away; €1,000–3,000 waits for approval; over €3,000 is refused
 
-| 工具 | 作用 |
+**AI agents (Agents page)**
+1. Switch to **Mikko** → **Agents** → **Connect an agent**: choose ChatGPT / Claude / ERP → issue a key (shown only once) → follow the generated steps to connect → **Try it in the console**
+2. **Console**: the left side is the conversation the user sees; the right side is every step PasStar takes behind the scenes: key check, the 4-step chain, the gate, Valio's signature, the audit record
+3. Click **Try to break the rules**: the agent really attempts 4 kinds of overreach, and every one is blocked
+4. Switch to **Aino** → **My orders**: orders placed by agents show up automatically, labelled with which agent placed them
+
+---
+
+## Connecting an AI agent
+
+The agent's only entry point is the **MCP service `POST /mcp`**, with an `X-Agent-Key` request header. The service offers 6 tools and **no approval tool**:
+
+| Tool | What it does |
 |---|---|
-| `get_mandate` | 我代表谁、能买什么、额度多少、审批人是谁、结果怎么读、必须遵守的规则 |
-| `find_options` | 用户原话加上追问的回答 → 追问，或者排好序的方案（每个都有卡片） |
-| `get_options` | 重新读取某个需求的方案 |
-| `adjust_options` | 换品牌、排除商品或方案、按价格/可靠性排序、只要单一商品、强制走审批 |
-| `place_order` | 下单。同一个方案重复调用，返回的是同一张单 |
-| `order_status` | 查订单状态，以及下一步该怎么跟用户说 |
+| `get_mandate` | Who I act for, what I may buy, my limit, who the approver is, how to read results, the rules I must follow |
+| `find_options` | The user's own words plus answers to follow-up questions → a follow-up question, or ranked options (each with a card) |
+| `get_options` | Re-read the options for a request |
+| `adjust_options` | Change brand, exclude products or options, sort by price/reliability, single product only, force approval |
+| `place_order` | Place an order. Calling it again for the same option returns the same order |
+| `order_status` | Check an order's status, and what to tell the user next |
 
-**ChatGPT 插件**：插件包在 `plugin/passtar/`，包括 `plugin.json`、`mcp.json` 和 Skill。用公网地址和 key 打包：
+**ChatGPT plugin**: the plugin package lives in `plugin/passtar/`, with `plugin.json`, `mcp.json` and a Skill. Package it with a public URL and a key:
 
 ```bash
-cloudflared tunnel --url http://localhost:8000          # 另开一个窗口，一直开着
+cloudflared tunnel --url http://localhost:8000          # in another window, keep it running
 read -s "THE_PASS_AGENT_KEY?Agent key: "; export THE_PASS_AGENT_KEY
-plugin/build.sh https://xxxx.trycloudflare.com          # 生成 plugin/passtar.zip（不进 git）
+plugin/build.sh https://xxxx.trycloudflare.com          # builds plugin/passtar.zip (not in git)
 ```
 
-然后在 ChatGPT 桌面应用里上传 `passtar.zip`。详见 `plugin/README.md`。
+Then upload `passtar.zip` in the ChatGPT desktop app. See `plugin/README.md` for details.
 
-**Claude Code**：
+**Claude Code**:
 
 ```bash
 claude mcp add --transport http passtar https://xxxx.trycloudflare.com/mcp --header "X-Agent-Key: <key>"
 ```
 
-**key 从哪来**
-- 网页：Agents → Connect an agent → Issue the key（只有协议审批人能签发）
-- 命令行：`python backend/scripts/new_agent_keys.py agt_hotel`
-- 演示自带：`demo-hotel`、`demo-bistro` 等，公开写在代码里，**只能在本机用**
+**Where keys come from**
+- Web: Agents → Connect an agent → Issue the key (only the protocol's approver can issue one)
+- Command line: `python backend/scripts/new_agent_keys.py agt_hotel`
+- Built-in demo keys: `demo-hotel`, `demo-bistro` and so on, public in the code, **localhost only**
 
 ---
 
-## 安全设计
+## Security design
 
-- **人只能在本机登录**：经过隧道或代理来的 `X-Demo-User` 请求一律拒绝。外网只能用 agent key 访问。
-- **管理接口只在本机**：重置、故障开关等接口，经过隧道的请求一律拒绝。
-- **key 只存哈希**：签发时只显示一次；可以断开（吊销），Valio 也可以封禁 agent，封禁后拿着有效的 key 也会被拒。
-- **敏感度分级**：agent 最多只能看到 L1（自家价格、能不能送）。L2（库存数量、供应商表现）和 L3（成本、毛利、其他客户）不给。
-- **防探测**：同一个 agent 对同一个商品，每天最多查 3 种不同的数量。超过会返回 `PROBE_LIMIT` 并上报 Valio。
-- **Agent console 只给买家用**，而且只在本机能启动，外人不能通过隧道消耗我们的 LLM 额度。
+- **People can only sign in on localhost**: any `X-Demo-User` request arriving through a tunnel or proxy is refused. From outside, only agent keys work.
+- **Admin endpoints are localhost only**: reset, fault switches and similar endpoints refuse any request that came through a tunnel.
+- **Only key hashes are stored**: a key is shown once when issued; it can be disconnected (revoked), and Valio can block an agent, after which even a valid key is refused.
+- **Sensitivity levels**: an agent sees at most L1 (its own prices, whether it can be delivered). L2 (stock levels, supplier performance) and L3 (costs, margins, other customers) are never given out.
+- **Anti-probing**: one agent may check at most 3 different quantities per product per day. Beyond that it gets `PROBE_LIMIT` and Valio is notified.
+- **The agent console is for buyers only** and can only be started on localhost, so outsiders cannot spend our LLM quota through the tunnel.
 
 ---
 
-## 常见问题
+## Troubleshooting
 
-| 现象 | 处理 |
+| Symptom | Fix |
 |---|---|
-| `Address already in use` | `lsof -i :8000` 找到进程号，再 `kill <进程号>` |
-| agent 报 `PROBE_LIMIT` | 今天对这些商品换过太多次数量。点 **Reset demo** 会清空计数；演示时尽量固定用同一个数量 |
-| ChatGPT 报 "Unknown or blocked agent key" | key 被重置或换掉了。重新签发 key，再重新打包上传插件 |
-| ChatGPT 连不上 | cloudflared 重开后地址会变，要用新地址重新打包 |
-| 重置之后 agent 用不了 | Reset demo 会把 key 换回公开的演示 key，你签发过的 key 都会失效 |
-| Console 的 Live model 报没有 key | `.env` 里加上 `OPENROUTER_API_KEY` 后**重启后端** |
-| 前端报找不到字体 | 拉代码后在 `frontend` 里运行 `npm install`，再重启 `npm run dev` |
+| `Address already in use` | Find the process with `lsof -i :8000`, then `kill <pid>` |
+| Agent reports `PROBE_LIMIT` | Too many different quantities were tried for these products today. **Reset demo** clears the count; during a demo, try to stick to one quantity |
+| ChatGPT says "Unknown or blocked agent key" | The key was reset or replaced. Issue a new key, then repackage and re-upload the plugin |
+| ChatGPT cannot connect | The cloudflared URL changes when it restarts; repackage with the new URL |
+| Agent stops working after a reset | Reset demo swaps keys back to the public demo keys, so every key you issued stops working |
+| Console's Live model says there is no key | Add `OPENROUTER_API_KEY` to `.env`, then **restart the backend** |
+| Frontend cannot find a font | After pulling, run `npm install` in `frontend`, then restart `npm run dev` |
 
 ---
 
-## 目录结构
+## Project layout
 
 ```
 backend/app/
-  main.py            路由（所有 HTTP 接口都在这里）
-  schemas.py         接口契约（Pydantic）
-  internal.py        后端模块之间的内部接口
-  schema.sql         数据库建表
-  channel/           BE1：协议、报价、闸门、订单、审批、审计、agent 与 key
-  catalog/           BE2：商品目录、单位换算、可信等级、证据卡片、披露过滤
-  valio/             BE2：Valio 接口客户端、探测额度、故障模拟
-  orchestrator/      BE3：需求解析、处理链、排序、解释、MCP 服务、agent 接口、agent console
-  config/            rules.yaml（闸门规则）、field_policy.yaml（字段敏感等级）
-backend/scripts/     preprocess.py（生成商品库）、new_agent_keys.py、buyer_erp.py、export_contract.py
-frontend/            React 前端
-plugin/              ChatGPT / Claude 插件包和打包脚本
-agent/               脚本式 agent：正常采购、不用 AI 的脚本、越权的 agent
-tests/               后端测试和评测 runner
-openapi.json, fixtures/   由 backend/scripts/export_contract.py 生成
+  main.py            Routes (every HTTP endpoint is here)
+  schemas.py         API contract (Pydantic)
+  internal.py        Internal interfaces between backend modules
+  schema.sql         Database tables
+  channel/           BE1: protocols, quotes, gate, orders, approvals, audit, agents and keys
+  catalog/           BE2: product catalogue, unit conversion, trust grades, evidence cards, disclosure filtering
+  valio/             BE2: Valio API client, probe limits, fault simulation
+  orchestrator/      BE3: request parsing, processing chain, ranking, explanations, MCP service, agent API, agent console
+  config/            rules.yaml (gate rules), field_policy.yaml (field sensitivity levels)
+backend/scripts/     preprocess.py (builds the product database), new_agent_keys.py, buyer_erp.py, export_contract.py
+frontend/            React frontend
+plugin/              ChatGPT / Claude plugin package and build script
+agent/               Scripted agents: a normal buyer, a script without AI, a rogue agent
+tests/               Backend tests and the evaluation runner
+openapi.json, fixtures/   Generated by backend/scripts/export_contract.py
 ```
 
-**不进仓库的文件**：`.env`、`backend/data/*.sqlite`（商品库、运行时数据）、`plugin/*.zip`、Valio 原始数据。
+**Files not in the repo**: `.env`, `backend/data/*.sqlite` (product database, runtime data), `plugin/*.zip`, Valio's raw data.
 
 ---
 
-## 测试
+## Tests
 
 ```bash
-.venv/bin/python -m pytest -q                       # 后端全部测试
-cd frontend && npx tsc -b --noEmit && npm run build  # 前端类型检查和构建
+.venv/bin/python -m pytest -q                       # all backend tests
+cd frontend && npx tsc -b --noEmit && npm run build  # frontend type check and build
 ```
 
-测试不会调用真实的 LLM 和 Valio 接口，每个测试都用独立的临时数据库。
+Tests never call the real LLM or the Valio API, and every test uses its own temporary database.
 
-评测 runner（真实模型、多种说法、多次重复、故障注入）：
+Evaluation runner (real model, many phrasings, repeated runs, fault injection):
 
 ```bash
 python tests/runner.py --help
@@ -206,51 +206,51 @@ python tests/runner.py --help
 
 ---
 
-## 技术说明
+## Technical notes
 
-### 处理链（每个需求 4 步）
+### Processing chain (4 steps per request)
 
-1. **理解**：LLM 解析原话，再和规则解析交叉核对；缺品类、数量、日期就先追问
-2. **筛选**：按协议的硬性要求和厨房档案过滤，每项要求给出 A–D 可信等级
-3. **排序**：一次批量查 Valio 的价格和能否送达，换算包装规格，最多 8 个方案
-4. **闸门预判**：每个方案标明选了之后会怎样（直接下单 / 等审批 / Valio 审核 / 不允许）
+1. **Understand**: the LLM parses the user's words, cross-checked against rule-based parsing; if the category, quantity or date is missing, it asks first
+2. **Filter**: filter by the protocol's hard requirements and the kitchen profile, giving each requirement an A–D trust grade
+3. **Rank**: one batched lookup of Valio prices and deliverability, convert pack sizes, at most 8 options
+4. **Gate preview**: each option shows what happens if you pick it (orders straight away / waits for approval / Valio review / not allowed)
 
-任何一步觉得不对都可以 **Retry**，只从那一步重新生成。每步最多 3 次，而且不会放宽协议。
+If any step looks wrong you can **Retry** it, which regenerates from that step only. Each step allows at most 3 attempts and never loosens the protocol.
 
-### 可信等级和分数
+### Trust grades and scores
 
-| 等级 | 含义 |
+| Grade | Meaning |
 |---|---|
-| A | 制造商结构化数据，24 个月内更新过 |
-| B | 制造商数据，但超过 24 个月未更新 |
-| C | 只有商品名这么写，未经验证 |
-| D | 没有数据，或者数据互相矛盾 |
+| A | Manufacturer's structured data, updated within 24 months |
+| B | Manufacturer's data, but not updated for more than 24 months |
+| C | Only the product name says so, not verified |
+| D | No data, or the data contradicts itself |
 
-可靠性分 4 项：数据证据、匹配度、送达、合规。**总评取 4 项中最低的一项**。分数是这一项各个检查的平均分，并且一定落在等级对应的区间里：Reliable 80–100，Reliable? 50–79，Risky 0–49。
+Reliability has 4 parts: data evidence, match, delivery, compliance. **The overall rating is the lowest of the 4.** Each part's score is the average of its checks and always falls inside its grade's band: Reliable 80–100, Reliable? 50–79, Risky 0–49.
 
-### 授权协议
+### Authorisation protocol
 
-- 买家起草（可以用一句话让 AI 起草）→ 买家审批人签名 → Valio 确认并用 Ed25519 签名后生效
-- **收紧**（调低额度等）立即生效；**放宽**会生成新版本，要重新签名、Valio 重新确认
-- agent 可以帮忙起草，但不能让协议生效，也不能扩大自己的权限
-- 超额订单可以在 PasStar 里审批（`HOSTED`），也可以由买家自己的系统签名授权（`EXTERNAL`），详见 `backend/app/channel/authorization.py`
+- The buyer drafts it (AI can draft it from one sentence) → the buyer's approver signs → it takes effect once Valio confirms and signs it with Ed25519
+- **Tightening** (lowering a limit and so on) takes effect immediately; **loosening** creates a new version that must be re-signed and re-confirmed by Valio
+- An agent can help draft, but it cannot make a protocol take effect or widen its own permissions
+- Orders over the limit can be approved inside PasStar (`HOSTED`) or authorised by a signature from the buyer's own system (`EXTERNAL`); see `backend/app/channel/authorization.py`
 
-### Valio 数据
+### Valio data
 
-- 比赛只提供一个 Valio 客户账号，三家演示买家都用它查价格（`VALIO_SHARED_BUYERS`）
-- 比赛环境没有提交订单的接口：订单到 `PLACED` 表示 PasStar 已放行，正式上线时会转交 Valio 的订单系统
-- 价格和库存只查缩小后的最多 8 个商品；缺价格、缺税率、缺押金时不会算成零
-- 本地限流每分钟 30 次；429、5xx、超时会有限次重试
-- 故障模拟（Valio 的 Agents & faults 页面）：`PRICE_CHANGE`、`PARTIAL_STOCK`、`TIMEOUT`、`RATE_LIMIT`、`EMPTY_RESULT`
+- The hackathon provides one Valio customer account, and all three demo buyers use it to look up prices (`VALIO_SHARED_BUYERS`)
+- The hackathon environment has no order-submission API: an order reaching `PLACED` means PasStar released it; in production it would be handed to Valio's order system
+- Prices and stock are looked up only for the narrowed-down set of at most 8 products; a missing price, VAT rate or deposit is never counted as zero
+- Local rate limit of 30 calls per minute; 429, 5xx and timeouts get a limited number of retries
+- Fault simulation (Valio's Agents & faults page): `PRICE_CHANGE`, `PARTIAL_STOCK`, `TIMEOUT`, `RATE_LIMIT`, `EMPTY_RESULT`
 
-### 环境变量
+### Environment variables
 
-| 变量 | 作用 |
+| Variable | Purpose |
 |---|---|
-| `VALIO_API_BASE_URL`、`VALIO_API_KEY`、`VALIO_BUYER_ID`、`VALIO_CUSTOMER_ID` | Valio 接口 |
-| `OPENROUTER_API_KEY` | LLM。没有时，解析改用规则，解释改用模板，Console 只能用 Script 模式 |
-| `THE_PASS_LLM_STRONG`、`THE_PASS_LLM_LIGHT`、`THE_PASS_LLM_AGENT` | 换模型（默认：解析用 Opus 5.5，解释用 Gemini Flash Lite） |
-| `THE_PASS_BE2` | `auto`（默认）/ `live` / `stub`，强制用真实或演示数据 |
-| `VALIO_SHARED_BUYERS` | 哪些买家共用那一个 Valio 账号查价格 |
-| `THE_PASS_DB` | 数据库路径（默认 `data/the_pass.db`） |
-| `PASSTAR_SELF_URL` | Console 里的 agent 连回 PasStar 的地址（默认 `http://127.0.0.1:8000`） |
+| `VALIO_API_BASE_URL`, `VALIO_API_KEY`, `VALIO_BUYER_ID`, `VALIO_CUSTOMER_ID` | Valio API |
+| `OPENROUTER_API_KEY` | LLM. Without it, parsing falls back to rules, explanations to templates, and the Console only offers Script mode |
+| `THE_PASS_LLM_STRONG`, `THE_PASS_LLM_LIGHT`, `THE_PASS_LLM_AGENT` | Change models (default: Opus 5.5 for parsing, Gemini Flash Lite for explanations) |
+| `THE_PASS_BE2` | `auto` (default) / `live` / `stub`, forces real or demo data |
+| `VALIO_SHARED_BUYERS` | Which buyers share the one Valio account for price lookups |
+| `THE_PASS_DB` | Database path (default `data/the_pass.db`) |
+| `PASSTAR_SELF_URL` | The address the Console's agent uses to call back into PasStar (default `http://127.0.0.1:8000`) |

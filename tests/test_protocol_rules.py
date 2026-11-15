@@ -57,7 +57,7 @@ def test_apply_only_tightening():
     res = classify_changes(BODY, changes, "buyer", TODAY)
     new = apply_tightening(BODY, changes, res)
     assert new.auto_approve_limit_cents == 80_000
-    assert new.allowed_categories == BODY.allowed_categories  # 混合变化的字段等审批
+    assert new.allowed_categories == BODY.allowed_categories  # fields with mixed changes wait for approval
 
 
 def test_approval_mode_separate_to_self_is_expanded():

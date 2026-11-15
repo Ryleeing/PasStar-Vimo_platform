@@ -11,5 +11,5 @@ def test_self_mode_still_needs_named_approver():
 
 
 def test_separate_mode_requester_blocked_even_if_named_approver():
-    # 协议配置错误（审批人就是提需求的人）时，组织模式仍然拦住
+    # When the protocol is misconfigured (the approver is the requester), organisation mode still blocks it
     assert check_approver("SEPARATE", "usr_chef", "usr_chef", "usr_chef") == "SELF_APPROVAL_FORBIDDEN"
