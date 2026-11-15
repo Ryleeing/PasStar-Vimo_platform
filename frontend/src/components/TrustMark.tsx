@@ -28,11 +28,11 @@ export function TrustLight({ level, size = 18 }: { level?: Level | null; size?: 
 export function TrustMark({ level, score, size = 18, label }: { level?: Level | null; score?: number | null; size?: number; label?: string }) {
   const v = verdictOf(level);
   return (
-    <span className={`tl tl-text-${v.light}`} title={score != null ? `${v.label}: ${score} out of 100` : v.label}>
+    <span className={`tl tl-chip tl-chip-${v.light}`} title={score != null ? `${v.label}: ${score} out of 100` : v.label}>
       <TrustLight level={level} size={size} />
       {label && <span className="tl-label">{label}</span>}
       <b>{v.label}</b>
-      {score != null && <span className="tl-score num">{score}</span>}
+      {score != null && <span className="tl-score num">{score}<span className="tl-of">/100</span></span>}
     </span>
   );
 }

@@ -1879,3 +1879,18 @@ html:not([data-theme='light']) .composer textarea { background: transparent; bor
 .hero-tips li > span { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; margin-top: 1px; background: var(--accent-soft); color: var(--accent-ink); }
 .several { display: flex; flex-direction: column; gap: var(--s2); }
 .several .chips .chip { gap: 6px; }
+
+/* Reliability, easier to read: the verdict and its score form one chip; each check's name stands out from the
+   sentence that explains it, and the checks are separated by thin lines. Same colours and fonts as before. */
+.tl-chip { padding: 3px 10px 3px 4px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); }
+.tl-chip-go { background: color-mix(in srgb, var(--tl-go) 10%, var(--surface)); border-color: color-mix(in srgb, var(--tl-go) 28%, transparent); }
+.tl-chip-caution { background: color-mix(in srgb, var(--tl-caution) 16%, var(--surface)); border-color: color-mix(in srgb, var(--tl-caution) 45%, transparent); }
+.tl-chip-stop { background: color-mix(in srgb, var(--tl-stop) 9%, var(--surface)); border-color: color-mix(in srgb, var(--tl-stop) 28%, transparent); }
+.tl-chip .tl-score { padding: 0 0 0 8px; margin-left: 2px; border: 0; border-left: 1px solid var(--border-strong); border-radius: 0; background: none; }
+.tl-of { font-weight: 500; color: var(--muted); font-size: 0.85em; }
+.trust-rows { gap: 0; }
+.ev-trust { padding: var(--s3) 0; border-top: 1px solid var(--border); }
+.ev-trust:first-child { border-top: 0; padding-top: var(--s1); }
+.trust-name { font-size: 0.9375rem; font-weight: 650; }
+.ev-trust .ev-why { margin-top: 4px; font-size: var(--fs-meta); color: var(--muted); }
+.trust-line { grid-template-columns: 128px minmax(80px, 1fr) 72px; }

@@ -228,7 +228,7 @@ export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, 
                     <span className="trust-name">{d.label}</span>
                     {/* No score from the API (e.g. mock data): draw the bar at the middle of the level's band, show no number. */}
                     <ScoreBar level={t[d.key]} score={t.points?.[d.key] ?? BAND_MID[t[d.key]] ?? 25} />
-                    <span className="trust-score"><TrustLight level={t[d.key]} size={14} />{t.points?.[d.key] != null && <span className="num">{t.points[d.key]}</span>}</span>
+                    <span className="trust-score"><TrustLight level={t[d.key]} size={14} />{t.points?.[d.key] != null && <span className="num">{t.points[d.key]}<span className="tl-of">/100</span></span>}</span>
                   </div>
                   <p className="ev-why">{reasonFor(d.key)}</p>
                 </div>
