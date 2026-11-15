@@ -27,7 +27,7 @@ export function Sidebar({ open, collapsed, onToggle, onNavigate }: { open: boole
       <div className="brand">
         <img className="brand-logo" src="/passtar-logo.png" alt="PasStar" width={56} height={56} />
         <div className="brand-text">
-          <span>Valio Aimo ordering channel</span>
+          <span>Valio Aimo’s PasStar</span>
         </div>
         <button type="button" className="collapse-btn" onClick={onToggle} aria-expanded={!collapsed}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>

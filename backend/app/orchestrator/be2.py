@@ -112,7 +112,8 @@ def _live() -> Be2:
 
     def unverified(product: ProductRecord, r: Requirement) -> bool:
         return requirement_check(product, r, date.today()).verdict != "SATISFIED"
-    return Be2("live", catalog, UnitsConverter(), CardsBuilder(catalog),
+    return Be2("live", catalog, UnitsConverter(), CardsBuilder(catalog, reliability_high=float(os.environ.get("THE_PASS_RELIABILITY_HIGH", "0.98")),
+                                                   reliability_medium=float(os.environ.get("THE_PASS_RELIABILITY_MEDIUM", "0.90"))),
                ScopedValio(FaultProxy(client, FaultStore())), unverified)
 
 
