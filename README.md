@@ -11,6 +11,28 @@ Hotels, hospitals and restaurants can let an AI assistant (ChatGPT, Claude, or t
 
 ---
 
+## Try it
+
+**Live: https://passtar-demo.fly.dev** (the demo passcode is in our submission). Three minutes:
+
+1. **Reset demo** (bottom of the sidebar), then step 0: write the rules and sign them
+   > Milk, cream and milk powder. Everything must be lactose-free. Order on your own up to 1,000 euros, never above 3,000 euros. I approve anything in between myself.
+2. Switch to **Valio**, review the protocol, confirm it; switch back to **You**
+3. Tell Aimo: `300 litres of lactose-free milk for Wednesday`. Real Valio data gives a ✓ Reliable, a ? Reliable? and a ✗ Risky option side by side; open **Show details** on each, and the **Decision chain** above them
+4. **Agents** → **Connect an agent** → ChatGPT → **Try it in the console**: watch an external agent order, and press **Try to break the rules**
+
+---
+
+## How PasStar answers the challenge
+
+| Criterion | What we built | Evidence |
+|---|---|---|
+| **Working end-to-end demo (30%)** | Step 0 protocol signed by the buyer and Valio → request in plain words → four-step decision chain on Valio's real catalogue and live prices → Valio-signed quote → gate → order or approval → tamper-evident audit. The same path for people on the screens and for agents over MCP | Live app above; `backend/app/main.py`; [`backend/app/orchestrator/`](backend/app/orchestrator/); 533 automated tests (`pytest`) |
+| **Solving the problem and user need (20%)** | A kitchen says what it needs in its own words; Aimo asks instead of guessing; every option shows price, delivery, a traffic-light trust check with scores, where each fact comes from, and plain-language tips (storage, deposits, certifications) | [`frontend/src/pages/RequestPage.tsx`](frontend/src/pages/RequestPage.tsx), [`OptionRow.tsx`](frontend/src/components/OptionRow.tsx), [`catalog/trust.py`](backend/app/catalog/trust.py). Evaluation runner (`python tests/runner.py --in-process`), 5 scenarios × 5 phrasings: LLM + rule cross-check **25/25 pass, 0 silent wrong orders**; the rule parser alone 56–72%, 5 silent wrong orders |
+| **Autonomy and controls (20%)** | Agents act only under a protocol both sides signed (Ed25519); orders up to the limit go through, bigger ones wait for a person, anything outside is refused. No approval tool for agents; keys per agent, shown once, revocable; Valio can block an agent; agents see at most L1 data | [`channel/protocols.py`](backend/app/channel/protocols.py), [`channel/gate.py`](backend/app/channel/gate.py), [`channel/agents.py`](backend/app/channel/agents.py), [`orchestrator/mcp_server.py`](backend/app/orchestrator/mcp_server.py), [`config/field_policy.yaml`](backend/app/config/field_policy.yaml); the console's **Try to break the rules** (forged key, self-approval, over the maximum, another buyer's data: all refused and reported) |
+| **Robustness to exception situations (15%)** | Missing quantity or date → a question; nothing deliverable → the first date that works; price changed → re-quote; partial stock, unknown stock, cut-offs; probe limit against stock fishing; Valio timeouts and 429 retried; a shopping list in one message → handled one product at a time; no LLM → rule parser and templates | [`orchestrator/parser.py`](backend/app/orchestrator/parser.py), [`orchestrator/agent_api.py`](backend/app/orchestrator/agent_api.py), [`valio/client.py`](backend/app/valio/client.py), [`valio/faults.py`](backend/app/valio/faults.py) (fault switches on Valio's Agents page), [`orchestrator/several.py`](backend/app/orchestrator/several.py) |
+| **Openness and credible path toward production (15%)** | One open interface for any agent: MCP (ChatGPT and Claude plugins), REST with OpenAPI, and an ERP path with the buyer's own signed authorization. Verifiable: Valio-signed quotes and protocols (JWKS published), hash-chained audit log with a verify endpoint. Deployed on Fly.io as one container | [`openapi.json`](openapi.json), [`plugin/`](plugin/), `GET /v1/.well-known/jwks.json`, `GET /v1/quotes/{id}/verify`, `GET /v1/audit/verify`, [`Dockerfile`](Dockerfile), [`fly.toml`](fly.toml); see *Known limitations* below for what production still needs |
+
 ## Quick start
 
 Requires **Python 3.11+** and **Node.js 18+**.
@@ -146,6 +168,18 @@ claude mcp add --transport http passtar https://xxxx.trycloudflare.com/mcp --hea
 
 ---
 
+## Deployment
+
+The live demo runs on **Fly.io** as one container that serves the screens, the API and `/mcp` from one address ([`Dockerfile`](Dockerfile), [`fly.toml`](fly.toml)); the database is on a persistent volume.
+
+```bash
+fly secrets set VALIO_API_BASE_URL=… VALIO_API_KEY=… VALIO_BUYER_ID=… VALIO_CUSTOMER_ID=… OPENROUTER_API_KEY=… \
+  PASSTAR_SESSION_SECRET=… PASSTAR_DEMO_PASSCODE=… --app passtar-demo
+fly deploy --app passtar-demo --remote-only
+```
+
+`PASSTAR_PUBLIC=1` (set in `fly.toml`) switches on public mode: people enter the demo passcode once instead of being on the local machine, the demo agent keys written in the code are replaced by random ones, and a signed-in session may reset the demo. The catalogue (`backend/data/products.sqlite`) goes into the image from the local folder; it is never in git.
+
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -159,6 +193,15 @@ claude mcp add --transport http passtar https://xxxx.trycloudflare.com/mcp --hea
 | The frontend cannot find a font | Run `npm install` in `frontend` after pulling, then restart `npm run dev` |
 
 ---
+
+## Known limitations
+
+- **One product per request.** A message naming several products is answered kindly and handled one product at a time; ordering a whole shopping list in one go is the next version.
+- **Limits are per order.** The automatic and maximum limits apply to each order, not to a day's total, so several small orders are each checked on their own. A daily or weekly budget is the next control to add.
+- **No order submission to Valio.** The challenge API offers prices and availability only; `PLACED` means PasStar released the order, and production would hand it to Valio's order system.
+- **Demo sign-in.** People are identified by a demo account plus, on the public deployment, a shared passcode; production needs real accounts (e.g. SSO).
+- **Categories.** The demo protocols cover dairy (milk, cream, milk powder, quark); the catalogue's category codes have no names yet, so other categories are not offered on the screens.
+- **The LLM is optional, not authoritative.** Without it, parsing falls back to rules and Aimo asks more questions; limits, the gate, signatures and the audit never depend on it.
 
 ## Layout
 
