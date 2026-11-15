@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ShieldAlert, ShieldCheck, ShieldPlus, Sparkles } from 'lucide-react';
-import { amendProtocol, decideApproval, draftProtocol, getActiveProtocol, signProtocol } from '../api/endpoints';
+import { amendProtocol, decideApproval, draftProtocol, getActiveProtocol, getFacets, signProtocol } from '../api/endpoints';
+import { ProtocolEditor } from '../components/ProtocolEditor';
 import { describeError } from '../api/client';
 import type { Protocol, ProtocolBody, ProtocolDiff } from '../api/types';
 import { displayUser } from '../config/accounts';
@@ -90,7 +91,7 @@ export function ProtocolPage() {
         <div className="grid two" style={{ alignItems: 'start' }}>
           <ActiveProtocol p={p.data!} />
           <div className="stack lg">
-            <AmendCard p={p.data!} />
+            <AmendCard p={p.data!} onChanged={p.reload} />
             <DraftCard />
           </div>
         </div>
@@ -115,28 +116,32 @@ function ActiveProtocol({ p }: { p: Protocol }) {
   );
 }
 
-function AmendCard({ p }: { p: Protocol }) {
+function AmendCard({ p, onChanged }: { p: Protocol; onChanged: () => void }) {
   const toast = useToast();
-  const [limit, setLimit] = useState(String(Math.round(p.body.auto_approve_limit_cents / 100 * 0.8)));
-  const [addCat, setAddCat] = useState(true);
-  const [allPrices, setAllPrices] = useState(true);
+  const facets = useAsync(getFacets, []);
   const [diff, setDiff] = useState<ProtocolDiff | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [done, setDone] = useState<'signed' | 'rejected' | null>(null);
+  const [round, setRound] = useState(0);        // a new form after each submitted change
 
-  const submit = async () => {
-    if (!limit || busy) return;
-    const changes: Record<string, unknown> = { auto_approve_limit_cents: Math.round(Number(limit) * 100) };
-    if (addCat) changes.allowed_categories = [...p.body.allowed_categories, '22540'];
-    if (allPrices) changes['valio_scope.prices'] = 'ALL_CUSTOMERS';
-    setBusy('amend');
+  /** Send only what changed; PasStar applies stricter terms at once and puts looser ones up for signature. */
+  const submit = async (edited: ProtocolBody) => {
+    const fields = ['allowed_categories', 'hard_requirements', 'auto_approve_limit_cents', 'max_order_cents', 'valid_until'] as const;
+    const changes: Record<string, unknown> = {};
+    for (const f of fields) {
+      if (JSON.stringify(edited[f]) !== JSON.stringify(p.body[f])) changes[f] = edited[f];
+    }
+    if (!Object.keys(changes).length) {
+      toast('Nothing changed', 'info');
+      return;
+    }
     try {
       setDiff(await amendProtocol(p.id, changes));
       setDone(null);
+      setRound((r) => r + 1);
+      onChanged();
     } catch (e) {
       toast(describeError(e), 'bad');
-    } finally {
-      setBusy(null);
     }
   };
 
@@ -157,17 +162,11 @@ function AmendCard({ p }: { p: Protocol }) {
     <section className="card stack" aria-labelledby="amend-title">
       <div>
         <h2 id="amend-title">Change the rules</h2>
-        <div className="small muted">Stricter rules apply at once. Looser rules need your signature.</div>
+        <div className="small muted">Change any term below. Stricter terms apply at once; looser ones need your signature and Valio’s confirmation.</div>
       </div>
-      <div className="form-grid">
-        <div className="field">
-          <label htmlFor="limit">Auto-order up to (€)</label>
-          <input id="limit" inputMode="numeric" value={limit} onChange={(e) => setLimit(e.target.value.replace(/\D/g, ''))} />
-        </div>
-      </div>
-      <label className="row small" style={{ gap: 8 }}><input type="checkbox" checked={addCat} onChange={(e) => setAddCat(e.target.checked)} /> Also allow dry goods (22540)</label>
-      <label className="row small" style={{ gap: 8 }}><input type="checkbox" checked={allPrices} onChange={(e) => setAllPrices(e.target.checked)} /> Let the agent see all customers’ prices</label>
-      <Button onClick={submit} loading={busy === 'amend'}>Submit change</Button>
+      {facets.loading ? <Skeleton h={220} /> : facets.error ? <ErrorState error={facets.error} onRetry={facets.reload} /> : (
+        <ProtocolEditor key={`${p.id}-${round}`} body={p.body} facets={facets.data!} onSave={submit} saveLabel="Submit change" />
+      )}
 
       {diff && (
         <div className="stack">

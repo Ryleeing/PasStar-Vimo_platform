@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Eye, Inbox, Route, ShieldX, ThumbsUp } from 'lucide-react';
-import { confirmProtocol, decideApproval, listApprovals, listProtocols } from '../api/endpoints';
+import { ChevronDown, Eye, FileSearch, Inbox, Route, ShieldCheck, ShieldX, ThumbsUp } from 'lucide-react';
+import { confirmProtocol, decideApproval, getFacets, listApprovals, listProtocols } from '../api/endpoints';
+import { ProtocolTerms, buyerName } from '../components/ProtocolTerms';
 import { describeError } from '../api/client';
-import type { ApprovalCard, Protocol } from '../api/types';
+import type { ApprovalCard, Facets, Protocol } from '../api/types';
 import { APPROVAL_STATUS, eur, levelOf } from '../lib/format';
 import { useFlow } from '../state/flow';
-import { WORKSPACES } from '../config/accounts';
 import { Banner, Button, Empty, ErrorState, PageHead, Pill, Skeleton, useAsync, useToast } from '../components/ui';
 
 export function ValioQueuePage() {
@@ -14,35 +14,38 @@ export function ValioQueuePage() {
   const items = (list.data ?? []).map((a) => flow.decisions[a.id]?.approval ?? a);
   // Protocols the buyer signed, from the backend: a first protocol (step 0) or a raised limit (a new version).
   const toConfirm = useAsync(() => listProtocols('PENDING_VALIO_CONFIRMATION'), []);
+  const active = useAsync(() => listProtocols('ACTIVE'), []);
+  const facets = useAsync(getFacets, []);
+  const recent = [...(active.data ?? [])].filter((p) => p.valio_confirmed_at)
+    .sort((a, b) => (b.valio_confirmed_at ?? '').localeCompare(a.valio_confirmed_at ?? '')).slice(0, 5);
+  const confirmed = () => { toConfirm.reload(); active.reload(); };
 
   return (
     <>
       <PageHead title="Review queue"
         desc="Requests the channel won’t answer on its own." />
       <div className="stack lg">
-        {(toConfirm.data ?? []).map((p) => <ConfirmProtocolCard key={p.id} d={p} onDone={toConfirm.reload} />)}
+        {(toConfirm.data ?? []).map((p) => <ConfirmProtocolCard key={p.id} d={p} facets={facets.data} onDone={confirmed} />)}
         {list.loading ? <Skeleton h={380} /> : list.error ? <ErrorState error={list.error} onRetry={list.reload} /> : !items.length ? (
           <Empty icon={<Inbox size={22} />} title="Queue is empty">Nothing needs a Valio decision right now.</Empty>
         ) : items.map((a) => <ValioCard key={a.id} a={a} />)}
+        <RecentlyConfirmed items={recent} facets={facets.data} />
       </div>
     </>
   );
 }
 
-function ConfirmProtocolCard({ d, onDone }: { d: Protocol; onDone: () => void }) {
+/** A protocol a buyer signed. Valio reads every term first; only then can it confirm (and sign) it. */
+function ConfirmProtocolCard({ d, facets, onDone }: { d: Protocol; facets?: Facets | null; onDone: () => void }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
-  if (confirmed) {
-    return <Banner tone="ok" title={`${d.id} confirmed and active`}>{d.supersedes ? `${d.supersedes} is superseded.` : 'The buyer’s agent can start ordering.'}</Banner>;
-  }
+  const [open, setOpen] = useState(false);
   const confirm = async () => {
     setBusy(true);
     try {
       await confirmProtocol(d.id);
-      setConfirmed(true);
-      toast('Protocol confirmed and active', 'ok');
-      setTimeout(onDone, 2500);
+      toast(`${buyerName(d.body.buyer_id)}: protocol confirmed and in force`, 'ok');
+      onDone();
     } catch (e) {
       toast(describeError(e), 'bad');
     } finally {
@@ -50,12 +53,52 @@ function ConfirmProtocolCard({ d, onDone }: { d: Protocol; onDone: () => void })
     }
   };
   return (
-    <section className="card row wrap">
-      <div className="grow">
-        <h3>{d.supersedes ? `Protocol change ${d.id}` : `New protocol ${d.id}`} signed by {Object.values(WORKSPACES).find((w) => w.buyerId === d.body.buyer_id)?.name ?? d.body.buyer_id}</h3>
-        <div className="small muted">Auto-order up to {eur(d.body.auto_approve_limit_cents)} · max {eur(d.body.max_order_cents)} · confirm the customer and set Valio’s scope</div>
+    <section className="card stack confirm-card">
+      <div className="row wrap" style={{ gap: 8 }}>
+        <div className="grow">
+          <div className="eyebrow">{d.supersedes ? 'Change to a protocol' : 'New protocol'} · waiting for Valio</div>
+          <h3>{buyerName(d.body.buyer_id)} signed rules for its AI agent</h3>
+          <div className="small muted">Orders alone up to {eur(d.body.auto_approve_limit_cents)} · never above {eur(d.body.max_order_cents)} · {d.id} v{d.version}</div>
+        </div>
+        {!open && <Button onClick={() => setOpen(true)}><FileSearch size={15} /> Review the protocol</Button>}
       </div>
-      <Button variant="primary" loading={busy} onClick={confirm}>Confirm protocol</Button>
+      {open && (
+        <>
+          <ProtocolTerms p={d} facets={facets} />
+          <Banner tone="info" title="By confirming, Valio signs these rules">
+            From then on Valio accepts this agent’s orders within them, and refuses anything outside.
+          </Banner>
+          <div className="row wrap" style={{ gap: 8 }}>
+            <Button variant="primary" loading={busy} onClick={confirm}><ShieldCheck size={15} /> Confirm and sign</Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Not now</Button>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** Protocols Valio confirmed most recently, newest first, with their terms one click away. */
+function RecentlyConfirmed({ items, facets }: { items: Protocol[]; facets?: Facets | null }) {
+  const [open, setOpen] = useState<string | null>(null);
+  if (!items.length) return null;
+  return (
+    <section className="card stack">
+      <h2>Recently confirmed</h2>
+      <ul className="confirmed-list">
+        {items.map((p) => (
+          <li key={p.id}>
+            <button type="button" className="confirmed-row" aria-expanded={open === p.id} onClick={() => setOpen(open === p.id ? null : p.id)}>
+              <ShieldCheck size={16} className="ok-ink" aria-hidden />
+              <span className="grow"><b>{buyerName(p.body.buyer_id)}</b> · {p.id} v{p.version}
+                <span className="small muted"> · alone up to {eur(p.body.auto_approve_limit_cents)}, never above {eur(p.body.max_order_cents)}</span></span>
+              <span className="small muted">{p.valio_confirmed_at ? new Date(p.valio_confirmed_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+              <ChevronDown size={15} className="chev" aria-hidden />
+            </button>
+            {open === p.id && <ProtocolTerms p={p} facets={facets} />}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

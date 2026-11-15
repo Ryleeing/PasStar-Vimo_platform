@@ -69,3 +69,26 @@ def test_the_draft_can_be_edited_before_signing_but_not_after(client):
     assert client.post(f"/v1/protocols/{d['id']}/sign", headers=OWNER).status_code == 200
     late = client.put(f"/v1/protocols/{d['id']}", json={"body": {**body, "max_order_cents": 900_000}}, headers=OWNER)
     assert late.json()["error"]["code"] == "PROTOCOL_INVALID"
+
+
+def test_a_signed_protocol_can_be_changed_later(client):
+    d = onboard(client)
+    client.post(f"/v1/protocols/{d['id']}/confirm", headers=VALIO)
+    p = client.get("/v1/agents/agt_bistro/protocol", headers=OWNER).json()
+    # what the protocol page sends: a stricter limit, an extra category, and a dotted key Valio alone may widen
+    r = client.post(f"/v1/protocols/{p['id']}/amend", headers=OWNER, json={"changes": {
+        "auto_approve_limit_cents": 80_000, "allowed_categories": p["body"]["allowed_categories"] + ["10430"],
+        "valio_scope.prices": "ALL_CUSTOMERS"}})
+    assert r.status_code == 200, r.text
+    diff = r.json()
+    assert [c["field"] for c in diff["tightened"]] == ["auto_approve_limit_cents"]
+    assert [c["field"] for c in diff["expanded"]] == ["allowed_categories"]
+    assert [c["field"] for c in diff["forbidden"]] == ["valio_scope.prices"]
+    assert client.get("/v1/agents/agt_bistro/protocol", headers=OWNER).json()["body"]["auto_approve_limit_cents"] == 80_000
+
+
+def test_unknown_protocol_fields_are_a_clear_error(client):
+    d = onboard(client)
+    client.post(f"/v1/protocols/{d['id']}/confirm", headers=VALIO)
+    r = client.post(f"/v1/protocols/{d['id']}/amend", headers=OWNER, json={"changes": {"discount": 50}})
+    assert r.status_code == 422 and r.json()["error"]["code"] == "VALIDATION_ERROR"

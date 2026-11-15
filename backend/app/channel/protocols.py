@@ -201,6 +201,7 @@ def amend(protocol_id: str, changes: dict[str, Any], who: Caller) -> ProtocolDif
     sign; changes the caller may not make are dropped and listed."""
     p = get_for(protocol_id, who)
     _expect(p, "ACTIVE")
+    changes = _nested(changes, p.body)
     result = classify_changes(p.body, changes, "valio" if who.kind == "VALIO_USER" else "buyer", db.now().date())
     diff = ProtocolDiff(**result, result_status="ACTIVE")
 
@@ -230,6 +231,25 @@ def amend(protocol_id: str, changes: dict[str, Any], who: Caller) -> ProtocolDif
         _log("PROTOCOL_CHANGE_REFUSED", p, who, f"Refused changes to {p.id} that the caller may not make",
              changes=[c.model_dump() for c in diff.forbidden])
     return diff
+
+
+def _nested(changes: dict[str, Any], body: ProtocolBody) -> dict[str, Any]:
+    """Accept "valio_scope.prices"-style keys as {"valio_scope": {"prices": ...}}, and refuse unknown fields with a
+    readable error instead of failing half-way."""
+    known = set(body.model_dump())
+    out: dict[str, Any] = {}
+    for key, value in changes.items():
+        top, _, sub = key.partition(".")
+        if top not in known:
+            raise ApiError("VALIDATION_ERROR", f"{top} is not a field of the protocol", allowed=sorted(known))
+        if sub:
+            out.setdefault(top, {})
+            if not isinstance(out[top], dict):
+                raise ApiError("VALIDATION_ERROR", f"{top} is given both whole and by field")
+            out[top][sub] = value
+        else:
+            out[top] = value
+    return out
 
 
 def expansion_diff(new: Protocol) -> ProtocolDiff:
