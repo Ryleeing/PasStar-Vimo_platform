@@ -1894,3 +1894,6 @@ html:not([data-theme='light']) .composer textarea { background: transparent; bor
 .trust-name { font-size: 0.9375rem; font-weight: 650; }
 .ev-trust .ev-why { margin-top: 4px; font-size: var(--fs-meta); color: var(--muted); }
 .trust-line { grid-template-columns: 128px minmax(80px, 1fr) 72px; }
+/* Good to know: a heading per tip, then the plain sentence */
+.tips .tip-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.tips .tip-title { font-size: var(--fs-label); font-weight: 650; color: var(--text); }

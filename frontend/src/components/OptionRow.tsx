@@ -5,6 +5,7 @@ import {
 import type { Candidate } from '../api/types';
 import { ALLERGEN_STATUS, AVAILABILITY, BADGE, dayLabel, eur, num, outcomeOf } from '../lib/format';
 import { Button } from './ui';
+import { tipView } from '../lib/tips';
 import { ScoreBar, TrustLight, TrustMark } from './TrustMark';
 
 // Information architecture
@@ -241,7 +242,10 @@ export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, 
             <Section title="Good to know">
               <ul className="tips">
                 {tips.map((tip, i) => (
-                  <li key={i}><span className="tip-icon" aria-hidden>{TIP_ICON[tip.kind] ?? <Info size={16} />}</span>{tip.text}</li>
+                  <li key={i}>
+                    <span className="tip-icon" aria-hidden>{TIP_ICON[tip.kind] ?? <Info size={16} />}</span>
+                    <span className="tip-body"><b className="tip-title">{tipView(tip.kind, tip.text).title}</b>{tipView(tip.kind, tip.text).text}</span>
+                  </li>
                 ))}
               </ul>
             </Section>

@@ -14,6 +14,7 @@ Results contain L0 and L1 fields only, the most an agent may see (backend/app/co
 """
 from __future__ import annotations
 
+import re
 from datetime import date, timedelta
 from typing import Any, Optional
 
@@ -397,8 +398,41 @@ def _card(o: dict, approver: str, rules) -> list[str]:
         lines.append("Check: the pack size was read from the product name, not Valio's unit table; "
                      "confirm the quantity before ordering")
     lines += [f"Note: {n}" for n in o["allergen_notes"]]
-    lines += [f"Tip ({t['kind'].lower().replace('_', ' ')}): {t['text']}" for t in o["tips"]]
+    lines += [f"{t['title']}: {t['text']}" for t in o["tips"]]
     return lines
+
+
+TIP_TITLE = {"STORAGE": "Storage", "CARBON": "Carbon footprint", "LABEL": "Certifications", "DEPOSIT": "Deposit",
+             "ROUNDING": "Rounded up", "COLD_STORAGE_SPACE": "Cold-storage space", "RELIABILITY": "Delivery record",
+             "QUOTE_TIMER": "Price lock"}
+LABEL_NAME = {  # the catalogue's certification codes by the names people know (as frontend/src/lib/tips.ts)
+    "GOODS_FROM_FINLAND_BLUE_SWAN": "Made in Finland (Blue Swan)", "MADE_IN_FINLAND_FLAG_WITH_KEY": "Made in Finland (Key Flag)",
+    "FINNISH_HEART_SYMBOL": "Heart Symbol (a better nutritional choice)", "EU_ORGANIC_FARMING": "EU organic",
+    "SVANEN": "Nordic Swan Ecolabel", "RAINFOREST_ALLIANCE": "Rainforest Alliance", "EU_ECO_LABEL": "EU Ecolabel",
+    "MARINE_STEWARDSHIP_COUNCIL_LABEL": "MSC sustainable seafood", "FAIR_TRADE_MARK": "Fairtrade",
+    "AQUACULTURE_STEWARDSHIP_COUNCIL": "ASC responsibly farmed", "KRAV_MARK": "KRAV organic",
+    "OFFICIAL_ECO_LABEL_SUN": "Finnish organic (Sun label)", "SOIL_ASSOCIATION_ORGANIC_SYMBOL": "Soil Association organic",
+    "PUHTAASTI_KOTIMAINEN": "Purely Finnish", "DOLPHIN_SAFE": "Dolphin safe", "UTZ_CERTIFIED": "UTZ certified",
+}
+
+
+def _tip(kind: str, raw: str) -> dict:
+    """A catalogue tip in plain words: no product-number prefix, names instead of codes, euros instead of cents."""
+    text = re.sub(r"^\s*\d+:\s*", "", raw).strip()
+    title = TIP_TITLE.get(kind, kind.replace("_", " ").capitalize())
+    if kind == "STORAGE":
+        text = re.sub(r"^Store ", "Keep ", text)
+    elif kind == "CARBON" and (m := re.search(r"footprint factor:\s*([\d.]+)", text, re.I)):
+        text = f"About {m.group(1)} kg CO2e per kg of product, typical for this kind of product (not this order's exact total)."
+    elif kind == "LABEL" and (m := re.search(r"label codes:\s*(.+)$", text, re.I)):
+        text = " · ".join(LABEL_NAME.get(c, c.replace("_", " ").capitalize()) for c in re.split(r"\s*,\s*", m.group(1)) if c) + "."
+    elif kind == "DEPOSIT" and (m := re.search(r"deposit charge\s*(\d+)\s*cents", text, re.I)):
+        text = f"Includes EUR {int(m.group(1)) / 100:.2f} for returnable packaging."
+    elif kind == "ROUNDING" and (m := re.search(r"extra quantity\s*([\d.]+\s*\S+?)\.?$", text, re.I)):
+        text = f"Rounded up to full packs, so you get {m.group(1)} extra."
+    elif kind == "COLD_STORAGE_SPACE" and (m := re.search(r"volume\s*([\d.]+)\s*L per case", text, re.I)):
+        text = f"Each case takes about {m.group(1)} L of space in your cold room."
+    return {"kind": kind, "title": title, "text": text}
 
 
 def _option(c: dict) -> dict:
@@ -426,7 +460,7 @@ def _option(c: dict) -> dict:
                       "decided_by": "SIGNED_PROTOCOL"},
         "sources": _sources(lines),
         "why": c["explanation"],
-        "tips": [{"kind": t["kind"], "text": t["text"]} for t in c["cards"].get("tips", [])],
+        "tips": [_tip(t["kind"], t["text"]) for t in c["cards"].get("tips", [])],
         "sensitivity": "L1",
     }
 

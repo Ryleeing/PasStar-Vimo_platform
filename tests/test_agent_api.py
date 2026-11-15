@@ -121,7 +121,7 @@ def test_options_say_where_each_fact_came_from(hotel):
     assert all(r["source"] in known and r["grade"] in "ABCD" for r in top["requirements"])
     assert top["if_chosen"]["decided_by"] == "SIGNED_PROTOCOL"
     assert top["sources"]["price"] == "DEMO_DATA"          # tests run on BE3's stubs, and must say so
-    assert all({"kind", "text"} == set(t) for t in top["tips"])
+    assert all({"kind", "title", "text"} == set(t) for t in top["tips"])
 
 
 def test_sensitivity_is_stated_and_nothing_above_l1_is_returned(hotel):
@@ -194,3 +194,11 @@ def test_cards_place_the_total_against_the_limits(hotel):
     big = api.find_options(hotel, "2000 litres of lactose-free milk tomorrow")["options"][0]["card"]
     assert any("within your EUR 1,000 auto limit" in l for l in small)
     assert any("over your EUR 1,000 auto limit" in l for l in big)
+
+
+def test_tips_read_as_plain_words():
+    t = api._tip("LABEL", "463047: Recorded label codes: GOODS_FROM_FINLAND_BLUE_SWAN, EU_ORGANIC_FARMING")
+    assert t == {"kind": "LABEL", "title": "Certifications", "text": "Made in Finland (Blue Swan) · EU organic."}
+    assert api._tip("STORAGE", "463047: Store between 2 and 22 °C.")["text"] == "Keep between 2 and 22 °C."
+    assert api._tip("DEPOSIT", "1: deposit charge 120 cents.")["text"] == "Includes EUR 1.20 for returnable packaging."
+    assert "1.1 kg CO2e per kg" in api._tip("CARBON", "1: category-average footprint factor: 1.1 kg CO2-eq per kg; x")["text"]
