@@ -68,8 +68,9 @@ def test_results_are_compact(hotel):
 def test_adjust_by_price_puts_the_cheapest_first(hotel):
     rid = api.find_options(hotel, "200 litres of lactose-free milk tomorrow")["request_id"]
     r = api.adjust_options(hotel, rid, "prioritise", "price")
-    totals = [o["total_eur"] for o in r["options"]]
-    assert r["attempt"] == 2 and totals[0] == min(totals)
+    best = r["options"][0]["reliability"]["overall"]          # cheapest first within the most trusted group
+    totals = [o["total_eur"] for o in r["options"] if o["reliability"]["overall"] == best]
+    assert r["attempt"] == 2 and r["options"][0]["total_eur"] == min(totals)
 
 
 def test_adjust_rejects_unknown_changes(hotel):

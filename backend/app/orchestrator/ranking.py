@@ -1,4 +1,4 @@
-"""Ranking candidates by profile weights and assigning the top-3 badges.
+"""Ranking candidates by profile weights; the best deliverable one is marked Recommended.
 
 First version: single-SKU options only. Split orders and substitute combinations come later.
 """
@@ -10,7 +10,6 @@ from typing import Optional
 from ..schemas import CandidateLine, Totals
 
 RELIABILITY_SCORE = {"HIGH": 1.0, "MEDIUM": 0.6, "LOW": 0.3, "UNKNOWN": 0.5}
-RELIABILITY_ORDER = {"HIGH": 3, "MEDIUM": 2, "UNKNOWN": 1, "LOW": 0}
 
 
 @dataclass
@@ -44,7 +43,8 @@ def deliverable(d: Draft) -> bool:
 
 
 def rank(drafts: list[Draft], weights: dict[str, float], limit: int = 8) -> list[Draft]:
-    """Order drafts and set rank/badge: #1 best score, #2 cheapest of the rest, #3 most reliable of the rest.
+    """Order drafts by score and set rank/badge: only #1 is badged, RECOMMENDED. Other badges ("cheapest", "most
+    reliable") were dropped: given by position they could sit on an option that was neither, next to its trust check.
 
     Options that cannot be delivered on the requested date come last and never get a badge: they stay
     visible (the buyer sees why) but are never recommended."""
@@ -64,10 +64,6 @@ def rank(drafts: list[Draft], weights: dict[str, float], limit: int = 8) -> list
 
     if pool:
         take(pool[0], "RECOMMENDED")
-    if pool:
-        take(min(pool, key=lambda d: d.totals.gross_cents), "CHEAPEST")
-    if pool:
-        take(max(pool, key=lambda d: (RELIABILITY_ORDER[d.reliability_level], d.score)), "MOST_RELIABLE")
     ordered.extend(pool)
     ordered.extend(d for d in by_score if not deliverable(d))
     for i, d in enumerate(ordered[:limit], start=1):

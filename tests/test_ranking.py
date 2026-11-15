@@ -12,10 +12,11 @@ def draft(pid: str, gross: int, reliability: str = "HIGH", stock: str = "YES") -
                  reliability_level=reliability)
 
 
-def test_top_three_badges():
+def test_only_the_recommended_option_has_a_badge():
     out = rank([draft("a", 100), draft("b", 90, "MEDIUM"), draft("c", 120), draft("d", 130, "LOW")], WEIGHTS)
-    assert [d.badge for d in out[:3]] == ["RECOMMENDED", "CHEAPEST", "MOST_RELIABLE"]
+    assert [d.badge for d in out] == ["RECOMMENDED", None, None, None]
     assert [d.rank for d in out] == [1, 2, 3, 4]
+    assert [d.score for d in out] == sorted((d.score for d in out), reverse=True)   # the rest by score
 
 
 def test_undeliverable_options_come_last_without_badges():

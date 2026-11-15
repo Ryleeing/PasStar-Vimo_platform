@@ -48,7 +48,7 @@ def test_first_run_has_four_ok_nodes_and_ranked_candidates(env):
         (1, "UNDERSTAND", "OK", 1), (2, "FILTER", "OK", 1), (3, "RANK", "OK", 1), (4, "GATE", "OK", 1)]
     assert [c.rank for c in r.candidates] == list(range(1, len(r.candidates) + 1))
     assert len(r.candidates) <= MAX_CANDIDATES
-    assert [c.badge for c in r.candidates[:3]] == ["RECOMMENDED", "CHEAPEST", "MOST_RELIABLE"]
+    assert [c.badge for c in r.candidates[:3]] == ["RECOMMENDED", None, None]
     assert all(n.summary for n in r.chain) and all(c.explanation for c in r.candidates)
 
 
@@ -120,8 +120,9 @@ def test_constraints_accumulate_across_attempts(env):
     r = reject(p, rid, 3, "WRONG_PRIORITY", weights={"price": 1.0, "fulfilment": 0.0, "carbon": 0.0, "local": 0.0})
     assert r.attempt == 3
     assert "464179" in {c.lines[0].product_id for c in r.candidates}          # brand allowance still applies
-    grosses = [c.totals.gross_cents for c in r.candidates]
-    assert grosses[0] == min(grosses)                                          # price-only weights
+    best = r.candidates[0].cards.trust.overall                                # price-only weights: the cheapest of
+    grosses = [c.totals.gross_cents for c in r.candidates if c.cards.trust.overall == best]   # the most trusted group
+    assert r.candidates[0].totals.gross_cents == min(grosses)
 
 
 def test_exclude_option_defaults_to_current_top(env):
@@ -246,3 +247,13 @@ def test_options_the_gate_would_reject_go_last_without_a_badge(env):
     assert outcomes == sorted(outcomes, key=lambda o: o == "REJECT")          # every REJECT after the rest
     assert all(c.badge is None for c in r.candidates if c.outcome_preview == "REJECT")
     assert [c.rank for c in r.candidates] == list(range(1, len(r.candidates) + 1))
+
+
+def test_options_are_grouped_by_trust_and_only_the_first_is_recommended(env):
+    p, _ = env
+    r = p.result(new_request(p))
+    order = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
+    allowed = [c for c in r.candidates if c.outcome_preview != "REJECT"]
+    levels = [order[c.cards.trust.overall] for c in allowed]
+    assert levels == sorted(levels)                                  # Reliable, then Reliable?, then Risky
+    assert [c.badge for c in r.candidates].count("RECOMMENDED") == 1 and r.candidates[0].badge == "RECOMMENDED"

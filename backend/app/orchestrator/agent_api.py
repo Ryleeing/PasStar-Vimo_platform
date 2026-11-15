@@ -44,7 +44,7 @@ GUIDE = {
         "VALIO_REVIEW": "Choosing it holds the order until Valio reviews it.",
         "REJECT": "It breaks the buyer's protocol and cannot be ordered.",
     },
-    "badges": "RECOMMENDED (best overall score), CHEAPEST, MOST_RELIABLE. Undeliverable options never get a badge.",
+    "badges": "RECOMMENDED marks the best option overall; the rest are ranked by the same score. Undeliverable options never get it.",
     "deliverable": "YES / PARTIAL / NO / UNKNOWN for the requested delivery date.",
     "sensitivity_levels": {
         "L0": "Public product facts: name, brand, claims, allergens, labels, origin.",

@@ -25,7 +25,7 @@ from ..schemas import (
 )
 from .holds import record_blocked
 from .profiles import ProfileRepo
-from .ranking import Draft, rank
+from .ranking import Draft, deliverable, rank
 
 NODE_NAMES = {1: "UNDERSTAND", 2: "FILTER", 3: "RANK", 4: "GATE"}
 REJECT_OPTIONS = {
@@ -71,6 +71,7 @@ def _new_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:8]}"
 
 
+TRUST_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}   # Reliable, Reliable?, Risky
 AGENT_PREFIX = "agent:"   # created_by for requests submitted by an external agent, e.g. "agent:agt_hotel_ext"
 
 
@@ -285,11 +286,14 @@ class Pipeline:
                              outcome_reasons=reasons, cards=cards, explanation="")
             candidates.append(cand)
 
-        # Ranking ran before the gate. Options the gate would reject (over the order maximum, nothing
-        # deliverable) go last and lose their badge: they stay visible but are never recommended.
-        candidates = [c for c in candidates if c.outcome_preview != "REJECT"] + [
-            c.model_copy(update={"badge": None}) for c in candidates if c.outcome_preview == "REJECT"]
-        candidates = [c.model_copy(update={"rank": i}) for i, c in enumerate(candidates, start=1)]
+        # Ranking ran before the gate and the trust check. Now: options the gate would reject (over the order maximum,
+        # nothing deliverable) go last; the rest are grouped by their trust check (Reliable, Reliable?, Risky), keeping
+        # the score order within each group, so a Risky option never sits above a Reliable one. Recommended is the
+        # first allowed, deliverable option.
+        candidates = sorted(candidates, key=lambda c: (c.outcome_preview == "REJECT", TRUST_ORDER.get(c.cards.trust.overall, 3)))
+        top = next((c.id for c in candidates if c.outcome_preview != "REJECT" and deliverable(c)), None)
+        candidates = [c.model_copy(update={"rank": i, "badge": "RECOMMENDED" if c.id == top else None})
+                      for i, c in enumerate(candidates, start=1)]
 
         for p, violations in blocked:
             conv = self.d.units.convert(p, structured.quantity)
