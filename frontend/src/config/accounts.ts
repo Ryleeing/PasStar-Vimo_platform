@@ -37,8 +37,8 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
 export const ACCOUNTS: Account[] = [
   { key: 'chef', userId: 'usr_chef', name: 'Aino', title: 'Chef', workspace: 'hotel' },
   { key: 'buyer_manager', userId: 'usr_manager', name: 'Mikko', title: 'Procurement manager', workspace: 'hotel' },
-  { key: 'owner', userId: 'usr_owner', name: 'Sanna', title: 'Owner', workspace: 'bistro' },
-  { key: 'valio_reviewer', userId: 'usr_valio', name: 'Elina', title: 'Valio reviewer', workspace: 'valio' },
+  { key: 'owner', userId: 'usr_owner', name: 'You', title: 'Restaurant owner', workspace: 'bistro' },
+  { key: 'valio_reviewer', userId: 'usr_valio', name: 'Valio', title: 'Reviewer', workspace: 'valio' },
 ];
 
 export interface PageDef {

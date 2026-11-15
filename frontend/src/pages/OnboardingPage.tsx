@@ -88,7 +88,7 @@ export function OnboardingPage() {
   const category = (code: string) => facets.data?.categories.find((c) => c.code === code)?.label ?? code;
   const person = (userId: string) => {
     const a = ACCOUNTS.find((x) => x.userId === userId);
-    return a ? (a.userId === account.userId ? `you (${a.name})` : `${a.name}, ${a.title}`) : userId;
+    return a ? (a.userId === account.userId ? 'you' : `${a.name}, ${a.title.toLowerCase()}`) : userId;
   };
   const valio = ACCOUNTS.find((a) => a.workspace === 'valio');
 
@@ -100,9 +100,8 @@ export function OnboardingPage() {
           <p className="eyebrow">Step 0 · one-time setup, before the first order</p>
           <h1 id="onboard-title" className="display hero-title">Set the rules for your AI ordering assistant</h1>
           <p className="hero-sub">
-            You are {account.name}, the {account.title.toLowerCase()} of {workspace.name}, a restaurant that buys its food from
-            Valio Aimo. An AI assistant can do the ordering for you, here or in ChatGPT. First you decide what it may buy
-            and how much it may spend without asking you. Think of it as giving it a company card with a limit.
+            An AI assistant can order your restaurant’s food from Valio Aimo for you, here or in ChatGPT. First decide what
+            it may buy and how much it may spend without asking you. Think of it as giving it a company card with a limit.
           </p>
         </div>
       </section>
@@ -180,15 +179,15 @@ export function OnboardingPage() {
           {!waiting ? (
             !editing && (
               <div className="row wrap">
-                <Button variant="primary" onClick={sign} loading={busy === 'sign'}><PenLine size={15} /> Sign as {account.name}</Button>
+                <Button variant="primary" onClick={sign} loading={busy === 'sign'}><PenLine size={15} /> Sign</Button>
                 <Button onClick={() => setEditing(true)} disabled={!facets.data}><Pencil size={15} /> Edit</Button>
                 <Button variant="ghost" onClick={() => setDraft(null)}>Describe again</Button>
               </div>
             )
           ) : (
             <Banner tone="info" title="Signed. Now Valio has to confirm."
-              action={valio && <Button size="sm" onClick={() => switchAccount(valio.key)}><ShieldCheck size={15} /> Switch to {valio.name} (Valio)</Button>}>
-              In real life Valio would review your rules within a day. In this demo, switch to {valio?.name ?? 'Valio'}, Valio’s reviewer,
+              action={valio && <Button size="sm" onClick={() => switchAccount(valio.key)}><ShieldCheck size={15} /> Switch to Valio</Button>}>
+              In real life Valio would review your rules within a day. In this demo, switch to Valio,
               read the rules and confirm them. When you come back, ordering is open.
               <span className="wait-line">
                 <span className="run-dots" aria-hidden><i /><i /><i /></span> Checking for Valio’s answer every few seconds

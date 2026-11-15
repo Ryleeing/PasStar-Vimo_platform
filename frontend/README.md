@@ -39,9 +39,9 @@ The account switcher at the top of the sidebar groups accounts by organisation; 
 
 | Organisation | Approval mode | Accounts |
 |---|---|---|
-| Hotel Helsinki Central | separate approver | Aino · Chef (`usr_chef`), Mikko · Procurement manager (`usr_manager`) |
-| Bistro Kallio | one person | Sanna · Owner (`usr_owner`) |
-| Valio Aimo | — | Elina · Valio reviewer (`usr_valio`) |
+| Bistro Kallio | one person | You · Restaurant owner (`usr_owner`) |
+| Valio Aimo | — | Valio · Reviewer (`usr_valio`) |
+| Hotel Helsinki Central | separate approver | Aino · Chef (`usr_chef`), Mikko · Procurement manager (`usr_manager`); not shown in the switcher (`SHOWN_ROLES`) |
 
 Switching within an organisation keeps the current order in progress (the chef submits, the manager approves); switching to another buyer starts over. Which account sees which pages is in `src/config/accounts.ts`.
 

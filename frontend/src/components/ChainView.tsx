@@ -167,11 +167,9 @@ export function ChainView({ request }: { request: RequestResult | null }) {
         ? { title: 'Options ready', sub: `${request?.candidates.length ?? 0} options found${kept}` }
         : { title: run.from > 1 ? `Redoing from step ${run.from}` : 'Finding options for you', sub: `Step ${active} of ${STEPS.length} · ${ACTIVITY[STEPS[active! - 1]]}…${kept}` };
     }
-    const n = request?.candidates.length ?? 0;
-    const blocked = request?.blocked?.length ?? 0;
     return {
       title: 'Decision chain',
-      sub: `How Aimo chose these options · understand → filter → rank → check your rules · ${n} option${n === 1 ? '' : 's'}${blocked ? ` · ${blocked} left out` : ''} · not right? Retry any step`,
+      sub: 'How Aimo chose these options: understand → filter → rank → check your rules. Not right? Retry any step.',
     };
   })();
 

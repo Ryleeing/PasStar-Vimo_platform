@@ -69,37 +69,33 @@ Open http://localhost:5173.
 
 ## Demo accounts
 
-There is no login on the screens; switch accounts at the top of the sidebar (the `X-Demo-User` header, **accepted on the local machine only**):
+There is no login on the screens; switch accounts at the top of the sidebar (the `X-Demo-User` header, accepted on the local machine only, or on the public deployment after the demo passcode). The demo shows two accounts:
 
-| Account | Role | Workspace | Can |
-|---|---|---|---|
-| Aino | Chef | Hotel Helsinki Central | request, choose options, see orders; cannot approve her own order |
-| Mikko | Procurement manager | Hotel Helsinki Central | approve over-limit orders, sign protocols, issue agent keys |
-| Sanna | Owner | Bistro Kallio | one-person mode: buys and approves her own orders (logged as a separate step) |
-| Elina | Valio reviewer | Valio | confirm protocols, review orders, see every agent, block agents |
+| Account | Workspace | Can |
+|---|---|---|
+| **You** · Restaurant owner | Bistro Kallio | set the rules (step 0), request, order, approve your own bigger orders (logged as a separate step), connect AI agents |
+| **Valio** · Reviewer | Valio | confirm protocols, review orders, see every agent, block agents |
 
-**Two approval modes**
-- **Hotel (separate approver)**: the chef requests, the manager approves; nobody approves their own order.
-- **Bistro (one person)**: the owner may approve her own order, but approval is still a separate step and is logged as self-approved.
+The restaurant starts without a protocol: after **Reset demo**, step 0 guides you through setting the rules.
 
-**The bistro starts without a protocol**: after **Reset demo**, switch to Sanna and step 0 guides her through signing one.
+A second approval mode, a hotel where the chef requests and a manager approves (nobody approves their own order), is in the code and the backend (`usr_chef`, `usr_manager`) but not offered in the switcher (`SHOWN_ROLES` in `frontend/src/config/accounts.ts`).
 
 ---
 
 ## Demo flow
 
 **Main line (screens)**
-1. **Reset demo** → switch to **Sanna** and go through step 0: describe the rules in one sentence → Aimo drafts the protocol → check it (edit the draft in place) → sign
-2. Switch to **Elina** and confirm the protocol in the Review queue
-3. Back as **Sanna**, make a request: chat with Aimo on the left or fill in the form on the right; either finds options directly
+1. **Reset demo** → step 0: describe the rules in one sentence → Aimo drafts the protocol → check it (edit the draft in place) → sign
+2. Switch to **Valio**, review the protocol and confirm it in the Review queue
+3. Back as **You**, make a request: chat with Aimo on the left or fill in the form on the right; either finds options directly
 4. Read the options: traffic-light trust (✓ Reliable / ? Reliable? / ✗ Risky), scores, data sources, and what choosing each one does
 5. Order: up to €1,000 is placed at once; €1,000–3,000 waits for approval; above €3,000 is refused
 
 **AI agents (Agents page)**
-1. Switch to **Mikko** → **Agents** → **Connect an agent**: choose ChatGPT / Claude / ERP → issue the key (shown once) → follow the generated setup → **Try it in the console**
+1. **Agents** → **Connect an agent**: choose ChatGPT / Claude / ERP → issue the key (shown once) → follow the generated setup → **Try it in the console**
 2. **Console**: the conversation the user sees on the left; everything PasStar did behind it on the right (key check, the four steps, the gate, Valio's signature, the audit entries)
 3. **Try to break the rules**: the agent really attempts four violations, and each one is refused
-4. Switch to **Aino** → **My orders**: orders placed by agents appear on their own, labelled with the agent that placed them
+4. **My orders**: orders placed by agents appear on their own, labelled with the agent that placed them
 
 ---
 
