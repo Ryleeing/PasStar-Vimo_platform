@@ -100,8 +100,8 @@ export function OnboardingPage() {
           <p className="eyebrow">Step 0 · one-time setup, before the first order</p>
           <h1 id="onboard-title" className="display hero-title">Set the rules for your AI ordering assistant</h1>
           <p className="hero-sub">
-            An AI assistant can order your restaurant’s food from Valio Aimo for you, here or in ChatGPT. First decide what
-            it may buy and how much it may spend without asking you. Think of it as giving it a company card with a limit.
+            An AI assistant can order your restaurant’s food from Valio Aimo for you, here or in any AI assistant you already
+            use: ChatGPT, Claude or your own system. First decide what it may buy and how much it may spend without asking you. Think of it as giving it a company card with a limit.
           </p>
         </div>
       </section>
