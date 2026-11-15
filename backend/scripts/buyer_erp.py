@@ -1,11 +1,11 @@
-"""演示用：模拟“酒店自己的审批系统”。审批人在这里批准，系统用审批人的私钥签授权凭证。
+"""Demo only: simulates "the hotel's own approval system". The approver approves here, and the system signs the authorisation token with the approver's private key.
 
-用法（在 backend/ 目录下）：
-  python scripts/buyer_erp.py public-key                 # 打印公钥，登记到外部审批协议里
-  python scripts/buyer_erp.py approve request.json       # 读 AuthorizationRequest，审批人确认后打印凭证
-  python scripts/buyer_erp.py approve - --yes < req.json # 从标准输入读，跳过确认（给脚本和演示台用）
+Usage (from the backend/ directory):
+  python scripts/buyer_erp.py public-key                 # print the public key, to register in the external-approval protocol
+  python scripts/buyer_erp.py approve request.json       # read an AuthorizationRequest, print the token once the approver confirms
+  python scripts/buyer_erp.py approve - --yes < req.json # read from stdin, skip confirmation (for scripts and the demo console)
 
-正式环境里这一步发生在买方的 ERP 或审批流里，PasStar 永远拿不到这把私钥。
+In production this step happens in the buyer's ERP or approval workflow, and PasStar never gets this private key.
 """
 import argparse
 import json
@@ -24,8 +24,8 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("public-key")
     a = sub.add_parser("approve")
-    a.add_argument("request", help="AuthorizationRequest 的 JSON 文件，或 - 表示标准输入")
-    a.add_argument("--yes", action="store_true", help="不询问，直接批准")
+    a.add_argument("request", help="AuthorizationRequest JSON file, or - for stdin")
+    a.add_argument("--yes", action="store_true", help="approve without asking")
     args = ap.parse_args()
 
     if args.cmd == "public-key":
@@ -34,7 +34,7 @@ def main() -> None:
 
     raw = sys.stdin.read() if args.request == "-" else pathlib.Path(args.request).read_text()
     data = json.loads(raw)
-    req = AuthorizationRequest.model_validate(data.get("authorization_request", data))  # 也接受整张 Order
+    req = AuthorizationRequest.model_validate(data.get("authorization_request", data))  # a whole Order is accepted too
     print(f"[Hotel ERP] {req.approver} is asked to approve quote {req.quote_id}: "
           f"€{req.amount_gross_cents / 100:,.2f}, delivery {req.delivery_date}", file=sys.stderr)
     for r in req.reasons:

@@ -1,7 +1,7 @@
-"""PasStar · 接口契约（Pydantic v2）
+"""PasStar · API contract (Pydantic v2)
 
-所有 HTTP 请求和响应都用这里的模型。改动前先在群里说，BE1 负责合并。
-金额一律用整数分（_cents），时间用 ISO 8601，交货日只用日期。
+Every HTTP request and response uses the models here. Announce changes in the team chat first; BE1 merges them.
+Amounts are always integer cents (_cents), times are ISO 8601, delivery days are dates only.
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-# ───────────────────────── 通用 ─────────────────────────
+# ───────────────────────── Common ─────────────────────────
 
 Level = Literal["HIGH", "MEDIUM", "LOW"]
 TrustGrade = Literal["A", "B", "C", "D"]
@@ -41,14 +41,14 @@ class ErrorBody(BaseModel):
 
 
 class Requirement(BaseModel):
-    """一条硬性要求或属性。CLAIM=结构化声明（如 FREE_FROM_LACTOSE）；
-    ALLERGEN_FREE=必须明确声明不含某过敏原（GS1 代码，如 AN 坚果）；LABEL=证书标签。"""
+    """One hard requirement or attribute. CLAIM = structured claim (e.g. FREE_FROM_LACTOSE);
+    ALLERGEN_FREE = must explicitly declare free from an allergen (GS1 code, e.g. AN nuts); LABEL = certification label."""
     kind: Literal["CLAIM", "ALLERGEN_FREE", "LABEL"]
     code: str
-    label: Optional[str] = None  # 给人看的名字，如 "无乳糖"
+    label: Optional[str] = None  # human-readable name, e.g. "Lactose-free"
 
 
-# ───────────────────────── 授权协议（BE1）─────────────────────────
+# ───────────────────────── Authorisation protocol (BE1) ─────────────────────────
 
 class SubstitutionPolicy(BaseModel):
     official: PolicyAction = "AUTO"
@@ -65,7 +65,7 @@ class ValioScope(BaseModel):
 
 
 class ApproverKey(BaseModel):
-    """审批人的 Ed25519 公钥（JWK）。外部审批时，买方系统用对应的私钥签授权凭证。"""
+    """The approver's Ed25519 public key (JWK). With external approval, the buyer's system signs the authorisation token with the matching private key."""
     kty: Literal["OKP"] = "OKP"
     crv: Literal["Ed25519"] = "Ed25519"
     kid: str
@@ -83,13 +83,13 @@ class ProtocolBody(BaseModel):
     may_contain_policy: Literal["EXCLUDE", "REQUIRE_APPROVAL"] = "EXCLUDE"
     substitution: SubstitutionPolicy = SubstitutionPolicy()
     approval_mode: Literal["SEPARATE", "SELF"] = "SEPARATE"
-    # SEPARATE：提需求的人不能审批自己的单（酒店、医院、连锁厨房）
-    # SELF：老板兼采购，可以审批自己的单，但审批仍是单独的一步并记入日志（小餐厅）
-    approver: str                      # 审批人用户 ID；SELF 模式下通常就是下单人
+    # SEPARATE: whoever makes a request cannot approve their own order (hotels, hospitals, chain kitchens)
+    # SELF: the owner is also the buyer and may approve their own orders, but approval is still a separate, logged step (small restaurants)
+    approver: str                      # approver's user ID; in SELF mode usually the person ordering
     approval_channel: Literal["HOSTED", "EXTERNAL"] = "HOSTED"
-    # HOSTED：在 PasStar 的审批页上批（单子进 PENDING_BUYER_APPROVAL）
-    # EXTERNAL：在买方自己的系统里批，agent 带着签名的授权凭证回来下单（BUYER_AUTHORIZATION_REQUIRED）
-    approver_public_key: Optional[ApproverKey] = None   # EXTERNAL 时必填
+    # HOSTED: approved on PasStar's approval page (the order goes to PENDING_BUYER_APPROVAL)
+    # EXTERNAL: approved in the buyer's own system; the agent comes back with a signed authorisation token to order (BUYER_AUTHORIZATION_REQUIRED)
+    approver_public_key: Optional[ApproverKey] = None   # required for EXTERNAL
     valid_until: date
     valio_scope: ValioScope = ValioScope()
 
@@ -128,7 +128,7 @@ class Protocol(BaseModel):
 class ProtocolDraftRequest(BaseModel):
     buyer_id: str
     agent_id: str
-    description: str  # 采购经理的一句话
+    description: str  # the procurement manager's one-sentence description
 
 
 class ProtocolUpdateRequest(BaseModel):
@@ -142,18 +142,18 @@ class FieldChange(BaseModel):
 
 
 class ProtocolDiff(BaseModel):
-    tightened: list[FieldChange] = []   # 直接生效
-    expanded: list[FieldChange] = []    # 需要审批人重新签字
-    forbidden: list[FieldChange] = []   # 买家无权批准，拒绝
+    tightened: list[FieldChange] = []   # takes effect immediately
+    expanded: list[FieldChange] = []    # needs the approver to re-sign
+    forbidden: list[FieldChange] = []   # the buyer has no right to approve; refused
     result_status: ProtocolStatus
     approval_id: Optional[str] = None
 
 
 class ProtocolAmendRequest(BaseModel):
-    changes: dict[str, Any]  # ProtocolBody 的部分字段
+    changes: dict[str, Any]  # a subset of ProtocolBody fields
 
 
-# ───────────────────────── Profile（BE3）─────────────────────────
+# ───────────────────────── Profile (BE3) ─────────────────────────
 
 class HardExclusions(BaseModel):
     brands: list[str] = []
@@ -196,7 +196,7 @@ class Profile(BaseModel):
     updated_at: datetime
 
 
-# ───────────────────────── 目录（BE2）─────────────────────────
+# ───────────────────────── Catalogue (BE2) ─────────────────────────
 
 class FacetItem(BaseModel):
     code: str
@@ -219,7 +219,7 @@ class AllergenStatus(BaseModel):
 
 
 class ProductPublic(BaseModel):
-    """只含 L0 字段。"""
+    """L0 fields only."""
     id: str
     name: str
     brand: Optional[str] = None
@@ -243,7 +243,7 @@ class ProductSearchRequest(BaseModel):
     limit: int = Field(default=20, le=50)
 
 
-# ───────────────────────── 需求与处理链（BE3）─────────────────────────
+# ───────────────────────── Requests and processing chain (BE3) ─────────────────────────
 
 class StructuredRequest(BaseModel):
     category: str
@@ -273,9 +273,9 @@ class SeveralItem(BaseModel):
 
 
 class ParseResult(BaseModel):
-    structured: StructuredRequest     # 用来预填勾选面板
+    structured: StructuredRequest     # used to prefill the checkbox panel
     ambiguities: list[Ambiguity] = []
-    profile_applied: list[str] = []   # 例如 ["默认接受同品类替代"]
+    profile_applied: list[str] = []   # e.g. ["Same-category substitutes accepted by default"]
     # Several products in one message: one at a time for now (orchestrator/several.py); the form shows the first.
     several: list[SeveralItem] = []
 
@@ -285,7 +285,7 @@ class CreateRequest(BaseModel):
     profile_id: Optional[str] = None
     input_mode: Literal["NATURAL_LANGUAGE", "PANEL"]
     raw_text: Optional[str] = None
-    structured: StructuredRequest     # 用户确认后的结构化需求
+    structured: StructuredRequest     # the structured request after the user confirmed it
 
 
 class EvidenceRef(BaseModel):
@@ -296,8 +296,8 @@ class EvidenceRef(BaseModel):
 
 class ChainEvent(BaseModel):
     at: datetime
-    title: str          # 做了什么（人话）
-    logic: str          # 为什么这样做（人话）
+    title: str          # what was done (plain language)
+    logic: str          # why it was done (plain language)
     evidence: list[EvidenceRef] = []
 
 
@@ -312,18 +312,18 @@ class ChainNode(BaseModel):
     summary: str
     can_reject: bool
     retries_left: int
-    reject_options: list[str]  # 这个节点可选的否定原因代码
+    reject_options: list[str]  # rejection reason codes available for this node
     events: list[ChainEvent] = []
 
 
 RejectReason = Literal[
-    # ① 理解需求
+    # ① Understand the request
     "WRONG_QUANTITY", "WRONG_DATE", "WRONG_ATTRIBUTES", "WRONG_CATEGORY",
-    # ② 筛选商品
+    # ② Filter products
     "TOO_STRICT", "TOO_LOOSE", "ALLOW_BRAND", "EXCLUDE_PRODUCT",
-    # ③ 组合和排序
+    # ③ Combine and rank
     "WRONG_PRIORITY", "EXCLUDE_OPTION", "PREFER_SINGLE_SKU",
-    # ④ 协议判断（不能放行，只能转审批或换方案）
+    # ④ Protocol check (cannot release; can only send to approval or pick another option)
     "SEND_TO_APPROVAL", "PICK_OTHER",
     "OTHER",
 ]
@@ -331,19 +331,19 @@ RejectReason = Literal[
 
 class RejectNodeRequest(BaseModel):
     reason: RejectReason
-    params: dict[str, Any] = {}   # 如 {"brand": "Arla"}、{"weights": {...}}、{"structured": {...}}
+    params: dict[str, Any] = {}   # e.g. {"brand": "Arla"}, {"weights": {...}}, {"structured": {...}}
     note: Optional[str] = None
 
 
-# ───────────────────────── 候选与卡片（BE2 出卡片，BE3 组装）─────────────────────────
+# ───────────────────────── Candidates and cards (BE2 makes the cards, BE3 assembles) ─────────────────────────
 
 class CandidateLine(BaseModel):
     product_id: str
     name: str
     brand: Optional[str] = None
     sales_unit: str
-    sales_units: float                # 订购多少个销售单位
-    qty_covered: Quantity             # 折合的需求数量
+    sales_units: float                # how many sales units to order
+    qty_covered: Quantity             # the requested quantity this covers
     overbuy: Optional[Quantity] = None
     conversion_source: Literal["UNIT_CONVERSIONS", "NAME_PARSE", "UNKNOWN"]
     unit_price_cents: Optional[int] = None
@@ -351,7 +351,7 @@ class CandidateLine(BaseModel):
     vat_rate: Optional[float] = None
     deposit_cents: int = 0
     available_on_date: Literal["YES", "PARTIAL", "NO", "UNKNOWN"]
-    deliverable_sales_units: Optional[float] = None  # 只有 PARTIAL 时给，且不超过请求量
+    deliverable_sales_units: Optional[float] = None  # only given for PARTIAL, and never more than requested
     substitution_tier: SubstitutionTier = "NONE"
     substitutes_for: Optional[str] = None
 
@@ -378,7 +378,7 @@ class TrustScore(BaseModel):
     match: Level
     fulfilment: Level
     compliance: Level
-    overall: Level                    # 四项中最低的一项
+    overall: Level                    # the lowest of the four
     how_to_improve: Optional[str] = None
     points: Optional[TrustPoints] = None
 
@@ -394,7 +394,7 @@ class AllergenRow(BaseModel):
 class AllergenCard(BaseModel):
     rows: list[AllergenRow]
     data_updated_at: Optional[datetime] = None
-    notes: list[str] = []             # 如 "无乳糖 ≠ 无奶"
+    notes: list[str] = []             # e.g. "Lactose-free ≠ dairy-free"
 
 
 class AlternativeRef(BaseModel):
@@ -416,25 +416,25 @@ class Cards(BaseModel):
 
 
 class Violation(BaseModel):
-    rule: str                          # 如 PROFILE_EXCLUDED_BRAND、ALLERGEN_CONTAINS
+    rule: str                          # e.g. PROFILE_EXCLUDED_BRAND, ALLERGEN_CONTAINS
     detail: str
     product_id: Optional[str] = None
 
 
 class Candidate(BaseModel):
     id: str
-    rank: Optional[int] = None         # 1–8；标红的为空
+    rank: Optional[int] = None         # 1–8; empty for blocked ones
     badge: Optional[Literal["RECOMMENDED", "CHEAPEST", "MOST_RELIABLE"]] = None
     selectable: bool
     lines: list[CandidateLine]
     totals: Optional[Totals] = None
     delivery_date: date
     reliability_level: Literal["HIGH", "MEDIUM", "LOW", "UNKNOWN"]
-    outcome_preview: Outcome           # 选它会怎样
+    outcome_preview: Outcome           # what happens if this is picked
     outcome_reasons: list[str] = []
     cards: Cards
-    violations: list[Violation] = []   # 只有标红的才有
-    explanation: str                   # 一句话理由（LLM 基于可披露数据写）
+    violations: list[Violation] = []   # only blocked ones have these
+    explanation: str                   # one-sentence reason (written by the LLM from disclosable data)
 
 
 class RequestResult(BaseModel):
@@ -442,9 +442,9 @@ class RequestResult(BaseModel):
     status: Literal["CANDIDATES_READY", "NO_CANDIDATES", "QUOTED", "ORDERED", "CLOSED"]
     attempt: int
     structured: StructuredRequest
-    chain: list[ChainNode]             # 4 个节点
-    candidates: list[Candidate]        # 最多 8 个，按 rank 排序
-    blocked: list[Candidate] = []      # 标红、不能选
+    chain: list[ChainNode]             # 4 nodes
+    candidates: list[Candidate]        # at most 8, sorted by rank
+    blocked: list[Candidate] = []      # blocked, cannot be selected
     no_candidate_reason: Optional[str] = None
 
 
@@ -454,7 +454,7 @@ class ChainTimeline(BaseModel):
     events: list[ChainEvent]
 
 
-# ───────────────────────── 报价、闸门、订单（BE1）─────────────────────────
+# ───────────────────────── Quotes, gate, orders (BE1) ─────────────────────────
 
 class SelectRequest(BaseModel):
     candidate_id: str
@@ -500,15 +500,15 @@ class QuoteVerifyResult(BaseModel):
 class CreateOrderRequest(BaseModel):
     quote_id: str
     protocol_id: str
-    buyer_authorization: Optional[str] = None   # 外部审批：买方系统签的授权凭证（compact JWS，alg Ed25519）
+    buyer_authorization: Optional[str] = None   # external approval: authorisation token signed by the buyer's system (compact JWS, alg Ed25519)
 
 
 class AuthorizeOrderRequest(BaseModel):
-    buyer_authorization: str                   # 买方系统签的授权凭证（compact JWS）
+    buyer_authorization: str                   # authorisation token signed by the buyer's system (compact JWS)
 
 
 class AuthorizationRequest(BaseModel):
-    """BUYER_AUTHORIZATION_REQUIRED 时返回：买方系统要批准、签名的内容。凭证的 payload 是 BuyerAuthorizationClaims。"""
+    """Returned with BUYER_AUTHORIZATION_REQUIRED: what the buyer's system must approve and sign. The token's payload is BuyerAuthorizationClaims."""
     protocol_id: str
     buyer_id: str
     request_id: str
@@ -517,22 +517,22 @@ class AuthorizationRequest(BaseModel):
     currency: Literal["EUR"] = "EUR"
     delivery_date: date
     quote_valid_until: datetime
-    reason_codes: list[str]                    # 为什么需要授权，如 R-SPEND-APPROVAL
-    reasons: list[str]                         # 人话
-    approver: str                              # 协议里的审批人
-    sign_with_kid: str                         # 用哪把钥匙签
+    reason_codes: list[str]                    # why authorisation is needed, e.g. R-SPEND-APPROVAL
+    reasons: list[str]                         # plain language
+    approver: str                              # the approver named in the protocol
+    sign_with_kid: str                         # which key to sign with
 
 
 class BuyerAuthorizationClaims(BaseModel):
-    """授权凭证里签名的内容。只授权这一张报价、这个金额，过期作废。"""
+    """The signed contents of an authorisation token. Authorises only this quote and this amount, and is void once expired."""
     typ: Literal["buyer-authorization/v1"] = "buyer-authorization/v1"
     protocol_id: str
     buyer_id: str
     quote_id: str
     amount_gross_cents: int
     approver: str
-    iat: int                                   # 批准时间（Unix 秒）
-    exp: int                                   # 过期时间（Unix 秒），最长 15 分钟
+    iat: int                                   # approval time (Unix seconds)
+    exp: int                                   # expiry time (Unix seconds), at most 15 minutes
 
 
 OrderStatus = Literal[
@@ -550,13 +550,13 @@ class Order(BaseModel):
     approval_id: Optional[str] = None
     requote_reason: Optional[str] = None
     new_quote_id: Optional[str] = None
-    authorization_request: Optional[AuthorizationRequest] = None   # 仅 BUYER_AUTHORIZATION_REQUIRED
-    authorized_by: Optional[str] = None                            # 外部审批通过时，凭证里的审批人
+    authorization_request: Optional[AuthorizationRequest] = None   # only with BUYER_AUTHORIZATION_REQUIRED
+    authorized_by: Optional[str] = None                            # with external approval, the approver named in the token
     created_at: datetime
     placed_at: Optional[datetime] = None
 
 
-# ───────────────────────── 审批（BE1）─────────────────────────
+# ───────────────────────── Approvals (BE1) ─────────────────────────
 
 class RiskTag(BaseModel):
     kind: Literal["SPEND", "ALLERGEN", "DATA", "DELIVERY", "BEHAVIOUR", "SUBSTITUTION"]
@@ -639,20 +639,20 @@ class ApprovalCard(BaseModel):
     status: Literal["PENDING", "APPROVED", "APPROVED_WITH_CHANGES", "REJECTED", "ROUTED"]
     created_at: datetime
     title: str
-    reasons: list[str]                         # 为什么需要审批（人话）
+    reasons: list[str]                         # why approval is needed (plain language)
     reason_codes: list[str]
     risk_tags: list[RiskTag] = []
     request: Optional[StructuredRequest] = None
     raw_text: Optional[str] = None
-    requested_by: Optional[str] = None       # 提需求的用户 ID
-    approver: Optional[str] = None           # 有权审批的用户 ID（来自协议）
+    requested_by: Optional[str] = None       # user ID of whoever made the request
+    approver: Optional[str] = None           # user ID allowed to approve (from the protocol)
     approval_mode: Optional[Literal["SEPARATE", "SELF"]] = None
     quote: Optional[Quote] = None
     candidate: Optional[Candidate] = None
     alternatives: list[Candidate] = []
     protocol_diff: Optional[ProtocolDiff] = None
-    disclosure_preview: list[FieldDisclosure] = []   # Valio 审批：批准后会多披露什么
-    agent_activity: Optional[AgentActivity] = None   # Valio 审批：agent 行为
+    disclosure_preview: list[FieldDisclosure] = []   # Valio approval: what extra would be disclosed if approved
+    agent_activity: Optional[AgentActivity] = None   # Valio approval: agent behaviour
     suggested_action: Literal["APPROVE", "REJECT", "ROUTE"]
     suggested_reason: str
 
@@ -666,10 +666,10 @@ class ApprovalDecision(BaseModel):
 
 class ApprovalDecisionResult(BaseModel):
     approval: ApprovalCard
-    order: Optional[Order] = None    # 批准后复核再下单的结果
+    order: Optional[Order] = None    # result of re-checking and ordering after approval
 
 
-# ───────────────────────── 审计（BE1）─────────────────────────
+# ───────────────────────── Audit (BE1) ─────────────────────────
 
 class AuditEntry(BaseModel):
     seq: int
@@ -690,7 +690,7 @@ class AuditVerifyResult(BaseModel):
     first_bad_seq: Optional[int] = None
 
 
-# ───────────────────────── 管理（BE2 / BE1）─────────────────────────
+# ───────────────────────── Admin (BE2 / BE1) ─────────────────────────
 
 class Fault(BaseModel):
     name: Literal["PRICE_CHANGE", "PARTIAL_STOCK", "TIMEOUT", "RATE_LIMIT", "EMPTY_RESULT"]

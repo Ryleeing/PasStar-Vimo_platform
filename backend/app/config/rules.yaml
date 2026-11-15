@@ -1,6 +1,6 @@
-# 闸门规则（BE1）。所有命中的规则都列进 rules_hit；最终结果取最严格的一条：
+# Gate rules (BE1). Every rule that matches is listed in rules_hit; the final outcome is the strictest one:
 # REJECT > VALIO_REVIEW > BUYER_APPROVAL > AUTO
-# 违反硬性要求的商品在第②节点就进了标红列表，不会走到这里。
+# Products that break a hard requirement are already on the blocked list at node 2 and never reach here.
 - id: R-SPEND-MAX
   when: gross_cents > max_order_cents
   outcome: REJECT
@@ -8,7 +8,7 @@
   when: all_lines_available == "NO"
   outcome: REJECT
 - id: R-OUT-OF-API
-  when: needs_custom_quote          # 定制报价、目录外商品、超大量
+  when: needs_custom_quote          # custom quote, off-catalogue product, very large quantity
   outcome: VALIO_REVIEW
 - id: R-DELIVERY-PARTIAL
   when: any_line_available == "PARTIAL"
@@ -17,8 +17,8 @@
   when: gross_cents > auto_approve_limit_cents
   outcome: BUYER_APPROVAL
 - id: R-DATA-UNVERIFIED
-  when: any_requirement_unverified  # 可信等级 C/D，或名称与声明冲突
-  outcome: protocol.unknown_data_policy   # REQUIRE_APPROVAL → BUYER_APPROVAL；REJECT → REJECT
+  when: any_requirement_unverified  # trust grade C/D, or the name conflicts with a claim
+  outcome: protocol.unknown_data_policy   # REQUIRE_APPROVAL → BUYER_APPROVAL; REJECT → REJECT
 - id: R-QTY-INEXACT
   when: any_conversion_unknown
   outcome: BUYER_APPROVAL

@@ -410,7 +410,7 @@ export interface paths {
         };
         /**
          * Facets
-         * @description 勾选面板的选项。
+         * @description Options for the checkbox panel.
          */
         get: operations["facets_v1_catalog_facets_get"];
         put?: never;
@@ -432,7 +432,7 @@ export interface paths {
         put?: never;
         /**
          * Search Products
-         * @description 只返回 L0 字段，不含价格和库存。
+         * @description Returns L0 fields only, no prices or stock.
          */
         post: operations["search_products_v1_products_search_post"];
         delete?: never;
@@ -469,7 +469,7 @@ export interface paths {
         put?: never;
         /**
          * Parse Request
-         * @description 自然语言 → 预填面板。没有副作用，不建 request。
+         * @description Natural language → prefilled panel. No side effects; does not create a request.
          */
         post: operations["parse_request_v1_requests_parse_post"];
         delete?: never;
@@ -489,7 +489,7 @@ export interface paths {
         put?: never;
         /**
          * Create Request
-         * @description 提交确认后的需求，跑完四个节点，返回最多 8 个候选 + 标红列表 + 处理链。
+         * @description Submit the confirmed request, run all four nodes, and return up to 8 candidates + the blocked list + the processing chain.
          */
         post: operations["create_request_v1_requests_post"];
         delete?: never;
@@ -526,8 +526,8 @@ export interface paths {
         put?: never;
         /**
          * Reject Node
-         * @description 否定第 node 个节点：该节点及之后重新生成，attempt + 1。每个节点最多 3 次（否则 RETRY_LIMIT）。
-         *     第 4 个节点只接受 SEND_TO_APPROVAL 或 PICK_OTHER。
+         * @description Reject node number `node`: that node and everything after it is regenerated, attempt + 1. At most 3 attempts per node (otherwise RETRY_LIMIT).
+         *     Node 4 only accepts SEND_TO_APPROVAL or PICK_OTHER.
          */
         post: operations["reject_node_v1_requests__request_id__nodes__node__reject_post"];
         delete?: never;
@@ -564,7 +564,7 @@ export interface paths {
         put?: never;
         /**
          * Select Candidate
-         * @description 选中一个候选：调用 BE1 quotes.create + gate.evaluate，返回签名报价和判断结果。不能选标红的。
+         * @description Select a candidate: calls BE1 quotes.create + gate.evaluate and returns the signed quote and the decision. Blocked candidates cannot be selected.
          */
         post: operations["select_candidate_v1_requests__request_id__select_post"];
         delete?: never;
@@ -1098,7 +1098,7 @@ export interface components {
         };
         /**
          * ApproverKey
-         * @description 审批人的 Ed25519 公钥（JWK）。外部审批时，买方系统用对应的私钥签授权凭证。
+         * @description The approver's Ed25519 public key (JWK). With external approval, the buyer's system signs the authorisation token with the matching private key.
          */
         ApproverKey: {
             /**
@@ -1170,7 +1170,7 @@ export interface components {
         };
         /**
          * AuthorizationRequest
-         * @description BUYER_AUTHORIZATION_REQUIRED 时返回：买方系统要批准、签名的内容。凭证的 payload 是 BuyerAuthorizationClaims。
+         * @description Returned with BUYER_AUTHORIZATION_REQUIRED: what the buyer's system must approve and sign. The token's payload is BuyerAuthorizationClaims.
          */
         AuthorizationRequest: {
             /** Protocol Id */
@@ -1808,7 +1808,7 @@ export interface components {
         };
         /**
          * ProductPublic
-         * @description 只含 L0 字段。
+         * @description L0 fields only.
          */
         ProductPublic: {
             /** Id */
@@ -2189,8 +2189,8 @@ export interface components {
         };
         /**
          * Requirement
-         * @description 一条硬性要求或属性。CLAIM=结构化声明（如 FREE_FROM_LACTOSE）；
-         *     ALLERGEN_FREE=必须明确声明不含某过敏原（GS1 代码，如 AN 坚果）；LABEL=证书标签。
+         * @description One hard requirement or attribute. CLAIM = structured claim (e.g. FREE_FROM_LACTOSE);
+         *     ALLERGEN_FREE = must explicitly declare free from an allergen (GS1 code, e.g. AN nuts); LABEL = certification label.
          */
         Requirement: {
             /**

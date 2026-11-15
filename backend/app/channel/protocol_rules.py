@@ -1,5 +1,5 @@
-"""协议修改的判定：收紧（直接生效）/ 扩大（需要审批人重新签字）/ 越权（拒绝）。
-BE1 的 /v1/protocols/{id}/amend 直接调用 classify_changes()。规则见技术设计文档“协议规则内容”。"""
+"""Classifying protocol changes: tightened (takes effect immediately) / expanded (needs the approver to re-sign) / forbidden (refused).
+BE1's /v1/protocols/{id}/amend calls classify_changes() directly. Rules: see "Protocol rule contents" in the technical design document."""
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -7,7 +7,7 @@ from typing import Any
 
 from ..schemas import FieldChange, ProtocolBody, Requirement
 
-# 越权级别的顺序：越往右越宽松
+# Order of permission levels: further right is looser
 _POLICY_ORDER = {"FORBIDDEN": 0, "APPROVAL": 1, "AUTO": 2}
 _UNKNOWN_ORDER = {"REJECT": 0, "REQUIRE_APPROVAL": 1}
 _MAY_CONTAIN_ORDER = {"EXCLUDE": 0, "REQUIRE_APPROVAL": 1}
@@ -21,8 +21,8 @@ def _req_key(r: Any) -> tuple:
 
 
 def classify_changes(current: ProtocolBody, changes: dict[str, Any], actor: str, today: date) -> dict[str, list[FieldChange]]:
-    """actor: "buyer" 或 "valio"。返回 {"tightened": [...], "expanded": [...], "forbidden": [...]}。
-    changes 是 ProtocolBody 的部分字段；嵌套字段用整个对象传，如 {"substitution": {...}}。"""
+    """actor: "buyer" or "valio". Returns {"tightened": [...], "expanded": [...], "forbidden": [...]}.
+    changes is a subset of ProtocolBody fields; nested fields are passed as whole objects, e.g. {"substitution": {...}}."""
     out: dict[str, list[FieldChange]] = {"tightened": [], "expanded": [], "forbidden": []}
     cur = current.model_dump(mode="json")
 
@@ -32,10 +32,10 @@ def classify_changes(current: ProtocolBody, changes: dict[str, Any], actor: str,
     for field, new in changes.items():
         old = cur.get(field)
         if field not in cur:
-            add("forbidden", field, None, new)                       # 未知字段一律拒绝
+            add("forbidden", field, None, new)                       # unknown fields are always refused
         elif field in IMMUTABLE:
             if new != old:
-                add("forbidden", field, old, new)                    # 只能新建协议
+                add("forbidden", field, old, new)                    # only possible with a new protocol
         elif field == "auto_approve_limit_cents":
             limit = changes.get("max_order_cents", cur["max_order_cents"])
             if new > limit:
@@ -84,15 +84,15 @@ def classify_changes(current: ProtocolBody, changes: dict[str, Any], actor: str,
                 add("expanded", field, old, new)
         elif field == "approval_mode":
             if old == "SEPARATE" and new == "SELF":
-                add("expanded", field, old, new)                     # 允许自批：放宽，要重新签字
+                add("expanded", field, old, new)                     # allowing self-approval: loosening, needs re-signing
             elif old == "SELF" and new == "SEPARATE":
                 add("tightened", field, old, new)
         elif field in ("approval_channel", "approver_public_key"):
             if new != old:
-                add("expanded", field, old, new)                     # 换审批渠道或审批人钥匙：都要重新签字
+                add("expanded", field, old, new)                     # changing approval channel or approver key: both need re-signing
         elif field == "approver":
             if new != old:
-                add("expanded", field, old, new)                     # 换审批人要重新签字
+                add("expanded", field, old, new)                     # changing the approver needs re-signing
         elif field == "valio_scope":
             for k, v in new.items():
                 ov = old[k]
@@ -101,7 +101,7 @@ def classify_changes(current: ProtocolBody, changes: dict[str, Any], actor: str,
                 looser = (k in ("rate_limit_per_min", "max_probes_per_product_per_day") and v > ov) or \
                          (k == "sensitivity_ceiling" and v > ov) or k in ("prices", "stock")
                 if actor != "valio" and looser:
-                    add("forbidden", f"valio_scope.{k}", ov, v)      # 只有 Valio 能放宽
+                    add("forbidden", f"valio_scope.{k}", ov, v)      # only Valio can loosen this
                 elif looser:
                     add("expanded", f"valio_scope.{k}", ov, v)
                 else:
@@ -110,8 +110,8 @@ def classify_changes(current: ProtocolBody, changes: dict[str, Any], actor: str,
 
 
 def apply_tightening(current: ProtocolBody, changes: dict[str, Any], result: dict[str, list[FieldChange]]) -> ProtocolBody:
-    """只把收紧的部分写进当前协议（扩大的部分进审批，越权的部分丢弃）。
-    简化做法：一个顶层字段只有在它的全部变化都属于“收紧”时才整体应用。"""
+    """Write only the tightened parts into the current protocol (expanded parts go to approval, forbidden parts are dropped).
+    Simplification: a top-level field is applied as a whole only when all of its changes are "tightened"."""
     bad = {c.field.split(".")[0] for c in result["expanded"] + result["forbidden"]}
     body = current.model_dump(mode="json")
     for field, new in changes.items():
