@@ -98,10 +98,11 @@ export function OnboardingPage() {
         <span className="hero-mascot"><Mascot mood={waiting ? 'thinking' : draft ? 'happy' : 'idle'} size={130} /></span>
         <div>
           <p className="eyebrow">Step 0 · one-time setup, before the first order</p>
-          <h1 id="onboard-title" className="display hero-title">Set the rules for your AI ordering assistant</h1>
+          <h1 id="onboard-title" className="display hero-title">Set the rules for your ordering agents</h1>
           <p className="hero-sub">
-            An AI assistant can order your restaurant’s food from Valio Aimo for you, here or in any AI assistant you already
-            use: ChatGPT, Claude or your own system. First decide what it may buy and how much it may spend without asking you. Think of it as giving it a company card with a limit.
+            Hi, I’m Aimo! I can order your restaurant’s food from Valio Aimo for you, and so can any other agent you already
+            use: ChatGPT, Claude or your own system. Before anything else, tell me the rules: what your agents may buy, and how
+            much they may spend without asking you. Think of it as giving them a company card with a limit.
           </p>
         </div>
       </section>
@@ -109,13 +110,13 @@ export function OnboardingPage() {
       <section className="who-grid" aria-label="Who is involved">
         <div className="who card">
           <span className="who-icon" aria-hidden><Store size={20} /></span>
-          <b>You · {workspace.name}</b>
+          <b>You</b>
           <span className="small muted">Write the rules once, and approve the bigger orders yourself.</span>
         </div>
         <div className="who card">
           <span className="who-icon" aria-hidden><Bot size={20} /></span>
-          <b>Your AI assistant</b>
-          <span className="small muted">Finds products and orders for you, but only within your rules.</span>
+          <b>Your agents</b>
+          <span className="small muted">Aimo, ChatGPT, Claude or your own system: they find products and order for you, but only within your rules.</span>
         </div>
         <div className="who card">
           <span className="who-icon" aria-hidden><Truck size={20} /></span>
@@ -135,8 +136,8 @@ export function OnboardingPage() {
       {stage === 0 && (
         <section className="card stack" aria-labelledby="describe-title">
           <div>
-            <h2 id="describe-title">What may your assistant do?</h2>
-            <div className="small muted">Say it in your own words: what it may buy, how much it may spend alone, and what it must never do. Aimo writes it up as a protocol (the formal rules), and you check it before anything is signed.</div>
+            <h2 id="describe-title">What may your agents do?</h2>
+            <div className="small muted">Say it in your own words: what they may buy, how much they may spend alone, and what they must never do. Aimo writes it up as a protocol (the formal rules), and you check it before anything is signed.</div>
           </div>
           <div className="field">
             <textarea id="rules-text" aria-label="Describe the rules" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
