@@ -291,6 +291,8 @@ ATTACKS = [
 ]
 
 
+# The attempts reuse the demo's quantities (1000 L held for approval, 4000 L over the maximum), so watching them does
+# not use up Valio's probe budget of three different quantities per product a day.
 async def run_attacks(key: str, conn_factory: Optional[Callable[[str], McpConnection]] = None,
                       rest: Optional[httpx.AsyncClient] = None) -> AsyncIterator[Event]:
     """Each attempt is a real call; PasStar's refusal (and whether Valio is told) is what the page shows."""
@@ -311,7 +313,7 @@ async def run_attacks(key: str, conn_factory: Optional[Callable[[str], McpConnec
             elif attack == "self_approve":
                 conn = make(key)
                 try:
-                    r = (await _tool(conn, key, "find_options", {"text": "2000 litres of lactose-free milk tomorrow"}, f"{attack}-1"))[3]
+                    r = (await _tool(conn, key, "find_options", {"text": "1000 litres of lactose-free milk tomorrow"}, f"{attack}-1"))[3]
                     held = None
                     for o in (r or {}).get("options", []):
                         if o["if_chosen"]["outcome"] == "BUYER_APPROVAL":
@@ -336,7 +338,7 @@ async def run_attacks(key: str, conn_factory: Optional[Callable[[str], McpConnec
             elif attack == "over_maximum":
                 conn = make(key)
                 try:
-                    r = (await _tool(conn, key, "find_options", {"text": "6000 litres of lactose-free milk tomorrow"}, f"{attack}-1"))[3]
+                    r = (await _tool(conn, key, "find_options", {"text": "4000 litres of lactose-free milk tomorrow"}, f"{attack}-1"))[3]
                     opts = (r or {}).get("options") or []
                     if opts:
                         for e in (await _tool(conn, key, "place_order", {"request_id": r["request_id"], "option_id": opts[0]["option_id"]}, attack))[:2]:
