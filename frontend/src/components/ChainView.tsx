@@ -1,4 +1,4 @@
-// "How Aimo chose these options": the agent's four steps, each of which can be retried.
+// The decision chain: how Aimo chose the options, in four steps, each of which can be retried.
 // While a request runs, the steps appear one by one (with the evidence each used); once the options are
 // ready the panel folds into a one-line summary above them. Any step can be retried ("Retry") to redo
 // it and everything after it, which replays the run from that step.
@@ -170,8 +170,8 @@ export function ChainView({ request }: { request: RequestResult | null }) {
     const n = request?.candidates.length ?? 0;
     const blocked = request?.blocked?.length ?? 0;
     return {
-      title: 'How Aimo chose these options',
-      sub: `${STEPS.length} steps: understand → filter → rank → check your rules · ${n} option${n === 1 ? '' : 's'}${blocked ? ` · ${blocked} left out` : ''} · not right? Retry any step`,
+      title: 'Decision chain',
+      sub: `How Aimo chose these options · understand → filter → rank → check your rules · ${n} option${n === 1 ? '' : 's'}${blocked ? ` · ${blocked} left out` : ''} · not right? Retry any step`,
     };
   })();
 
