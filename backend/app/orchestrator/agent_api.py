@@ -382,9 +382,9 @@ def _card(o: dict, approver: str, rules) -> list[str]:
     lines = [f"{head}: " + "; ".join(f"{p['name']} - order {p['order']}, covers {p['covers']}" for p in o["products"]),
              f"Total EUR {o['total_eur']:,.2f} incl. VAT and deposits; delivery {o['delivery_date']}: "
              + ", ".join(p["deliverable"] for p in o["products"]),
-             f"{rel['verdict']}{score('overall')} (product data {rel['evidence']}{score('evidence')}, "
-             f"fit {rel['match']}{score('match')}, delivery {rel['fulfilment']}{score('fulfilment')}, "
-             f"purchasing rules {rel['compliance']}{score('compliance')})"
+             f"{rel['verdict']}{score('overall')} (product info verified {rel['evidence']}{score('evidence')}, "
+             f"matches your request {rel['match']}{score('match')}, arrives on time {rel['fulfilment']}{score('fulfilment')}, "
+             f"within your rules {rel['compliance']}{score('compliance')})"
              + (f" - to improve: {rel['how_to_improve']}" if rel["how_to_improve"] else "")]
     lines += [f"{r['need']}: {r['status'].lower().replace('_', ' ')}, grade {r['grade']} ({GRADE_WORDS[r['grade']]})"
               for r in o["requirements"]]

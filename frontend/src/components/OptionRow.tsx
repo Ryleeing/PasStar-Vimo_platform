@@ -19,10 +19,10 @@ type Dim = 'evidence' | 'match' | 'fulfilment' | 'compliance';
 
 const STEPS: Record<string, number> = { HIGH: 3, MEDIUM: 2, LOW: 1 };
 const DIMENSIONS: { key: Dim; label: string; asks: string }[] = [
-  { key: 'evidence', label: 'Product data', asks: 'Is the product data from a reliable source?' },
-  { key: 'match', label: 'Fit', asks: 'Does it fit what you asked for?' },
-  { key: 'fulfilment', label: 'Delivery', asks: 'Will it arrive on time and in full?' },
-  { key: 'compliance', label: 'Purchasing rules', asks: 'Is it within your purchasing protocol?' },
+  { key: 'evidence', label: 'Product info verified', asks: 'Is the product data from a reliable source?' },
+  { key: 'match', label: 'Matches your request', asks: 'Does it fit what you asked for?' },
+  { key: 'fulfilment', label: 'Arrives on time', asks: 'Will it arrive on time and in full?' },
+  { key: 'compliance', label: 'Within your rules', asks: 'Is it within your purchasing protocol?' },
 ];
 const TIP_ICON: Record<string, ReactNode> = {
   STORAGE: <Thermometer size={16} />,
@@ -174,7 +174,7 @@ export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, 
           </span>
           <TrustMark level={t.overall} score={t.points?.overall} size={16} />
           <button type="button" className="opt-more" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen((o) => !o)}>
-            {open ? 'Hide evidence' : 'Show evidence'}<ChevronDown size={15} className="chev" aria-hidden />
+            {open ? 'Hide details' : 'Show details'}<ChevronDown size={15} className="chev" aria-hidden />
           </button>
         </div>
       </div>
@@ -220,8 +220,8 @@ export function OptionRow({ c, position, best, selected, onSelect, onChooseAlt, 
             </Section>
           )}
 
-          <Section title="Reliability" aside={<TrustMark level={t.overall} score={t.points?.overall} size={18} />}>
-            <p className="trust-caption">Overall is the weakest of the four checks below.</p>
+          <Section title="Trust check" aside={<TrustMark level={t.overall} score={t.points?.overall} size={18} />}>
+            <p className="trust-caption">Overall score = the weakest of these four checks.</p>
             <div className="trust-rows">
               {dims.map((d) => (
                 <div key={d.key} className="ev-trust" title={d.asks}>

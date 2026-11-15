@@ -222,7 +222,7 @@ Any step can be **retried**, and only that step onward is redone. Each step can 
 | C | Only the product name says so; not verified |
 | D | No data, or the data contradicts itself |
 
-Reliability has four parts: evidence, match, fulfilment and compliance. **The overall level is the lowest of the four.** A score is the average of that part's checks, always within its level's band: Reliable 80–100, Reliable? 50–79, Risky 0–49.
+The **trust check** has four parts: *product info verified* (evidence), *matches your request* (match), *arrives on time* (fulfilment) and *within your rules* (compliance). **The overall score is the lowest of the four.** A score is the average of that part's checks, always within its level's band: Reliable 80–100, Reliable? 50–79, Risky 0–49.
 
 ### Authorization protocols
 

@@ -144,7 +144,7 @@ def test_every_option_has_a_card_with_all_dimensions(hotel):
     for o in r["options"]:
         card = "\n".join(o["card"])
         assert o["reliability"]["verdict"] in card
-        assert all(p in card for p in ("product data", "fit", "delivery", "purchasing rules"))
+        assert all(p in card for p in ("product info verified", "matches your request", "arrives on time", "within your rules"))
         assert "grade" in card and "If chosen:" in card and "Sources:" in card
         assert all(t["text"] in card for t in o["tips"])
     assert "card" in r["next_step"]
