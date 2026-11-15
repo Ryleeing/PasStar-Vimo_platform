@@ -427,7 +427,16 @@ function AiReply({ message, answers, asking, stuck, thinking, several, onPickIte
           </>
         )}
         {!thinking && stuck && (
-          <p>I still couldn’t work out “{stuck.question.replace(/\?$/, '')}”. Set it in the form below and find options there.</p>
+          <div className="several">
+            <p className="ai-question">Hmm, I’m still not sure about that one.</p>
+            <p>I couldn’t work out “{stuck.question.replace(/\?$/, '')}”. Let’s try another way:</p>
+            <div className="row wrap" style={{ gap: 8 }}>
+              <button type="button" className="chip" onClick={onStartOver}><RotateCcw size={14} aria-hidden /> Say it again, one product</button>
+              <button type="button" className="chip" onClick={() => document.getElementById('form-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+                <ArrowRight size={14} aria-hidden /> Fill in the order form instead
+              </button>
+            </div>
+          </div>
         )}
         {!thinking && !asking && !stuck && (
           <p className="ai-done"><Check size={16} className="ok-ink" aria-hidden /> I’ve filled in the form below.</p>

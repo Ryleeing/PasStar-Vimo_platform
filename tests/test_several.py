@@ -43,3 +43,12 @@ def test_the_screens_get_the_products_and_a_form_for_the_first():
     one = TestClient(app).post("/v1/requests/parse", json={"text": "200 litres of milk tomorrow"},
                                headers={"X-Demo-User": "usr_chef"}).json()
     assert one["several"] == []
+
+
+@pytest.mark.parametrize("text, products", [
+    ("I wanna milk and meat", ["milk", "meat"]),
+    ("20 kg beef, 10 kg potatoes and cream", ["meat", "potatoes", "cream"]),
+    ("maitoa ja jauhelihaa", ["milk", "meat"]),
+])
+def test_everyday_foods_beyond_dairy_are_spotted(text, products):
+    assert [i["product"] for i in several_products(text)] == products

@@ -33,6 +33,12 @@ PRODUCTS: dict[str, list[str]] = {
     "juice": ["juice", "mehu"],
     "oil": ["oil", "öljy", "olja"],
     "sugar": ["sugar", "sokeri", "socker"],
+    "meat": ["meat", "beef", "pork", "lamb", "veal", "mince", "minced", "sausage", "ham", "bacon", "turkey",
+             "liha", "naudan", "possu", "sianliha", "jauheliha", "makkara", "kinkku", "kött", "nötkött", "fläsk", "korv"],
+    "vegetables": ["vegetable", "vegetables", "veggies", "salad", "lettuce", "tomato", "tomatoes", "onion", "onions",
+                   "carrot", "carrots", "vihannes", "vihannekset", "tomaatti", "sipuli", "porkkana", "grönsaker", "lök"],
+    "potatoes": ["potato", "potatoes", "peruna", "potatis"],
+    "fruit": ["fruit", "apple", "apples", "banana", "bananas", "berries", "hedelmä", "omena", "banaani", "frukt", "äpple"],
 }
 _TERMS = sorted(((w, label) for label, ws in PRODUCTS.items() for w in ws), key=lambda t: -len(t[0]))
 _SPLIT = re.compile(r"\s*(?:,|;|&|\+|\n|\band\b|\bja\b|\boch\b|\bplus\b)\s*", re.I)
