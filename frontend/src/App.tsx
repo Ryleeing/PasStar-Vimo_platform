@@ -20,6 +20,7 @@ import { AuditPage } from './pages/AuditPage';
 import { ValioQueuePage } from './pages/ValioQueuePage';
 import { AgentsPage } from './pages/AgentsPage';
 import { OnboardingPage } from './pages/OnboardingPage';
+import { PasscodeGate } from './components/PasscodeGate';
 import { ErrorState, Skeleton } from './components/ui';
 
 const ROUTES: Record<PageKey, () => JSX.Element> = {
@@ -92,6 +93,7 @@ function Shell() {
 export default function App() {
   return (
     <HashRouter>
+      <PasscodeGate>
       <SessionProvider>
         <ToastProvider>
           <FlowProvider>
@@ -101,6 +103,7 @@ export default function App() {
           </FlowProvider>
         </ToastProvider>
       </SessionProvider>
+      </PasscodeGate>
     </HashRouter>
   );
 }

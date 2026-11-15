@@ -35,7 +35,7 @@ const save = (key: string, v: string) => {
 };
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<RoleKey>(() => load('thepass.role', ['chef', 'buyer_manager', 'owner', 'valio_reviewer'] as const, 'chef'));
+  const [role, setRole] = useState<RoleKey>(() => load('thepass.role', ['owner', 'valio_reviewer'] as const, 'owner'));
   const [theme, setTheme] = useState<Theme>(() => load('thepass.theme', ['dark', 'light'] as const, 'light'));
   const account = accountByKey(role);
   const workspace = WORKSPACES[account.workspace];

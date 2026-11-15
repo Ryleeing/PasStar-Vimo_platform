@@ -3,6 +3,9 @@ Auto-approve limit €1,000, order maximum €3,000: 1,000 litres of milk costs 
 prices. Tune both once real prices are known."""
 from __future__ import annotations
 
+import os
+import secrets
+
 from datetime import timedelta
 
 from .. import db, demo_keys
@@ -57,7 +60,10 @@ def reset(onboarding: bool = True) -> None:
         db.run("INSERT INTO buyers (id, name, delivery_address) VALUES (?,?,?)", b)
     for u in USERS:
         db.run("INSERT INTO users (id, org, buyer_id, name, role) VALUES (?,?,?,?,?)", u)
+    public = os.environ.get("PASSTAR_PUBLIC") == "1"
     for agent_id, buyer_id, name, api_key in AGENTS:
+        if public:                  # on a public deployment the demo keys in this file must not work: random ones
+            api_key = f"tp_{secrets.token_urlsafe(24)}"   # nobody knows; issue real keys on the Agents page
         db.run("INSERT INTO agents (id, buyer_id, name, api_key_hash) VALUES (?,?,?,?)",
                (agent_id, buyer_id, name, key_hash(api_key)))
         db.run("INSERT INTO agent_connections (agent_id, kind, key_hint, key_issued_at) VALUES (?,?,?,?)",

@@ -1,0 +1,18 @@
+# Never in the image: secrets, local databases and caches. The catalogue (backend/data/products.sqlite) IS included.
+.git
+.github
+.claude
+.venv
+.env
+.env.*
+!.env.example
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+frontend/dist
+frontend/.env.local
+data/
+backend/data/runtime.sqlite
+plugin/*.zip
+tests/
+documents/

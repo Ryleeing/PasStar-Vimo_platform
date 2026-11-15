@@ -1,0 +1,28 @@
+# PasStar on Fly.io. Secrets (Valio, OpenRouter, the demo passcode) are set with `fly secrets set`, never here.
+app = "passtar-demo"
+primary_region = "arn"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PASSTAR_PUBLIC = "1"                                    # screens need the demo passcode; demo agent keys are random
+  THE_PASS_DB = "/data/the_pass.db"                       # on the persistent volume
+  PASSTAR_SELF_URL = "http://127.0.0.1:8080"              # the console's agent reaches /mcp inside the machine
+  VALIO_SHARED_BUYERS = "buy_hotel,buy_bistro,buy_hospital"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"                              # no cold starts during the demo
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[mounts]]
+  source = "passtar_data"
+  destination = "/data"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

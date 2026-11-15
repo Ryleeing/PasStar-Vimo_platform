@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Check, ChevronsUpDown, Moon, PanelLeftClose, PanelLeftOpen, RotateCcw, Sun } from 'lucide-react';
-import { ACCOUNTS, PAGES_BY_ROLE, WORKSPACES, type RoleKey } from '../config/accounts';
+import { ACCOUNTS, PAGES_BY_ROLE, SHOWN_ROLES, WORKSPACES, type RoleKey } from '../config/accounts';
 import { useSession } from '../state/session';
 import { progressSteps, useFlow } from '../state/flow';
 import { useActiveProtocol } from '../state/protocol';
@@ -89,10 +89,10 @@ function AccountSwitcher() {
       </button>
       {open && (
         <div className="switcher-menu" role="menu" aria-label="Switch account">
-          {Object.values(WORKSPACES).map((ws) => (
+          {Object.values(WORKSPACES).filter((ws) => ACCOUNTS.some((a) => a.workspace === ws.key && SHOWN_ROLES.includes(a.key))).map((ws) => (
             <div key={ws.key} className="switcher-group">
               <div className="ws"><b>{ws.name}</b><span>{ws.mode ?? 'Seller'}</span></div>
-              {ACCOUNTS.filter((a) => a.workspace === ws.key).map((a) => (
+              {ACCOUNTS.filter((a) => a.workspace === ws.key && SHOWN_ROLES.includes(a.key)).map((a) => (
                 <button key={a.key} className="switcher-item" role="menuitemradio" aria-checked={a.key === account.key} onClick={() => pick(a.key)}>
                   <Avatar role={a.key} name={a.name} size="sm" />
                   <span className="grow">

@@ -72,6 +72,10 @@ export const PAGES_BY_ROLE: Record<RoleKey, PageDef[]> = {
   valio_reviewer: [P.valio, { ...P.agents, label: 'Agents & faults' }, { ...P.audit, label: 'Full audit log' }],
 };
 
+/** The accounts offered in the switcher. The hotel's two-person mode (chef + manager) is kept in the backend and the
+ *  code but not shown: the demo tells one story, the one-person bistro, plus Valio. */
+export const SHOWN_ROLES: RoleKey[] = ['owner', 'valio_reviewer'];
+
 export const accountByKey = (k: RoleKey) => ACCOUNTS.find((a) => a.key === k)!;
 export const accountByUserId = (u?: string | null) => ACCOUNTS.find((a) => a.userId === u);
 export const displayUser = (u?: string | null) => {

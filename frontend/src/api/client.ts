@@ -29,7 +29,10 @@ function readMode(): ApiMode {
 
 let mode: ApiMode = readMode();
 let source: DataSource = mode === 'mock' ? 'mock' : 'unknown';
-let demoUser = 'usr_chef';
+let demoUser = 'usr_owner';
+/** On a public deployment: the session token from the demo passcode (see backend/app/demo_access.py). */
+const SESSION_KEY = 'passtar.session';
+let session: string | null = (() => { try { return localStorage.getItem(SESSION_KEY); } catch { return null; } })();
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
@@ -56,6 +59,18 @@ export const apiState = {
   get demoUser() {
     return demoUser;
   },
+  get session() {
+    return session;
+  },
+  setSession(t: string | null) {
+    session = t;
+    try {
+      if (t) localStorage.setItem(SESSION_KEY, t);
+      else localStorage.removeItem(SESSION_KEY);
+    } catch {
+      /* private mode */
+    }
+  },
   subscribe(l: () => void) {
     listeners.add(l);
     return () => {
@@ -80,7 +95,7 @@ export interface RequestOptions {
 export async function api<T>(method: string, path: string, opts: RequestOptions = {}): Promise<T> {
   const query = Object.entries(opts.query ?? {}).filter(([, v]) => v !== undefined) as [string, string | number][];
   const qs = query.length ? '?' + new URLSearchParams(query.map(([k, v]) => [k, String(v)])).toString() : '';
-  const headers: Record<string, string> = { 'X-Demo-User': demoUser, ...(opts.headers ?? {}) };
+  const headers: Record<string, string> = { 'X-Demo-User': demoUser, ...(session ? { 'X-Demo-Session': session } : {}), ...(opts.headers ?? {}) };
 
   const viaMock = () =>
     mockHandle(method, path, { body: opts.body, query: Object.fromEntries(query), headers }) as Promise<T>;

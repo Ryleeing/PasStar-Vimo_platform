@@ -26,7 +26,7 @@ export async function streamConsole(path: '/v1/console/turn' | '/v1/console/atta
                                     onEvent: (e: ConsoleEvent) => void, signal?: AbortSignal): Promise<void> {
   const res = await fetch(API_BASE + path, {
     method: 'POST', signal,
-    headers: { 'Content-Type': 'application/json', 'X-Demo-User': apiState.demoUser },
+    headers: { 'Content-Type': 'application/json', 'X-Demo-User': apiState.demoUser, ...(apiState.session ? { 'X-Demo-Session': apiState.session } : {}) },
     body: JSON.stringify(body),
   });
   if (!res.ok || !res.body) {

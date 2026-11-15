@@ -6,6 +6,7 @@ Run: uvicorn app.main:app --reload    Docs: http://localhost:8000/docs
 Tags name the owner: BE1 channel & transactions, BE2 catalogue & data, BE3 orchestration & AI.
 """
 import functools
+from pathlib import Path
 import json
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -17,7 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from . import db, errors, fixtures as fx
+from . import db, demo_access, errors, fixtures as fx
 from .channel import agents, approvals, audit as audit_store, checkpoints, identity, orders, protocols, quotes, reports, seed, signing
 from .internal import Audience
 from .orchestrator import console, parser_api, seed as be3_seed, service as be3
@@ -63,15 +64,42 @@ def _is_local(request: Request) -> bool:
     return client in LOCAL_HOSTS and not any(h in request.headers for h in PROXY_HEADERS)
 
 
+def _person_allowed(request: Request) -> bool:
+    """Locally: requests from this machine. Public deployment: requests with a valid demo session (see demo_access)."""
+    if demo_access.public():
+        return demo_access.valid(request.headers.get("x-demo-session"))
+    return _is_local(request)
+
+
 @app.middleware("http")
 async def _people_only_locally(request: Request, call_next):
     """People are identified by the X-Demo-User header, with no login (demo only). Through a public tunnel anyone
-    could send it and act as the manager, so it is accepted only on the machine running PasStar. Agents still reach
-    PasStar from anywhere with their X-Agent-Key (MCP and the HTTP API)."""
-    if "x-demo-user" in request.headers and not _is_local(request):
-        return errors.response("OUT_OF_SCOPE", "Signing in as a person only works on the machine running PasStar; "
-                                               "agents use X-Agent-Key", {})
+    could send it and act as the manager, so it is accepted only on the machine running PasStar, or on a public
+    deployment with the demo passcode's session. Agents reach PasStar from anywhere with their X-Agent-Key."""
+    if "x-demo-user" in request.headers and not _person_allowed(request):
+        return errors.response("OUT_OF_SCOPE", "Sign in with the demo passcode first; agents use X-Agent-Key"
+                               if demo_access.public() else
+                               "Signing in as a person only works on the machine running PasStar; agents use X-Agent-Key", {})
     return await call_next(request)
+
+
+class SessionRequest(pydantic.BaseModel):
+    passcode: str
+
+
+@app.get("/v1/session", tags=["BE1 · admin"])
+def session_status(request: Request):
+    """Whether this deployment asks for the demo passcode, and whether the caller's session is valid."""
+    return {"public": demo_access.public(), "signed_in": _person_allowed(request)}
+
+
+@app.post("/v1/session", tags=["BE1 · admin"])
+def session_sign_in(body: SessionRequest):
+    """Exchange the demo passcode for a session token (send it as X-Demo-Session)."""
+    token = demo_access.sign_in(body.passcode)
+    if token is None:
+        raise errors.ApiError("NOT_APPROVER", "Wrong passcode")
+    return {"token": token}
 
 if mcp_server is not None:
     app.router.routes.extend(mcp_server.routes)      # POST /mcp
@@ -433,7 +461,9 @@ def holds_report(since: Optional[datetime] = None, until: Optional[datetime] = N
 def _local_only(request: Request) -> None:
     """Admin routes (reset, faults) answer only on the machine running the backend. A request that came through a
     tunnel or proxy (e.g. cloudflared, which adds Cf-Connecting-Ip) is refused, so a public demo URL cannot wipe the
-    data or bring back the public demo agent keys."""
+    data or bring back the public demo agent keys. On a public deployment a signed-in demo session may use them."""
+    if demo_access.public() and demo_access.valid(request.headers.get("x-demo-session")):
+        return
     if not _is_local(request):
         raise errors.ApiError("OUT_OF_SCOPE", "Admin endpoints are only available on the machine running PasStar")
 
@@ -459,3 +489,12 @@ def reset():
     # Only the budgets are cleared; the probe log stays.
     from .valio.client import reset_probe_budgets
     return {"ok": True, "probe_budgets_cleared": reset_probe_budgets()}
+
+
+# ───── The built frontend (deployment) ─────
+# When frontend/dist exists (the Docker image builds it), the same server serves the screens at "/", so the
+# screens, the API and /mcp share one address. Registered last: every API route above takes precedence.
+_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+if _DIST.is_dir():
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/", StaticFiles(directory=_DIST, html=True), name="frontend")
