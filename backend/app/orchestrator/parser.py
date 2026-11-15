@@ -257,6 +257,12 @@ class Parser:
         structured, ambiguities, applied, unknown = self._finish(cross_check(need, rules) if need else rules, profile, today)
         return ParseOutcome(structured, ambiguities, applied, unknown, source)
 
+    def rules_only(self, text: str, profile: Optional[Profile]) -> ParseOutcome:
+        """The rule parser alone, without a model call (e.g. to pre-fill the form for one of several products)."""
+        today = self.today()
+        structured, ambiguities, applied, unknown = self._finish(rule_parse(text, today), profile, today)
+        return ParseOutcome(structured, ambiguities, applied, unknown, "rules")
+
     def draft_protocol(self, buyer_id: str, agent_id: str, description: str) -> tuple[ProtocolBody, list[dict]]:
         today = self.today()
         d = self.llm.structured(DRAFT_SYSTEM.format(vocabulary=_vocabulary(self.vocabulary)),

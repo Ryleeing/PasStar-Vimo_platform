@@ -24,6 +24,8 @@ call is written to the buyer's audit trail.
    - `NEEDS_INPUT`: ask the user the `questions`, in plain words. Do not guess. Then call `find_options` again
      with the same `text` and their replies in `answers`, keyed by each question's `field`.
    - `NO_OPTIONS`: explain `why_none` and what the user could change.
+   - `ONE_PRODUCT_AT_A_TIME`: the user asked for several products at once. Say kindly that ordering several in one
+     go comes in the next version, list what you heard, and ask which one to start with. Then do them one by one.
    - An `OUT_OF_SCOPE` error: the protocol does not allow this product. Say so; do not try another wording.
 3. **Present the options** (see below) and let the user choose. Do not choose for them unless they asked you to.
 4. **`adjust_options`** when the user wants a change: another brand, cheapest first, without a product,

@@ -25,6 +25,7 @@ from ..internal import Audience
 from ..schemas import CreateRequest, RejectNodeRequest, SelectRequest
 from . import be2, parser_api, service
 from .holds import BLOCKING_REASONS, HoldCaller, record_parse
+from .several import several_products
 
 GUIDE = {
     "trust_grades": {
@@ -202,6 +203,14 @@ def find_options(who: Audience, text: str, answers: Optional[dict[str, str]] = N
     and the whole is parsed again, so the parser's cross-checks apply to the answers too."""
     _agent_only(who)
     protocol_id = _protocol_id(who)
+    items = [] if answers else several_products(text)
+    if items:
+        return {"status": "ONE_PRODUCT_AT_A_TIME", "products": items,
+                "message": "Ordering several products in one go is coming in the next version of PasStar. "
+                           "For now Aimo takes them one at a time.",
+                "next_step": "Tell the user, kindly and briefly, that several products in one message come in the next "
+                             "version; list what you heard and ask which one to start with. Then call find_options "
+                             "with just that product's words; the others follow one by one."}
     full = text.strip() + "".join(f"\n{field}: {answer}" for field, answer in (answers or {}).items() if answer)
     outcome = parser_api.parse_detailed(full, service.profile_for(profile_id, who))
     record_parse(audit_store, outcome,

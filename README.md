@@ -89,9 +89,9 @@ There is no login on the screens; switch accounts at the top of the sidebar (the
 ## Demo flow
 
 **Main line (screens)**
-1. **Reset demo** → switch to **Sanna** and go through step 0: describe the rules in one sentence → A.I.mo drafts the protocol → check it (edit the draft in place) → sign
+1. **Reset demo** → switch to **Sanna** and go through step 0: describe the rules in one sentence → Aimo drafts the protocol → check it (edit the draft in place) → sign
 2. Switch to **Elina** and confirm the protocol in the Review queue
-3. Back as **Sanna**, make a request: chat with A.I.mo on the left or fill in the form on the right; either finds options directly
+3. Back as **Sanna**, make a request: chat with Aimo on the left or fill in the form on the right; either finds options directly
 4. Read the options: traffic-light trust (✓ Reliable / ? Reliable? / ✗ Risky), scores, data sources, and what choosing each one does
 5. Order: up to €1,000 is placed at once; €1,000–3,000 waits for approval; above €3,000 is refused
 
@@ -230,7 +230,7 @@ Reliability has four parts: evidence, match, fulfilment and compliance. **The ov
 
 ### Authorization protocols
 
-- The buyer drafts it (A.I.mo can draft it from one sentence) → the buyer's approver signs → Valio confirms and signs it with Ed25519, and only then is it in force
+- The buyer drafts it (Aimo can draft it from one sentence) → the buyer's approver signs → Valio confirms and signs it with Ed25519, and only then is it in force
 - **Tightening** (e.g. a lower limit) applies at once; **loosening** creates a new version that must be signed again and confirmed again by Valio
 - An agent may help draft a protocol, but it can neither put one in force nor widen its own permissions
 - Over-limit orders are approved in PasStar (`HOSTED`) or authorized with a signature from the buyer's own system (`EXTERNAL`); see `backend/app/channel/authorization.py`

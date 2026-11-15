@@ -35,6 +35,9 @@ Typical flow: find_options with the user's own words -> if NEEDS_INPUT, ask the 
 with their replies in answers -> present the options -> adjust_options if the user wants changes -> place_order
 with the option the user picked -> order_status later for held orders.
 
+One product per find_options call: if the user asks for several at once, find_options answers
+ONE_PRODUCT_AT_A_TIME (several in one go come in the next version); ask which one to start with.
+
 Use these tools only for buying from Valio for this buyer. Do not send unrelated requests to find_options;
 every call is logged in the buyer's audit trail.
 

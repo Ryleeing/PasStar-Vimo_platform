@@ -1,6 +1,6 @@
 // Step 0. Before an agent may order anything, the buyer and Valio sign a protocol: what the agent may buy, how much
 // it may spend on its own, and who approves the rest. A workspace without an active protocol lands here instead of
-// on its pages: describe the rules → A.I.mo drafts them → check → sign → Valio confirms → ordering opens.
+// on its pages: describe the rules → Aimo drafts them → check → sign → Valio confirms → ordering opens.
 import { useEffect, useState } from 'react';
 import { Bot, Check, Pencil, PenLine, ShieldCheck, Sparkles, Store, Truck } from 'lucide-react';
 import { draftProtocol, getFacets, listProtocols, signProtocol, updateProtocol } from '../api/endpoints';
@@ -16,7 +16,7 @@ import { useActiveProtocol } from '../state/protocol';
 
 const SUGGESTED = 'Milk, cream and milk powder. Order on your own up to 1,000 euros, never above 3,000 euros. '
   + 'I approve anything in between myself.';
-const STAGES = ['Describe your rules', 'Check what A.I.mo wrote', 'Sign them', 'Valio confirms'] as const;
+const STAGES = ['Describe your rules', 'Check what Aimo wrote', 'Sign them', 'Valio confirms'] as const;
 const WAIT_POLL_MS = 3000;
 
 export function OnboardingPage() {
@@ -137,7 +137,7 @@ export function OnboardingPage() {
         <section className="card stack" aria-labelledby="describe-title">
           <div>
             <h2 id="describe-title">What may your assistant do?</h2>
-            <div className="small muted">Say it in your own words: what it may buy, how much it may spend alone, and what it must never do. A.I.mo writes it up as a protocol (the formal rules), and you check it before anything is signed.</div>
+            <div className="small muted">Say it in your own words: what it may buy, how much it may spend alone, and what it must never do. Aimo writes it up as a protocol (the formal rules), and you check it before anything is signed.</div>
           </div>
           <div className="field">
             <textarea id="rules-text" aria-label="Describe the rules" rows={3} value={text} onChange={(e) => setText(e.target.value)} />

@@ -1,15 +1,15 @@
 // Step 1. Two equal ways to ask, each finds options on its own:
-//   - tell A.I.mo in your own words: it reads the message and finds options straight away; when something it
+//   - tell Aimo in your own words: it reads the message and finds options straight away; when something it
 //     must know is missing (product, quantity, date, an unknown requirement) it asks, and your answer goes on;
 //   - or fill in the form: product, quantity and date are required, everything else is optional.
-// What A.I.mo understood is mirrored into the form, so the two never disagree and you can adjust it there.
+// What Aimo understood is mirrored into the form, so the two never disagree and you can adjust it there.
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowUp, Check, ChevronDown, RotateCcw, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ArrowUp, Check, ChevronDown, MessageCircle, Package, RotateCcw, Scale, ShieldCheck } from 'lucide-react';
 import { Mascot, MascotFace, type MascotMood } from '../components/Mascot';
 import { createRequest, getActiveProtocol, getFacets, listProfiles, parseRequest, rejectNode } from '../api/endpoints';
 import { describeError } from '../api/client';
-import type { Ambiguity, Facets, RequestResult, Requirement, StructuredRequest } from '../api/types';
+import type { Ambiguity, Facets, RequestResult, Requirement, SeveralItem, StructuredRequest } from '../api/types';
 import { useSession } from '../state/session';
 import { useFlow } from '../state/flow';
 import { useActiveProtocol } from '../state/protocol';
@@ -31,9 +31,9 @@ interface Form {
 const reqKey = (r: Requirement) => `${r.kind}:${r.code}`;
 const isoIn = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 const EMPTY: Form = { category: '', reqs: [], qty: '', unit: 'L', date: '', budget: '', substitution: 'SAME_CATEGORY' };
-/** What A.I.mo must know before it can look for options; anything else it asks about keeps a sensible default. */
+/** What Aimo must know before it can look for options; anything else it asks about keeps a sensible default. */
 const BLOCKING = new Set(['category', 'quantity', 'delivery_date', 'requirements']);
-/** The message plus the answers to A.I.mo's questions, as the parser reads them (one "field: answer" per line). */
+/** The message plus the answers to Aimo's questions, as the parser reads them (one "field: answer" per line). */
 const withAnswers = (message: string, answers: Record<string, string>) =>
   message + Object.entries(answers).map(([field, answer]) => `\n${field}: ${answer}`).join('');
 
@@ -49,7 +49,7 @@ const formFrom = (s: StructuredRequest): Form => ({
 
 
 
-/** Example prompts: one click fills the message box, which teaches what A.I.mo can read. */
+/** Example prompts: one click fills the message box, which teaches what Aimo can read. */
 const EXAMPLES = [
   '1000 litres of lactose-free milk by Monday',
   'Nut-free cream for 200 desserts, Friday',
@@ -68,15 +68,17 @@ export function RequestPage() {
   const profile = profiles.data?.find((p) => p.id === profileId) ?? profiles.data?.[0];
 
   const [form, setFormState] = useState<Form>(() => (flow.panel ? formFrom(flow.panel) : EMPTY));
-  /** 'ai' while the form shows exactly what A.I.mo understood; any hand edit makes it the user's own. */
+  /** 'ai' while the form shows exactly what Aimo understood; any hand edit makes it the user's own. */
   const [formSource, setFormSource] = useState<'ai' | 'you'>('you');
   const setForm = (fn: (f: Form) => Form) => { setFormState(fn); setFormSource('you'); };
 
   const [input, setInput] = useState(flow.rawText);
-  const [message, setMessage] = useState<string | null>(null);      // the request being worked out with A.I.mo
+  const [message, setMessage] = useState<string | null>(null);      // the request being worked out with Aimo
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [asking, setAsking] = useState<Ambiguity | null>(null);
-  const [stuck, setStuck] = useState<Ambiguity | null>(null);         // asked, answered, still unreadable
+  const [stuck, setStuck] = useState<Ambiguity | null>(null);
+  /** Several products in one message: one at a time for now; Aimo asks which to start with. */
+  const [several, setSeveral] = useState<SeveralItem[] | null>(null);         // asked, answered, still unreadable
   const [busy, setBusy] = useState<'chat' | 'form' | null>(null);
   const [tried, setTried] = useState(false);
   const [aiFilled, setAiFilled] = useState(false);
@@ -131,7 +133,7 @@ export function RequestPage() {
     });
   }, null);
 
-  /** Way 1: a new message to A.I.mo (top box), or the answer to its question (asked and answered in the reply card). */
+  /** Way 1: a new message to Aimo (top box), or the answer to its question (asked and answered in the reply card). */
   const send = async (reply?: string, asAnswer = false) => {
     const typed = (reply ?? input).trim();
     if (!typed || busy) return;
@@ -143,6 +145,7 @@ export function RequestPage() {
     setAnswers(ans);
     if (reply === undefined) setInput('');
     setStuck(null);
+    setSeveral(null);
     patch({ rawText: msg });
     setBusy('chat');
     try {
@@ -152,6 +155,11 @@ export function RequestPage() {
       setFormSource('ai');
       setAiFilled(true);
       setTimeout(() => setAiFilled(false), 1600);
+      if (parse.several?.length) {
+        setAsking(null);
+        setSeveral(parse.several);
+        return;
+      }
       const open = parse.ambiguities.find((a) => BLOCKING.has(a.field));
       if (open && answering && open.field === answering.field) {
         setAsking(null);            // the answer did not help: hand over to the form instead of asking again
@@ -172,6 +180,7 @@ export function RequestPage() {
   };
 
   const startOver = () => {
+    setSeveral(null);
     setMessage(null);
     setAnswers({});
     setAsking(null);
@@ -180,7 +189,7 @@ export function RequestPage() {
     patch({ parse: null });
   };
 
-  /** Way 2: the form, as filled in by hand or as A.I.mo left it. */
+  /** Way 2: the form, as filled in by hand or as Aimo left it. */
   const submitForm = async () => {
     setTried(true);
     if (blocker || busy) return;
@@ -199,7 +208,7 @@ export function RequestPage() {
       const { request_id } = flow.request, reason = flow.correcting;
       run(structured, () => rejectNode(request_id, 1, { reason, params: { structured } }));
     } else {
-      // Untouched since A.I.mo filled it: the request still comes from the message, so keep the words with it.
+      // Untouched since Aimo filled it: the request still comes from the message, so keep the words with it.
       find(structured, formSource === 'ai' && message !== null ? withAnswers(message, answers) : null);
     }
   };
@@ -243,16 +252,22 @@ export function RequestPage() {
   return (
     <div className="request-page">
       <MandateStrip />
-      {/* Two equal ways in, side by side: chat with A.I.mo on the left, the order form on the right.
+      {/* Two equal ways in, side by side: chat with Aimo on the left, the order form on the right.
           On narrow screens they stack, chat first. */}
       <div className="request-split">
         <div className="request-chat">
-          {/* ── Way 1: tell A.I.mo ── */}
+          {/* ── Way 1: tell Aimo ── */}
           <section className="hero" aria-labelledby="hero-title">
             <span className="hero-mascot"><Mascot mood={mood} size={120} /></span>
             <div>
               <h1 id="hero-title" className="display hero-title">What does your kitchen need?</h1>
-              <p className="hero-sub">Tell A.I.mo in your own words and it finds the options. Or use the order form.</p>
+              <p className="hero-sub">Tell Aimo in your own words and it finds the options. Or use the order form.</p>
+              <ul className="hero-tips" aria-label="What Aimo can do">
+                <li><span aria-hidden><MessageCircle size={14} /></span>Say it like you would to a colleague: “1000 litres of lactose-free milk by Monday”.</li>
+                <li><span aria-hidden><Scale size={14} /></span>Aimo compares price, delivery and how trustworthy each product’s data is.</li>
+                <li><span aria-hidden><ShieldCheck size={14} /></span>It orders only within your rules; bigger orders wait for your OK.</li>
+                <li><span aria-hidden><Package size={14} /></span>One product per request for now. Whole shopping lists are coming soon!</li>
+              </ul>
             </div>
             <div className="composer">
               <textarea
@@ -294,6 +309,7 @@ export function RequestPage() {
 
           {message !== null && (
             <AiReply message={message} answers={answers} asking={asking} stuck={stuck} thinking={busy === 'chat'}
+              several={several} onPickItem={(t) => send(t)}
               onAnswer={(o) => send(o, true)} onStartOver={startOver} />
           )}
         </div>
@@ -353,8 +369,8 @@ function MandateStrip() {
   );
 }
 
-/** The exchange with A.I.mo: your message, your answers, and what it is doing or asking. */
-/** Hint for the free-text answer, by the field A.I.mo is asking about. */
+/** The exchange with Aimo: your message, your answers, and what it is doing or asking. */
+/** Hint for the free-text answer, by the field Aimo is asking about. */
 const ANSWER_HINT: Record<string, string> = {
   quantity: 'e.g. 200 litres',
   delivery_date: 'e.g. Friday',
@@ -362,9 +378,9 @@ const ANSWER_HINT: Record<string, string> = {
   requirements: 'e.g. nut-free',
 };
 
-function AiReply({ message, answers, asking, stuck, thinking, onAnswer, onStartOver }: {
+function AiReply({ message, answers, asking, stuck, thinking, several, onPickItem, onAnswer, onStartOver }: {
   message: string; answers: Record<string, string>; asking: Ambiguity | null; stuck: Ambiguity | null; thinking: boolean;
-  onAnswer: (o: string) => void; onStartOver: () => void;
+  several: SeveralItem[] | null; onPickItem: (text: string) => void; onAnswer: (o: string) => void; onStartOver: () => void;
 }) {
   const [draft, setDraft] = useState('');
   const submit = () => { const t = draft.trim(); if (!t) return; setDraft(''); onAnswer(t); };
@@ -374,6 +390,21 @@ function AiReply({ message, answers, asking, stuck, thinking, onAnswer, onStartO
       <div className="stack sm grow">
         <p className="small muted">You: “{message}”{Object.values(answers).map((a) => ` · “${a}”`).join('')}</p>
         {thinking && <p>Reading your request and looking for options…</p>}
+        {!thinking && several && (
+          <div className="several">
+            <p className="ai-question">Ooh, a whole shopping list!</p>
+            <p>For now I can fetch <b>one product per request</b>. Ordering several in one go is coming in the next version, I promise.
+              Which one shall we start with?</p>
+            <div className="chips">
+              {several.map((i) => (
+                <button key={i.product} type="button" className="chip" onClick={() => onPickItem(i.text)}>
+                  <Package size={14} aria-hidden /> {i.text}
+                </button>
+              ))}
+            </div>
+            <p className="small muted">After this one is ordered, come back and pick the next.</p>
+          </div>
+        )}
         {!thinking && asking && (
           <>
             <p>I need one more thing before I can look:</p>

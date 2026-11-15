@@ -23,6 +23,7 @@ from .channel import agents, approvals, audit as audit_store, checkpoints, ident
 from .internal import Audience
 from .orchestrator import console, parser_api, seed as be3_seed, service as be3
 from .orchestrator.holds import HoldCaller, record_parse
+from .orchestrator.several import several_products
 from .schemas import *  # noqa: F401,F403
 
 try:        # MCP for AI assistants (BE3, orchestrator/mcp_server.py); the API runs without it when mcp is not installed
@@ -327,6 +328,11 @@ def get_product(product_id: str):
 def parse_request(body: ParseRequest, who: Audience = Caller):
     """自然语言 → 预填面板。没有副作用，不建 request。"""
     # LLM via OpenRouter, rule-based without OPENROUTER_API_KEY. Creates no request; only writes hold events.
+    items = several_products(body.text)
+    if items:   # one product at a time for now: no model call, the form shows the first product
+        outcome = parser_api.rules_only(items[0]["text"], be3.profile_for(body.profile_id, who))
+        return ParseResult(structured=outcome.structured, ambiguities=[], profile_applied=outcome.profile_applied,
+                           several=[SeveralItem(**i) for i in items])
     outcome = parser_api.parse_detailed(body.text, be3.profile_for(body.profile_id, who))
     record_parse(audit_store, outcome, HoldCaller(buyer_id=who.buyer_id, agent_id=who.agent_id, actor=identity.actor(who)))
     return ParseResult(structured=outcome.structured, ambiguities=outcome.ambiguities,

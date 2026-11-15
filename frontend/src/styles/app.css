@@ -73,7 +73,7 @@
   --sidebar-w: 300px;
   --sidebar-rail: 76px;
   --display: 'Barlow Condensed', 'Hanken Grotesk Variable', system-ui, sans-serif;
-  /* A.I.mo the mascot */
+  /* Aimo the mascot */
   --m-shell: #ffffff;
   --m-shell-2: #eef3f5;
   --m-shade: rgba(15, 60, 80, 0.08);
@@ -479,7 +479,7 @@ input[type='range'] { min-height: 0; padding: 0; border: 0; background: none; ac
   .hero-title { font-size: 2.25rem; }
 }
 
-/* ───────────── A.I.mo ───────────── */
+/* ───────────── Aimo ───────────── */
 .mascot { overflow: visible; display: block; }
 .mascot .m-body { animation: m-float 3.6s ease-in-out infinite; transform-origin: 60px 120px; }
 .mascot .m-shadow { animation: m-shadow 3.6s ease-in-out infinite; transform-origin: 60px 134px; }
@@ -1212,7 +1212,7 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
 .form-src { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px 4px 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: var(--fs-meta); font-weight: 600; animation: fade var(--t) var(--ease); }
 .form-src .mascot-face { width: 26px; height: 15px; border-radius: 8px; }
 
-/* Chat card: clean white panel; A.I.mo stands on its top edge to draw the eye (idle float + blink). */
+/* Chat card: clean white panel; Aimo stands on its top edge to draw the eye (idle float + blink). */
 .chat {
   position: relative; min-height: 480px; border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
   border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow);
@@ -1385,7 +1385,7 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-2); font-size: var(-
   .run-summary { max-width: none; }
 }
 
-/* ── Request page: chat with A.I.mo on the left, the order form on the right; stacked on narrow screens ── */
+/* ── Request page: chat with Aimo on the left, the order form on the right; stacked on narrow screens ── */
 .request-page { max-width: 1280px; }
 .request-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s6); align-items: start; }
 .request-split .hero { margin-bottom: 0; padding: var(--s6); gap: var(--s4) var(--s5); }
@@ -1491,7 +1491,7 @@ input:hover, select:hover, textarea:hover { border-color: #c9ced6; }
 .avatar, .av-chef, .av-buyer_manager, .av-owner, .av-valio_reviewer { background: #e4e2de; color: #3d3833; }
 :root:not([data-theme='light']) .avatar { background: var(--surface-3); color: var(--text-2); }
 
-/* answering A.I.mo happens in its reply card, right under the question */
+/* answering Aimo happens in its reply card, right under the question */
 .ai-answer { display: flex; align-items: center; gap: var(--s2); margin-top: var(--s1); max-width: 520px; }
 .ai-answer input { flex: 1; min-width: 0; min-height: 44px; background: var(--surface); }
 .ai-answer .btn { flex: none; min-height: 44px; }
@@ -1501,7 +1501,7 @@ input:hover, select:hover, textarea:hover { border-color: #c9ced6; }
    Page: a misty blue field with soft light that shifts across it (never a flat colour).
    Cards: frosted white that catches light top-left and cools to blue bottom-right, a bright rim, a wide soft
    blue-grey shadow. Primary: deep navy with depth. Selection: bright blue tint. Type: light weights.
-   A.I.mo keeps its own colours. */
+   Aimo keeps its own colours. */
 body {
   background:
     radial-gradient(1100px 650px at 100% -10%, var(--bg-glow), transparent 60%),
@@ -1872,3 +1872,10 @@ html:not([data-theme='light']) .composer textarea { background: transparent; bor
 .confirmed-row .chev { transition: transform var(--t) var(--ease); }
 .confirmed-row[aria-expanded='true'] .chev { transform: rotate(180deg); }
 .ok-ink { color: var(--ok); }
+
+/* Request page: what Aimo can do, and the kind "one product at a time" reply */
+.hero-tips { list-style: none; margin: var(--s3) 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.9375rem; color: var(--text-2); }
+.hero-tips li { display: flex; align-items: flex-start; gap: var(--s2); }
+.hero-tips li > span { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; margin-top: 1px; background: var(--accent-soft); color: var(--accent-ink); }
+.several { display: flex; flex-direction: column; gap: var(--s2); }
+.several .chips .chip { gap: 6px; }

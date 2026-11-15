@@ -267,10 +267,17 @@ class ParseRequest(BaseModel):
     profile_id: Optional[str] = None
 
 
+class SeveralItem(BaseModel):
+    product: str                      # e.g. "cream"
+    text: str                         # the words that asked for it, e.g. "20 litres of cream"
+
+
 class ParseResult(BaseModel):
     structured: StructuredRequest     # 用来预填勾选面板
     ambiguities: list[Ambiguity] = []
     profile_applied: list[str] = []   # 例如 ["默认接受同品类替代"]
+    # Several products in one message: one at a time for now (orchestrator/several.py); the form shows the first.
+    several: list[SeveralItem] = []
 
 
 class CreateRequest(BaseModel):

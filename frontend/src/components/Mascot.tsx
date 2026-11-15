@@ -1,4 +1,4 @@
-// A.I.mo — Valio Aimo's assistant robot, redrawn as a flat, simplified illustration for this prototype:
+// Aimo — Valio Aimo's assistant robot, redrawn as a flat, simplified illustration for this prototype:
 // white shell, dark-teal visor with LED-dot eyes, ear pods with a green light, teal scarf.
 // If Valio provides official artwork, swap it in here; every surface uses these two components.
 export type MascotMood = 'idle' | 'thinking' | 'asking' | 'happy';
@@ -25,7 +25,7 @@ function Face({ mood }: { mood: MascotMood }) {
   );
 }
 
-export function Mascot({ mood = 'idle', size = 120, title = 'A.I.mo, your ordering assistant' }: { mood?: MascotMood; size?: number; title?: string }) {
+export function Mascot({ mood = 'idle', size = 120, title = 'Aimo, your ordering assistant' }: { mood?: MascotMood; size?: number; title?: string }) {
   return (
     <svg className={`mascot mood-${mood}`} width={size} height={size * 1.17} viewBox="0 0 120 140" role="img" aria-label={title}>
       <ellipse className="m-shadow" cx="60" cy="134" rx="24" ry="4.5" fill="var(--illo-shadow)" />

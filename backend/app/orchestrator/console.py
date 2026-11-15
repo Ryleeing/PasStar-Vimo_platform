@@ -259,6 +259,10 @@ async def run_script(key: str, state: dict, text: str, conn: Optional[McpConnect
                 yield e
             if not ok:
                 yield {"type": "assistant", "text": f"PasStar refused: {r.get('message')}"}
+            elif r["status"] == "ONE_PRODUCT_AT_A_TIME":
+                heard = ", ".join(p["text"] for p in r["products"])
+                yield {"type": "assistant", "text": f"I heard several products: {heard}. {r['message']} "
+                                                    "Which one shall we start with? Send me just that one."}
             elif r["status"] == "NEEDS_INPUT":
                 q = r["questions"][0]
                 state.update(text=base, question=q["field"])

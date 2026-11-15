@@ -1,4 +1,4 @@
-// A protocol's terms as a form (categories, hard requirements, limits, end date). Used in step 0 to fix A.I.mo's draft
+// A protocol's terms as a form (categories, hard requirements, limits, end date). Used in step 0 to fix Aimo's draft
 // and on the protocol page to change a signed protocol; the backend decides what is stricter and what is looser.
 import { useState } from 'react';
 import { Check } from 'lucide-react';

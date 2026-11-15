@@ -135,3 +135,9 @@ def test_console_is_for_people_on_this_machine_and_their_own_agents():
     tunnel = {"X-Demo-User": "usr_manager", "Cf-Connecting-Ip": "203.0.113.7"}
     assert c.post("/v1/console/turn", json=body, headers=tunnel).status_code == 403
     assert json  # keep the import used
+
+
+def test_script_mode_answers_several_products_kindly():
+    events = collect(console.run_script("demo-hotel", {"mandate": "x"}, "200 l milk and 20 l cream tomorrow", conn=InProcess("demo-hotel")))
+    said = next(e for e in events if e["type"] == "assistant")["text"]
+    assert "next version" in said and "milk" in said and "cream" in said

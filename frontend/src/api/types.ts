@@ -46,6 +46,7 @@ export type ErrorBody = S['ErrorBody'];
 
 export type AgentConnection = S['AgentConnection'];
 export type OrderSummary = S['OrderSummary'];
+export type SeveralItem = S['SeveralItem'];
 export type IssuedKey = S['IssuedKey'];
 export type AgentKind = AgentConnection['kind'];
 export type Outcome = Candidate['outcome_preview'];
