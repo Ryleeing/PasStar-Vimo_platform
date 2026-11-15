@@ -33,6 +33,48 @@ Hotels, hospitals and restaurants can let an AI assistant (ChatGPT, Claude, or t
 | **Robustness to exception situations (15%)** | Missing quantity or date → a question; nothing deliverable → the first date that works; price changed → re-quote; partial stock, unknown stock, cut-offs; probe limit against stock fishing; Valio timeouts and 429 retried; a shopping list in one message → handled one product at a time; no LLM → rule parser and templates | [`orchestrator/parser.py`](backend/app/orchestrator/parser.py), [`orchestrator/agent_api.py`](backend/app/orchestrator/agent_api.py), [`valio/client.py`](backend/app/valio/client.py), [`valio/faults.py`](backend/app/valio/faults.py) (fault switches on Valio's Agents page), [`orchestrator/several.py`](backend/app/orchestrator/several.py) |
 | **Openness and credible path toward production (15%)** | One open interface for any agent: MCP (ChatGPT and Claude plugins), REST with OpenAPI, and an ERP path with the buyer's own signed authorization. Verifiable: Valio-signed quotes and protocols (JWKS published), hash-chained audit log with a verify endpoint. Deployed on Fly.io as one container | [`openapi.json`](openapi.json), [`plugin/`](plugin/), `GET /v1/.well-known/jwks.json`, `GET /v1/quotes/{id}/verify`, `GET /v1/audit/verify`, [`Dockerfile`](Dockerfile), [`fly.toml`](fly.toml) |
 
+## Architecture
+
+PasStar sits between the restaurant (its people and the agents they choose) and Valio Aimo. Every door leads to the same rules.
+
+```mermaid
+flowchart LR
+  subgraph Buyer["Restaurant"]
+    P["People on the screens<br/>step 0 rules · ask · approve"]
+    A["ChatGPT / Claude<br/>PasStar plugin"]
+    E["Restaurant's own system<br/>REST + signed authorization"]
+  end
+  subgraph PS["PasStar"]
+    D["Front doors<br/>Web · REST/OpenAPI · MCP (6 tools, no approval tool)"]
+    C["Checkpoints<br/>agent key → signed protocol · rate limit · probe budget"]
+    O["Decision chain<br/>Understand → Filter → Rank → Gate preview"]
+    T["Catalogue & trust<br/>17,546 products · trust check · disclosure filter"]
+    L["Contract & ledger<br/>Ed25519 protocols & quotes · gate · hash-chained audit"]
+    D --> C --> O --> T
+    O --> L
+  end
+  subgraph V["Valio Aimo"]
+    VD["Product data<br/>catalogue · delivery records · carbon"]
+    VA["Live APIs<br/>price · availability"]
+    VR["Valio reviewers<br/>confirm protocols · review · block agents"]
+  end
+  P -- "request · L0–L1 back" --> D
+  A -- "MCP + X-Agent-Key" --> D
+  E -- "REST + X-Agent-Key" --> D
+  T -- "≤ 8 shortlisted products" --> VA
+  VD --> T
+  L <-- "confirm · sign · hold reports" --> VR
+```
+
+| Level | What it covers | Agents | Restaurant's people | Valio | LLM |
+|---|---|---|---|---|---|
+| **L0** public | Name, brand, claims, allergens, certifications, origin | Yes | Yes | Yes | Yes |
+| **L1** this buyer | Own prices and totals, deliverable yes / no, reliability level | Own only | Own only | Yes | For explanations |
+| **L2** Valio internal | Stock quantities, raw delivery reliability, supplier performance | No | No | With Valio's approval | No |
+| **L3** never leaves | Cost, margin, other customers, contracts | No | No | Not through PasStar | No |
+
+Levels are set per field in [`config/field_policy.yaml`](backend/app/config/field_policy.yaml); a field that is not listed counts as L3.
+
 ## Quick start
 
 Requires **Python 3.11+** and **Node.js 18+**.
